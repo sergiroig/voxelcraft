@@ -6,24 +6,24 @@ Este documento contiene las reglas de arquitectura, restricciones de rendimiento
 
 ## 1. Información General y Ubicación
 
-- **Ruta local del proyecto:** `/home/sergiroig@TierraZen.local/code/personal/voxelcraft`
+- **Ruta local del proyecto:** `c:\Users\sroig\code\voxelcraft` (`/home/sergiroig@TierraZen.local/code/personal/voxelcraft`)
 - **Repositorio GitHub:** [`https://github.com/sergiroig/voxelcraft`](https://github.com/sergiroig/voxelcraft) (`git@github.com:sergiroig/voxelcraft.git`)
 - **URL pública (GitHub Pages):** [`https://sergiroig.github.io/voxelcraft/`](https://sergiroig.github.io/voxelcraft/)
 - **URL de la suite de tests:** [`https://sergiroig.github.io/voxelcraft/test.html`](https://sergiroig.github.io/voxelcraft/test.html)
 - **Idioma de comunicación:** Español siempre.
-- **Archivos del repositorio:**
-  - [`index.html`](index.html) (`177` líneas): Estructura HTML del juego, `<link rel="preload">` paralelo y carga ordenada de módulos.
-  - [`src/styles.css`](src/styles.css) (`736` líneas): Hoja de estilos CSS completa (HUD, inventario, menú y controles multitáctiles).
-  - [`src/01-config-atlas.js`](src/01-config-atlas.js) (`642` líneas): Constantes, definiciones de bloques (`BLOCK`, `BLOCK_DEFS`), recetas (`CRAFTING_RECIPES`) y generador procedural del Atlas de Texturas Pixel-Art (`createProceduralAtlas`, `createCrackTextures`).
-  - [`src/02-worldgen-lighting.js`](src/02-worldgen-lighting.js) (`520` líneas): Generador de terreno procedural, 4 biomas, cuevas 3D trilineales $4\times4\times4$, estructuras (*Pirámides, Cabañas*) y motor de iluminación vóxel *Flood-Fill BFS* en 1 byte (`computeChunkLighting` + caché de minimapa).
-  - [`src/03-mesher-audio.js`](src/03-mesher-audio.js) (`670` líneas): *Chunk Mesher* (`buildChunkMeshArrays` con *Hidden Face Culling*, *Vertex AO* y *X-Mesh*) y sintetizador `Web Audio API` + música generativa *C418* FM (`SoundFX`, `updateAmbientAudio`).
-  - [`src/04-world-renderer.js`](src/04-world-renderer.js) (`796` líneas): Estado del mundo (`chunks`, `worldDeltas`), escena `Three.js`, *Shaders GPU* (`onBeforeCompile`), pools `InstancedMesh` de partículas y *drops* 3D imantados, mano en 1ª persona y Cielo Dinámico (`updateDynamicSky`).
-  - [`src/05-simulation-entities.js`](src/05-simulation-entities.js) (`794` líneas): Cola de simulación vóxel (`updateVoxelSimulation`: arena, agua, lava/obsidiana, cultivo de trigo y crecimiento de árboles `growTreeAt`), TNT, Clima Dinámico (`updateWeather`), Flechas 3D (`shootArrow`), Comida (`eatHeldApple`), Circuitos Redstone + Puertas + Trampillas (`toggleVoxelLever`, `toggleVoxelDoor`, `toggleVoxelTrapdoor`), Cofres del Tesoro (`openVoxelChest`) y Ferrocarril + Vagonetas 3D (`spawnMinecart`, `toggleRideMinecart`, `updateMinecarts`).
-  - [`src/06-mobs-worker.js`](src/06-mobs-worker.js) (`733` líneas): Motor optimizado de criaturas (`mobs`: Ovejas, Cerdos, Zombis, **Creepers Explosivos** y **Gólem de Hierro Guardián Aliado** `trySummonIronGolem`), subida de mallas (`applyArraysToMesh`) y `Web Worker` multihilo *inline* (`Blob URL` + `Transferable` *Zero-Copy*).
-  - [`src/07-physics-camera.js`](src/07-physics-camera.js) (`650` líneas): Raycaster vóxel DDA 3D (`raycastVoxel`), físicas del jugador (`updatePlayerPhysics`, escalada en `BLOCK.LADDER`, rebote en Slime, viaje en Vagoneta), minado progresivo, *Smart Frustum Culling 3D* (`updateFrustumCulling`), cámara en 3ª persona con avatar articulado (`playerAvatar`, `toggleCameraMode`), zoom (`toggleZoom`) y streaming de chunks (`updateChunkStreaming`).
-  - [`src/08-ui-minimap.js`](src/08-ui-minimap.js) (`772` líneas): Interfaz de usuario (hotbar, inventario/crafteo, selector de semillas, teletransporte a biomas, **Balizas GPS / Waypoints** `addWaypoint`, `teleportToWaypoint`) y Minimapa Radar 2D Topográfico con brújula 360° (`updateMinimap`).
-  - [`src/09-controls-loop.js`](src/09-controls-loop.js) (`648` líneas): Eventos de teclado/ratón en PC, controlador multitáctil móvil (`joy-zone`, botones táctiles), bucle principal (`animate`), telemetría FPS y API de introspección `window.__VOXELCRAFT__`.
-  - [`test.html`](test.html): Runner de 57 tests E2E/unitarios (29 suites) y profiler de coste en FPS en tiempo real sobre el motor.
+- **Archivos del repositorio (todos estrictamente `< 800` líneas en `src/` e `index.html`):**
+  - [`index.html`](index.html) (`182` líneas): Estructura HTML del juego, `<link rel="preload">` paralelo y carga ordenada de módulos.
+  - [`src/styles.css`](src/styles.css) (`718` líneas): Hoja de estilos CSS completa (HUD, inventario, cofres, menú y controles multitáctiles).
+  - [`src/01-config-atlas.js`](src/01-config-atlas.js) (`642` líneas): Constantes, definiciones de bloques (`BLOCK`, `BLOCK_DEFS`, incluyendo `LILY_PAD`, `PISTON`, `PORTAL`, `ICE`, `ITEM_BOAT`, `TOOL_GRAPPLING_HOOK`), 27 recetas (`CRAFTING_RECIPES`) y generador procedural del Atlas de Texturas Pixel-Art de 51 tiles (`createProceduralAtlas`, `createCrackTextures`).
+  - [`src/02-worldgen-lighting.js`](src/02-worldgen-lighting.js) (`486` líneas): Generador de terreno procedural, 4 biomas (con lagos helados `BLOCK.ICE` en *Taiga Nevada* y nenúfares `BLOCK.LILY_PAD` en *Llanura/Bosque*), cuevas 3D trilineales $4\times4\times4$, estructuras (*Pirámides, Cabañas*) y motor de iluminación vóxel *Flood-Fill BFS* en 1 byte (`computeChunkLighting` + caché de minimapa).
+  - [`src/03-mesher-audio.js`](src/03-mesher-audio.js) (`687` líneas): *Chunk Mesher* (`buildChunkMeshArrays` con *Hidden Face Culling* incluyendo bloques translúcidos `GLASS`/`ICE`/`PORTAL`, *Vertex AO* y *X-Mesh*) y sintetizador `Web Audio API` + música generativa *C418* FM (`SoundFX`, `updateAmbientAudio`).
+  - [`src/04-world-renderer.js`](src/04-world-renderer.js) (`709` líneas): Estado del mundo (`chunks`, `worldDeltas`), escena `Three.js`, *Shaders GPU* (`onBeforeCompile`: viento en vegetación/nenúfares, vórtice en portales, destello en hielo/menas y olas 3D), pools `InstancedMesh` de partículas y *drops* 3D imantados, mano en 1ª persona y Cielo Dinámico (`updateDynamicSky`).
+  - [`src/05-simulation-entities.js`](src/05-simulation-entities.js) (`668` líneas): Cola de simulación vóxel (`updateVoxelSimulation`: arena, agua, lava/obsidiana, cultivo de trigo y crecimiento de árboles `growTreeAt`), TNT, Clima Dinámico (`updateWeather`), Flechas 3D y **Gancho de Agarre** (`shootArrow`, `shootGrappleHook`, `grapplePullPlayerTo`), Comida (`eatHeldApple`), Circuitos Redstone + **Pistones Mecánicos** + Puertas + Trampillas (`toggleVoxelLever`, `triggerVoxelPiston`, `toggleVoxelDoor`, `toggleVoxelTrapdoor`), Cofres del Tesoro (`openVoxelChest`) y Ferrocarril + Vagonetas 3D (`spawnMinecart`, `toggleRideMinecart`, `updateMinecarts`).
+  - [`src/06-mobs-worker.js`](src/06-mobs-worker.js) (`643` líneas): Motor optimizado de criaturas (`mobs`: Ovejas, Cerdos, Zombis, **Esqueletos Arqueros**, **Creepers Explosivos** y **Gólem de Hierro Guardián Aliado** `trySummonIronGolem`), subida de mallas (`applyArraysToMesh`) y `Web Worker` multihilo *inline* (`Blob URL` + `Transferable` *Zero-Copy*).
+  - [`src/07-physics-camera.js`](src/07-physics-camera.js) (`620` líneas): Raycaster vóxel DDA 3D (`raycastVoxel`), físicas del jugador (`updatePlayerPhysics`, **Bloqueo con Escudo/Espada** `toggleShieldBlock`, patinaje en **Hielo Glaciar** `BLOCK.ICE`, escalada en `BLOCK.LADDER`, rebote en Slime, viaje en Vagoneta/Barca), **Portales Dimensionales de Obsidiana** (`activateObsidianPortal`, `useVoxelPortal`), **Barcas Navegables 3D** (`spawnBoat`, `toggleRideBoat`, `updateBoats`), minado progresivo, *Smart Frustum Culling 3D* (`updateFrustumCulling`), cámara en 3ª persona (`playerAvatar`, `toggleCameraMode`), zoom (`toggleZoom`) y streaming de chunks (`updateChunkStreaming`).
+  - [`src/08-ui-minimap.js`](src/08-ui-minimap.js) (`722` líneas): Interfaz de usuario (hotbar, inventario/crafteo, **Modo Foto / Captura de Pantalla** `takeGameScreenshot`, selector de semillas, teletransporte a biomas, **Balizas GPS / Waypoints** `addWaypoint`, `teleportToWaypoint`) y Minimapa Radar 2D Topográfico con brújula 360° (`updateMinimap`).
+  - [`src/09-controls-loop.js`](src/09-controls-loop.js) (`521` líneas): Eventos de teclado/ratón en PC, controlador multitáctil móvil (`joy-zone`, botones táctiles), modal de cofres, bucle principal (`animate`), telemetría FPS y API de introspección `window.__VOXELCRAFT__`.
+  - [`test.html`](test.html): Runner de **64 tests E2E/unitarios (35 suites)** y profiler de coste en FPS en tiempo real sobre el motor.
   - [`README.md`](README.md): Descripción general del repositorio.
   - [`AGENTS.md`](AGENTS.md): Este archivo de referencia.
 
@@ -41,20 +41,20 @@ Este documento contiene las reglas de arquitectura, restricciones de rendimiento
 Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimiento en CPU, GPU y memoria**:
 1. **Datos planos por Chunk:** Cada chunk ($16 \times 64 \times 16 = 16\,384$ vóxeles) almacena sus bloques en un `Uint8Array(16384)` (`chunks`) y su iluminación en otro `Uint8Array(16384)` (`chunkLights`).
 2. **Prohibido crear un `Mesh` por bloque:** Cada chunk genera como máximo **1 `BufferGeometry` para bloques opacos/recortados** y **1 `BufferGeometry` para el agua**, descartando caras ocultas (*Hidden Face Culling*).
-3. **Cero presión al Garbage Collector (GC):** El *mesher* (`buildChunkMesh`) escribe sobre buffers tipados estáticos pre-asignados (`solidPos`, `solidNorm`, `solidUv`, `solidCol`, `solidIdx`, etc.) y solo recorta la vista exacta al subirla a GPU.
-4. **Actualizaciones por lotes (Batching):** Cuando una acción modifique múltiples bloques a la vez (explosiones de TNT, caída de arena, flujo de agua, estructuras), usar **siempre** `setVoxelFast(x, y, z, id, recordDelta, affectedChunks)` y reconstruir los chunks afectados una única vez al final mediante `rebuildAffectedChunksSet(affectedChunks)`.
-5. **Geometrías compartidas e Instancing:** Partículas (`InstancedMesh` de 120 instancias), nubes (malla fusionada única `cloudMesh`) y criaturas (`mobGeos` compartidos entre todas las entidades) deben minimizar los *draw calls* y el uso de VRAM.
+3. **Cero presión al Garbage Collector (GC):** El *mesher* (`buildChunkMeshArrays`) escribe sobre buffers tipados estáticos pre-asignados (`solidPos`, `solidNorm`, `solidUv`, `solidCol`, `solidIdx`, etc.) y solo recorta la vista exacta al subirla a GPU.
+4. **Actualizaciones por lotes (Batching):** Cuando una acción modifique múltiples bloques a la vez (explosiones de TNT, pistones Redstone, caída de arena, flujo de agua, estructuras), usar **siempre** `setVoxelRawNoRebuild(x, y, z, id, affectedChunks)` y reconstruir los chunks afectados una única vez al final mediante `rebuildAffectedChunksSet(affectedChunks)`.
+5. **Geometrías compartidas e Instancing:** Partículas (`InstancedMesh` de 120 instancias), nubes (malla fusionada única `cloudMesh`), proyectiles/gancho (`arrowInstanced`) y criaturas (`mobGeos` compartidos entre todas las entidades) deben minimizar los *draw calls* y el uso de VRAM.
 6. **Aritmética entera de 32 bits en Hashes:** En funciones de hash/ruido determinista como `hash3D`, usar siempre `Math.imul(...)` en lugar del operador `*` antes de desplazamientos bit a bit para no perder precisión en los bits bajos por el límite de 53 bits de `Number` en JavaScript.
 
 ### Regla 3: Compatibilidad Híbrida PC + Móvil/Tablet
 - El juego debe ser **100% jugable tanto en PC (ratón con `Pointer Lock` + teclado) como en dispositivos móviles/tablets (pantallas multitáctiles)**.
-- Cualquier acción o mecánica nueva que añada un atajo de teclado o clic en PC **debe** tener su equivalente accesible desde la interfaz táctil (`#touch-controls`, botones en `#touch-action-col` o `#touch-top-bar`, o controles dentro del modal de inventario `#inventory-modal`).
+- Cualquier acción o mecánica nueva que añada un atajo de teclado o clic en PC **debe** tener su equivalente accesible desde la interfaz táctil (`#touch-controls`, botones en `#touch-actions` o `#touch-top-bar`, o controles dentro del modal de inventario `#inventory-modal`).
 
 ### Regla 4: Testing, Reproducción de Bugs (TDD) y Benchmark de FPS Obligatorios en Chrome (`test.html`)
-- El motor expone su API interna de pruebas en `window.__VOXELCRAFT__` (al final de [`index.html`](index.html)).
+- El motor expone su API interna de pruebas en `window.__VOXELCRAFT__` (al final de [`src/09-controls-loop.js`](src/09-controls-loop.js)).
 - **Toda funcionalidad nueva debe ir acompañada de nuevos tests en [`test.html`](test.html)** y de su entrada en el profiler de rendimiento (`perFrameFeatures` / `onDemandFeatures`).
 - **Regla de Bugs (Primero Reproducir en Test, Luego Arreglar):** Siempre que se detecte o reporte un bug, **primero se debe escribir un test automatizado en [`test.html`](test.html) que reproduzca el fallo** (verificando en Chrome que el test falla con el bug presente) y **después implementar la corrección** hasta que toda la suite pase con `failed: 0`.
-- **Antes de dar por terminada una tarea o hacer `git push`**, es obligatorio ejecutar [`test.html`](test.html) en Chrome (usando las herramientas MCP de `chrome_devtools`), comprobar que `window.__TEST_RESULTS__` devuelve **`failed: 0`** y **anotar el coste en FPS / tiempo por frame en la Sección 6 de este archivo (`AGENTS.md`)** tomando este PC como referencia.
+- **Antes de dar por terminada una tarea o hacer `git push`**, es obligatorio ejecutar [`test.html`](test.html) en Chrome, comprobar que `window.__TEST_RESULTS__` devuelve **`failed: 0`** y **anotar el coste en FPS / tiempo por frame en la Sección 6 de este archivo (`AGENTS.md`)** tomando este PC como referencia.
 
 ### Regla 5: Git y Cuenta Personal de GitHub
 - **Usar SIEMPRE la cuenta personal `sergiroig`**, **NUNCA** una organización de GitHub.
@@ -65,28 +65,27 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 
 ---
 
-## 3. Arquitectura Interna de `index.html`
+## 3. Arquitectura Interna de VoxelCraft HTML5
 
 | Subsistema | Funciones / Estructuras Clave | Descripción |
 | :--- | :--- | :--- |
-| **Coordenadas y Chunks** | `chunks`, `chunkLights`, `getChunkKey`, `getVoxel`, `setVoxel`, `setVoxelFast` | Chunks de $16 \times 64 \times 16$ con `RENDER_DISTANCE = 3` (49 chunks en torno al jugador). |
-| **Terreno, Biomas, Cuevas 3D y Estructuras** | `generateChunkData`, `getBiomeAt`, `sampleCaveNoiseChunk`, `hash3D` | 4 biomas (*Llanura, Bosque, Desierto, Taiga Nevada*), cuevas 3D con interpolación trilineal $4\times4\times4$ (425 muestras por chunk en lugar de $16\,384$), lagos de lava en cuevas profundas (`y <= 11`), vetas de minerales (*Carbón, Hierro, Oro, Diamante*) y estructuras procedurales (*Pirámides del Desierto* con cámara secreta subterránea de tesoros + TNT, y *Cabañas de Explorador*). |
-| **Iluminación Vóxel (1 Byte)** | `computeChunkLighting`, `getSunLight`, `getBlockLight`, `getEffectiveLight` | `chunkLights` empaqueta 4 bits altos (`>> 4`) para luz solar y 4 bits bajos (`& 15`) para luz cálida de bloques (antorchas, *Glowstone*, Lava y Lámparas Redstone) propagada por *Flood-Fill BFS* entre chunks, además de precalcular la caché topográfica `ch.mapColors` (`Uint32Array(256)`). |
-| **Mesher + AO + X-Mesh** | `buildChunkMesh`, `vertexAO`, `FACE_DEFS` | Genera caras visibles con *Ambient Occlusion* en los 4 vértices (con giro de diagonal anti-artefactos) y geometría cruzada (`X-Mesh`) para flores, hierba alta, antorchas y palancas. |
-| **Raycasting y Minado** | `raycastVoxel`, `updateMiningAndPlacement`, `spawnBlockParticles` | Algoritmo DDA 3D rápido, rotura progresiva en 8 fases según `hardness` (con multiplicador $\times 3.5$ usando el Pico de Diamante `ID 20`) y partículas con `InstancedMesh`. |
-| **Simulación Vóxel, Agricultura, Lava, Obsidiana y TNT** | `simQueue`, `enqueueSimNeighbors`, `updateVoxelSimulation`, `growTreeAt`, `igniteTNT`, `explodeAt` | Cola de simulación a 10 Hz: gravedad de arena, expansión de agua, flujo viscoso de lava, reacción **Agua + Lava $\rightarrow$ Obsidiana**, crecimiento orgánico de **Brotes de Roble $\rightarrow$ Árbol 3D completo** y cultivo de **Trigo por etapas (`WHEAT_1..3`) $\rightarrow$ Pan Horneado (`+5` ❤)**, más encendido de bloques `BLOCK.TNT`. |
-| **Circuitos Vóxel / Redstone y Puertas Mecánicas** | `toggleVoxelLever`, `toggleVoxelDoor`, `propagateRedstoneSignal` | Palancas interactivas (`BLOCK.LEVER_OFF` / `BLOCK.LEVER_ON`) con coste 0 en reposo que conmutan Lámparas de Redstone (`BLOCK.REDSTONE_LAMP_OFF` / `ON`, luz BFS 15), abren/cierran **Puertas Mecánicas (`BLOCK.DOOR_CLOSED` / `DOOR_OPEN`)** y detonan TNT adyacente a distancia. |
-| **Físicas Elásticas (Slime) y Cuevas Bioluminiscentes** | `BLOCK.SLIME`, `BLOCK.AMETHYST`, `BLOCK.GLOW_MUSHROOM`, `updatePlayerPhysics` | **Bloques de Slime** que anulan el daño por caída e impulsan elásticamente al jugador (`vy > 9.2`), y cavernas profundas (`y <= 22`) con **Drusas de Amatista** (luz BFS 5, sonido cristalino `'chime'`) y **Hongos Luminosos** (luz BFS 12, pulso cian en GPU). |
-| **Smart Frustum Culling 3D + Cámara 3ª Persona y Zoom** | `updateFrustumCulling`, `ch.worldBox`, `playerAvatar`, `toggleCameraMode`, `toggleZoom` | Descarte automático por `THREE.Frustum` vs `THREE.Box3` (`ch.worldBox`) de los chunks y criaturas fuera del campo de visión (~50% menos draw calls), **Cámara en 3ª Persona (`C` / `🎥`)** con avatar vóxel articulado de 6 piezas y raycast anticolisión, y **Zoom Óptico Catalejo (`Z` / `🔭`, FOV `24°`)**. |
-| **Criaturas (Mobs), Combate y Proyectiles 3D** | `mobs`, `spawnMob`, `updateMobs`, `raycastMob`, `damageMob`, `arrowInstanced`, `shootArrow`, `updateArrows`, `eatHeldApple` | *Ovejas, Cerdos y Zombis* construidos con geometrías compartidas (`mobGeos`). Combate cuerpo a cuerpo con **Espada de Diamante** (`5 dmg` + *knockback*), disparo balístico parabólico con **Arco y Flechas 3D** (`InstancedMesh` de 24 instancias) y curación con **Manzana Roja (`+4` ❤)** o **Pan Horneado (`+5` ❤)**. |
-| **Cielo Dinámico y Clima por Bioma** | `sunMesh`, `moonMesh`, `starsPoints`, `cloudMesh`, `updateDynamicSky`, `weatherInstanced`, `setWeatherMode`, `updateWeather` | Ciclo día/noche (`T`), Sol/Luna cúbicos, estrellas y nubes 3D fusionadas. Clima dinámico (`V` / `🌧`: `clear`, `rain`, `storm`) con 180 trazas en 1 solo `InstancedMesh` que alterna automáticamente entre **Lluvia** y **Nieve** según el bioma/altitud, oculta precipitación bajo techo (`sunLight === 0`), incrementa el viento GPU y genera relámpagos con truenos. |
-| **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en flores/hierba alta (con raíz anclada `uv.y`) y hojas 3D sin grietas, baile de llama en antorchas, pulso incandescente de magma en `BLOCK.LAVA`, destello en menas de oro/diamante, olas 3D con espuma/cáusticas en el agua y atmósfera subacuática o de lava. |
-| **Drops 3D, Supervivencia y Crafteo** | `dropInstanced`, `itemDrops`, `spawnItemDrop`, `updateItemDrops`, `CRAFTING_RECIPES`, `craftRecipe`, `toggleGameMode` | Pool `InstancedMesh` de 64 mini-bloques 3D flotantes e imantados en 1 *draw call*, inventario con cantidades en Supervivencia (`G` para alternar con Creativo `∞`) y 12 recetas de crafteo rápido en el modal `E`. |
-| **Minimapa Radar 2D, Semillas y Teletransporte** | `updateMinimap`, `ch.mapColors`, `applyWorldSeed`, `teleportToBiome` | Radar topográfico en tiempo real (`68×68 px` a 10 Hz) con lectura $O(1)$ desde `Uint32Array`, sombreado de altitud, puntos de radar para criaturas/zombis y cono de visión, más selector de semilla personalizada y teletransporte instantáneo a biomas. |
-| **Música C418 + Paisaje Sonoro** | `SoundFX`, `C418_SCALE_HZ`, `C418_CHORDS`, `triggerMusicChord`, `playCaveEcho`, `updateAmbientAudio`, `toggleMusic` | Sintetizador FM de piano cálido + *Reverb* algorítmica estéreo (`ConvolverNode` de 2s) + generador continuo de brisa/lluvia/cueva/agua en el hilo de audio nativo (`M` / `🎵` para silenciar). |
-| **`Web Worker` Multihilo + Escalado Dinámico** | `meshWorker`, `packChunkPaddedBuffers`, `requestChunkMeshWorker`, `updateDynamicResolution` | Worker *inline* (`Blob URL`) que reutiliza `buildChunkMeshArrays.toString()` con transferencia *Zero-Copy* (`Transferable` `ArrayBuffer`) de una región $18 \times 64 \times 18$ (`20,736` bytes), reduciendo el coste en el hilo principal de `~7.77-9.85 ms` a `~0.70-0.88 ms` (`11.2×` más rápido). Escalado dinámico de `PixelRatio` (`0.65`–`1.5`) si los FPS bajan de 45. |
-| **Controles Híbridos** | `updateJoystickFromTouch`, `setTouchPlaying`, `joyX`, `joyY` | Captura de ratón (`Pointer Lock`) en PC y joystick virtual analógico + cámara multitáctil + barra de botones en móvil/tablet. |
-| **Persistencia Delta** | `worldDeltas`, `saveWorldState`, `loadWorldState`, `exportWorldJSON` | Guarda en `localStorage` únicamente la semilla (`WORLD_SEED`) y los bloques modificados por el usuario. |
+| **Coordenadas y Chunks** | `chunks`, `chunkKey`, `getVoxelGlobal`, `setVoxelGlobal`, `setVoxelRawNoRebuild` | Chunks de $16 \times 64 \times 16$ con streaming circular y reconstrucción por lotes (`rebuildAffectedChunksSet`). |
+| **Terreno, Biomas, Cuevas 3D y Estructuras** | `createWorldGenerator`, `getBiomeAt`, `placeStructureInChunk` | 4 biomas (*Llanura, Bosque, Desierto, Taiga Nevada* con lagos helados `BLOCK.ICE` y nenúfares `BLOCK.LILY_PAD`), cuevas 3D con interpolación trilineal $4\times4\times4$ (425 muestras por chunk en lugar de $16\,384$), lagos de lava (`y <= 11`), minerales y estructuras (*Pirámides del Desierto* y *Cabañas de Explorador*). |
+| **Iluminación Vóxel (1 Byte)** | `computeChunkLighting`, `getLightGlobal` | Empaqueta 4 bits altos (`>> 4`) para luz solar y 4 bits bajos (`& 15`) para luz cálida de bloques (*Antorchas, Glowstone, Lava, Lámparas Redstone, Hongos Luminosos y Portales*) propagada por *Flood-Fill BFS*, además de precalcular `ch.mapColors` (`Uint32Array(256)`). |
+| **Mesher + AO + X-Mesh** | `buildChunkMeshArrays`, `FACE_DEFS` | Genera caras visibles con *Ambient Occlusion* en los 4 vértices y geometría cruzada (`X-Mesh`) para flores, hierba alta, antorchas y palancas, descartando caras internas entre bloques translúcidos (`GLASS`, `ICE`, `PORTAL`). |
+| **Raycasting y Minado** | `raycastVoxel`, `updateMining`, `spawnBlockParticles` | Algoritmo DDA 3D rápido, rotura progresiva en 8 fases según `hardness` (con multiplicador $\times 3.5$ usando el Pico de Diamante) y partículas con `InstancedMesh`. |
+| **Simulación Vóxel, Agricultura, Lava, Obsidiana y TNT** | `simQueue`, `updateVoxelSimulation`, `growTreeAt`, `igniteTNT`, `explodeAt` | Cola de simulación a 10 Hz: gravedad de arena, expansión de agua, flujo de lava, reacción **Agua + Lava $\rightarrow$ Obsidiana**, crecimiento de **Brotes de Roble $\rightarrow$ Árbol 3D** y cultivo de **Trigo (`WHEAT_1..3`) $\rightarrow$ Pan Horneado (`+5` ❤)**, más encendido de `BLOCK.TNT`. |
+| **Circuitos Redstone, Pistones, Puertas y Trampillas** | `toggleVoxelLever`, `triggerVoxelPiston`, `toggleVoxelDoor`, `toggleVoxelTrapdoor`, `propagateRedstoneSignal` | Palancas interactivas con coste 0 en reposo que conmutan Lámparas de Redstone, abren/cierran **Puertas y Trampillas Mecánicas**, accionan **Pistones Mecánicos (`BLOCK.PISTON`)** que empujan hasta 4 bloques en lote y detonan TNT adyacente. |
+| **Físicas Elásticas (Slime), Hielo Glaciar y Cuevas Bio** | `BLOCK.SLIME`, `BLOCK.ICE`, `BLOCK.AMETHYST`, `BLOCK.GLOW_MUSHROOM`, `updatePlayerPhysics` | **Bloques de Slime** que anulan el daño por caída e impulsan al jugador (`vy > 9.2`), **Hielo Glaciar (`BLOCK.ICE`)** con patinaje de alta velocidad (`× 1.45`) e inercia horizontal (`iceVx`, `iceVz`), y cavernas bioluminiscentes con **Amatista** (luz 5) y **Hongos Luminosos** (luz 12). |
+| **Vehículos 3D (Vagonetas y Barcas) y Portales** | `spawnMinecart`, `toggleRideMinecart`, `updateMinecarts`, `spawnBoat`, `toggleRideBoat`, `updateBoats`, `activateObsidianPortal`, `useVoxelPortal` | **Vagonetas 3D** sobre raíles (`11.5 m/s`), **Barcas Navegables 3D (`BLOCK.ITEM_BOAT`)** sobre el agua (`9.5 m/s`) y **Portales Dimensionales de Obsidiana (`BLOCK.PORTAL`)** con teletransporte instantáneo entre portales enlazados. |
+| **Smart Frustum Culling 3D + Cámara 3ªP, Zoom y Foto** | `updateFrustumCulling`, `ch.worldBox`, `playerAvatar`, `toggleCameraMode`, `toggleZoom`, `takeGameScreenshot` | Descarte automático por `THREE.Frustum` vs `THREE.Box3` (~50% menos draw calls), **Cámara en 3ª Persona (`C` / `🎥`)**, **Zoom Catalejo (`Z` / `🔭`, FOV `24°`)** y **Modo Foto PNG (`F2` / `K` / `📷`)**. |
+| **Criaturas (Mobs), Escudo, Arco y Gancho de Agarre** | `mobs`, `spawnMob`, `updateMobs`, `toggleShieldBlock`, `arrowInstanced`, `shootArrow`, `shootGrappleHook`, `updateArrows` | *Ovejas, Cerdos, Zombis, Esqueletos Arqueros, Creepers y Gólems de Hierro* con geometrías compartidas (`mobGeos`). **Bloqueo con Escudo/Espada** (reduce daño un 80% y rebota flechas), **Arco 3D** y **Gancho de Agarre (`BLOCK.TOOL_GRAPPLING_HOOK`)** con tracción elástica. |
+| **Cielo Dinámico y Clima por Bioma** | `sunMesh`, `moonMesh`, `starField`, `cloudMesh`, `updateDynamicSky`, `weatherInstanced`, `toggleWeather`, `updateWeather` | Ciclo día/noche (`T`), Sol/Luna cúbicos, estrellas y nubes 3D. Clima dinámico (`V` / `🌧`: `clear`, `rain`, `storm`) en 1 `InstancedMesh` de 180 trazas con Lluvia/Nieve según bioma y relámpagos. |
+| **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en vegetación y nenúfares, llama en antorchas, pulso de magma en lava, vórtice dimensional en `BLOCK.PORTAL`, destello en hielo y menas de oro/diamante, olas 3D con espuma en el agua y atmósfera subacuática. |
+| **Drops 3D, Supervivencia y Crafteo** | `dropInstanced`, `itemDrops`, `spawnItemDrop`, `updateItemDrops`, `CRAFTING_RECIPES`, `craftRecipe`, `toggleGameMode` | Pool `InstancedMesh` de 64 mini-bloques 3D flotantes e imantados en 1 *draw call*, modos Supervivencia y Creativo (`G`) y 27 recetas de crafteo rápido en el modal `E`. |
+| **Minimapa Radar 2D, Balizas GPS y Semillas** | `updateMinimap`, `ch.mapColors`, `addWaypoint`, `teleportToWaypoint`, `applyWorldSeed`, `teleportToBiome` | Radar topográfico (`68×68 px` a 10 Hz) con lectura $O(1)$ desde `Uint32Array`, radar de criaturas, **Balizas GPS (`B` / `📍`)** con brújula 360° y teletransporte a biomas/balizas. |
+| **Música C418 + Paisaje Sonoro** | `SoundFX`, `C418_SCALE_HZ`, `C418_CHORDS`, `triggerMusicChord`, `playCaveEcho`, `updateAmbientAudio`, `toggleMusic` | Sintetizador FM de piano cálido + *Reverb* algorítmica estéreo (`ConvolverNode` de 2s) + generador continuo de brisa/lluvia/cueva/agua en `Web Audio API` (`M` / `🎵`). |
+| **`Web Worker` Multihilo + Escalado Dinámico** | `meshWorker`, `packChunkPaddedBuffers`, `requestChunkMeshWorker`, `updateDynamicResolution` | Worker *inline* (`Blob URL`) con transferencia *Zero-Copy* (`Transferable` `ArrayBuffer`) de una región $18 \times 64 \times 18$, reduciendo el coste en el hilo principal de `3.90 ms` a **`0.34 ms`** (**reducción del 91.2% / 11.4× más rápido**). |
 
 ---
 
@@ -95,87 +94,51 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
 
 1. **Iniciar un servidor HTTP local temporal** en el directorio del proyecto:
-   ```bash
-   python3 -m http.server 8765 --directory "/home/sergiroig@TierraZen.local/code/personal/voxelcraft"
+   ```powershell
+   python -m http.server 8765 --bind 127.0.0.1
    ```
-2. **Abrir o recargar `http://127.0.0.1:8765/test.html`** en Chrome con las herramientas MCP de `chrome_devtools` (`new_page` o `evaluate_script`).
-3. **Inspeccionar el resultado automatizado** evaluando en la página:
-   ```js
-   async () => {
-     window.__TEST_RESULTS__ = null;
-     document.getElementById('game-frame').src = 'index.html?t=' + Date.now();
-     for (let i = 0; i < 60; i++) {
-       await new Promise(r => setTimeout(r, 200));
-       if (window.__TEST_RESULTS__) return window.__TEST_RESULTS__;
-     }
-     return { error: 'Timeout waiting for __TEST_RESULTS__' };
-   }
-   ```
-4. **Verificar que `failed === 0`** y detener el servidor HTTP temporal al finalizar.
+2. **Abrir o recargar `http://127.0.0.1:8765/test.html`** en Chrome con las herramientas del navegador.
+3. **Inspeccionar `window.__TEST_RESULTS__`** y verificar que **`failed === 0`** (64/64 tests exitosos en 35 suites), deteniendo el servidor HTTP temporal al finalizar.
 
 ---
 
 ## 5. Hoja de Ruta (Estado de Mejoras Optimizadas)
 
-1. ✅ **Punto 1 — Mundo Vivo y Físicas Vóxel (Completado):**
-   - Criaturas optimizadas con geometría compartida (*Ovejas, Cerdos, Zombis*) y combate con *knockback*.
-   - Físicas vóxel por cola de eventos (`Tick Queue`): gravedad de arena y expansión de agua.
-   - Bloques de **TNT** con mecha, reacciones en cadena y cráteres en 1 sola pasada de reconstrucción.
-   - Cielo dinámico: Sol/Luna cúbicos, estrellas y nubes 3D en 1 *draw call*.
-2. ✅ **Punto 2 — Shaders en GPU (`Coste 0 en CPU`, Completado):**
-   - Inyección en el *Vertex/Fragment Shader* (`onBeforeCompile`) pre-compilada al inicio (`renderer.compile`) para mecer hojas, flores y hierba alta con el viento usando `uTime`, animar llamas de antorchas y añadir destellos en menas de oro/diamante.
-   - Olas 3D de doble octava, cáusticas y espuma en las crestas del agua.
-   - Niebla y atmósfera subacuática automática al sumergir la cámara (`isCameraUnderwater`).
-3. ✅ **Punto 3 — Jugabilidad, Drops 3D y Crafteo (Completado):**
-   - **Mini-bloques 3D flotantes e imantados (*Item Drops*):** Al picar un bloque o derrotar un mob, suelta un mini-cubo rotando (`InstancedMesh` de 64 instancias = 1 *draw call*) que es atraído magnéticamente hacia el jugador a `< 2.8m`.
-   - **Modo Supervivencia vs. Creativo (`G` / `⚒`):** Cantidades reales de bloques en el inventario al jugar en Supervivencia y bloques infinitos (`∞`) en Creativo.
-   - **Sistema de Crafteo Rápido:** 8 recetas directas en el inventario (`E`) para fabricar Madera, Antorchas, Ladrillos, Cristal, Piedra Luminosa, TNT, Piedra Lisa y Pico de Diamante.
-4. ✅ **Punto 4 — Audio y Música Ambiental Generativa (Web Audio API, Completado):**
-   - Música ambiental estilo *C418* generada proceduralmente con acordes arpegiados en escala de Re Mayor / Sol Lidio (`Dmaj7, Gadd9, A6, Bm7`) en un sintetizador FM de piano cálido + *reverb* algorítmica estéreo (`ConvolverNode`).
-   - Paisaje sonoro dinámico que adapta el filtro en tiempo real entre brisa exterior (`surface`), resonancia y ecos cristalinos en cuevas oscuras (`cave`) y sonido subacuático (`underwater`), conmutable con `M` / `🎵`.
-5. ✅ **Punto 5 — Rendimiento Extremo (Multihilo y Escalado Dinámico, Completado):**
-   - **`Web Worker` inline** (mediante `Blob URL` en el mismo `index.html`) con `Transferable` `ArrayBuffer` (*Zero-Copy*) que empaqueta el chunk $18 \times 64 \times 18$ por filas contiguas y delega el *meshing* (`buildChunkMeshArrays`) fuera del hilo principal (`0.70-0.88 ms` en hilo principal frente a `7.77-9.85 ms` síncrono = **reducción del 91% / 11.2× más rápido**).
-   - **Escalado dinámico de resolución (`Dynamic Pixel Ratio`, `updateDynamicResolution`)** que adapta automáticamente `renderer.setPixelRatio` entre `0.65` y `1.5` si los FPS bajan de 45 y lo restaura al recuperar $\ge 56$ FPS.
-6. ✅ **Punto 6 — Estructuras Procedurales, Lava Fluida y Reacción Agua + Lava → Obsidiana (Completado):**
-   - **Pirámides del Desierto** con cámara secreta subterránea de tesoros (`Gold`, `Diamond`, `Glowstone`, `TNT`) y **Cabañas de Explorador** en bosque/llanura con iluminación real (`BLOCK.TORCH`).
-   - **Lava incandescente (`BLOCK.LAVA`)** en cavernas profundas (`y <= 11`) que emite luz máxima (`15`) en el BFS vóxel, tiene animación de magma en el shader GPU, quema en Supervivencia y al entrar en contacto con el agua se solidifica formando **Obsidiana (`BLOCK.OBSIDIAN`, dureza 9.5)**.
-7. ✅ **Punto 7 — Clima Dinámico por Bioma (`1 Draw Call`, Completado):**
-   - **Lluvia, Nieve y Tormentas Eléctricas (`V` / `🌧`):** Pool `InstancedMesh` de 180 trazas que alterna entre gotas de lluvia y copos de nieve según el bioma (*Taiga Nevada* / alta montaña), oculta precipitación bajo techo (`getSunLight === 0`), incrementa `uWindStrength` en el shader de vegetación y genera relámpagos con truenos reverberados.
-8. ✅ **Punto 8 — Herramientas Especializadas, Arco con Flechas 3D y Curación (Completado):**
-   - **Espada de Diamante (`BLOCK.TOOL_SWORD`):** `5` de daño cuerpo a cuerpo (derrota zombis de 2 golpes) con *knockback* reforzado.
-   - **Arco y Flechas Balísticas 3D (`BLOCK.TOOL_BOW`, `arrowInstanced`):** Proyectiles 3D con trayectoria parabólica, impacto contra criaturas a distancia, detonación remota de bloques `BLOCK.TNT` y clavado en bloques sólidos.
-   - **Manzana Roja (`BLOCK.ITEM_APPLE`):** Consumible que restaura `+4` corazones de salud al usar clic derecho o al seleccionarla y pulsar acción.
-9. ✅ **Punto 9 — Minimapa Radar 2D Topográfico + Semillas y Teletransporte (Completado):**
-   - **Minimapa Radar 2D (`#minimap-canvas`, `68×68 px` a 10 Hz):** Utiliza una caché `Uint32Array(256)` (`ch.mapColors`) precalculada durante el pase de luz solar para copiar el terreno en $O(1)$ por píxel (`0.0148 ms/frame` amortizado), mostrando relieve de alturas, criaturas cercanas y el cono de visión del jugador.
-   - **Selector de Semilla Personalizada y Teletransporte a Biomas** integrado en el modal `E`.
-10. ✅ **Punto 10 — Circuitos Vóxel / Redstone Ligero (`Coste 0 en Reposo`, Completado):**
-    - **Palanca (`BLOCK.LEVER_OFF` / `BLOCK.LEVER_ON`) y Lámpara de Redstone (`BLOCK.REDSTONE_LAMP_OFF` / `BLOCK.REDSTONE_LAMP_ON`):** Conmutación instantánea por eventos (`toggleVoxelLever` + `propagateRedstoneSignal`) que enciende lámparas (luz BFS 15) y activa bloques de TNT a distancia sin ningún bucle por frame.
-11. ✅ **Punto 11 — Smart Frustum Culling 3D (`Box3` vs `THREE.Frustum`, Completado):**
-    - Precalcula un `THREE.Box3` (`ch.worldBox`) por cada chunk mallado y descarta en `12.2 µs/frame` todos los chunks y criaturas situados a espaldas de la cámara (`visibleChunksCount` / `culledChunksCount`), ahorrando ~45–55% de *draw calls* y triángulos en GPU.
-12. ✅ **Punto 12 — Agricultura Vóxel, Crecimiento Orgánico de Árboles y Pan Horneado (Completado):**
-    - **Brotes de Roble (`BLOCK.SAPLING`):** Al plantarse sobre Césped/Tierra con luz solar $\ge 9$, germinan en la cola de simulación hasta convertirse en un árbol 3D completo (`BLOCK.WOOD` + `BLOCK.LEAVES`) en una sola pasada por lotes (`growTreeAt`).
-    - **Cultivo de Trigo (`BLOCK.WHEAT_1` $\rightarrow$ `WHEAT_2` $\rightarrow$ `WHEAT_3`) y Pan Horneado (`BLOCK.ITEM_BREAD`):** Las semillas crecen por etapas hasta espigas doradas maduras que permiten hornear **Pan (`+5` corazones)**.
-13. ✅ **Punto 13 — Cuevas Bioluminiscentes: Drusas de Amatista y Hongos Luminosos (Completado):**
-    - **Drusa de Amatista (`BLOCK.AMETHYST`):** Cristales subterráneos (`y <= 22`) con emisión de luz BFS `5`, destello cristalino púrpura en el *Fragment Shader* y nota armónica FM (`'chime'`) al pisarlos o picarlos.
-    - **Hongo Luminoso (`BLOCK.GLOW_MUSHROOM`):** Flora subterránea (`X-Mesh`) con emisión de luz BFS `12` y pulso bioluminiscente cian/esmeralda en GPU.
-14. ✅ **Punto 14 — Bloques de Slime Elásticos y Puertas Mecánicas Redstone (Completado):**
-    - **Bloque de Slime (`BLOCK.SLIME`):** Cancela el 100% del daño por caída, rebota elásticamente al jugador según su velocidad de impacto (`vy > 9.2`) con sonido `'boing'` y potencia el salto (`vy = 12.8`).
-    - **Puerta Mecánica (`BLOCK.DOOR_CLOSED` / `BLOCK.DOOR_OPEN`):** Se abre y cierra con clic derecho (`toggleVoxelDoor`) o automáticamente al accionar una Palanca Redstone cercana (`propagateRedstoneSignal`), conmutando su colisión AABB (`solid: true` $\leftrightarrow$ `false`).
-15. ✅ **Punto 15 — Cámara en 3ª Persona con Avatar Vóxel Articulado (`C`) y Zoom Óptico Catalejo (`Z`) (Completado):**
-    - **Vista en 3ª Persona (`C` / `🎥 3ªP`):** Renderiza el **Avatar Vóxel Articulado** del jugador (cabeza, torso, brazos y piernas animados con el paso, picado y cabeceo) y sitúa la cámara detrás con raycast DDA anticolisión contra muros.
-    - **Zoom Óptico Catalejo (`Z` / `🔭`):** Alterna el FOV de la cámara a `24°` para explorar biomas y estructuras lejanas.
-16. ✅ **Punto 16 — Escaleras de Mano (`BLOCK.LADDER`) y Trampillas Mecánicas Redstone (`BLOCK.TRAPDOOR`) (Completado):**
-    - **Escaleras de Mano (`BLOCK.LADDER`):** Permiten trepar verticalmente (`W`/`Espacio` sube a `vy = 4.6`, `Shift` sujeta posición y soltar desciende suavemente a `vy = -2.2`), anulando el 100% del daño por caída (`maxFallVel = 0`). Las Pirámides del Desierto incluyen un conducto de escaleras desde la cámara subterránea hasta la superficie.
-    - **Trampillas Mecánicas (`BLOCK.TRAPDOOR_CLOSED` / `OPEN`):** Escotillas horizontales accionables con clic derecho (`toggleVoxelTrapdoor`) o automáticamente mediante Palancas Redstone (`propagateRedstoneSignal`).
-17. ✅ **Punto 17 — Vías de Ferrocarril (`BLOCK.RAIL`) y Vagoneta de Tren 3D Montable (`R` / `🛤 Tren`) (Completado):**
-    - **Vías (`BLOCK.RAIL`) y Vagoneta 3D (`BLOCK.ITEM_MINECART`, `spawnMinecart`, `toggleRideMinecart`, `updateMinecarts`):** Permite montar y desmontar con `R`, clic derecho sobre una vía o botón táctil `🛤 Tren`. La vagoneta se desliza a `11.5 m/s` siguiendo tramos rectos, girando 90° automáticamente en curvas N/S/E/O, subiendo y bajando pendientes de 1 bloque y rebotando en topes sólidos.
-18. ✅ **Punto 18 — Cofres del Tesoro y Almacenamiento Persistente (`BLOCK.CHEST`, `openVoxelChest`) (Completado):**
-    - **Cofres del Tesoro (`BLOCK.CHEST`):** Generados automáticamente en Pirámides del Desierto y Cabañas de Explorador (y fabricables con 4× Madera). Al abrirlos por primera vez entregan botín de expedición (*Diamantes, Oro, Pan, Manzanas, Vías y Vagoneta*), y en interacciones posteriores funcionan como contenedor persistente en `localStorage` (`chestLootMap`) para guardar y retirar bloques.
-19. ✅ **Punto 19 — Creeper Explosivo (`'creeper'`) y Gólem de Hierro Guardián Aliado (`'golem'`, `trySummonIronGolem`) (Completado):**
-    - **Creeper Explosivo (`'creeper'`):** Criatura hostil verde que acecha en silencio; a `< 2.5m` sisea (`'hiss'`), parpadea en blanco, se hincha durante `1.3s` y detona un cráter (`explodeAt`) si no se escapa o derrota antes (soltando `BLOCK.TNT`).
-    - **Gólem de Hierro Aliado (`'golem'`):** Se invoca colocando `BLOCK.GLOWSTONE` sobre 2 bloques verticales de `BLOCK.IRON_ORE` (`trySummonIronGolem`), consumiendo el tótem y generando un guardián aliado (`24 HP`) que patrulla y ataca automáticamente a Zombis y Creepers cercanos (`6 dmg` + lanzamiento vertical `vy = 9.2`).
-20. ✅ **Punto 20 — Sistema de Balizas GPS (`Waypoints`, `B` / `📍 Baliza`), Brújula 360° en Radar y Teletransporte (Completado):**
-    - Permite guardar cualquier coordenada con nombre y color pulsando `B`, el botón táctil `📍 Baliza` o desde el modal `E` (`addWaypoint`), renderiza las balizas en el **Minimapa Radar 2D** (fijándolas en el anillo exterior del radar como brújula direccional cuando están lejos) y permite teletransportarse con 1 clic (`teleportToWaypoint`).
+1. ✅ **Punto 1 — Mundo Vivo y Físicas Vóxel (Completado):** Criaturas con geometría compartida (*Ovejas, Cerdos, Zombis*), gravedad de arena, flujo de agua, TNT y cielo dinámico.
+2. ✅ **Punto 2 — Shaders en GPU (`Coste 0 en CPU`, Completado):** Viento en vegetación, antorchas, destellos en menas, olas 3D con espuma y atmósfera subacuática.
+3. ✅ **Punto 3 — Jugabilidad, Drops 3D y Crafteo (Completado):** Mini-bloques 3D flotantes e imantados (`InstancedMesh` de 64 instancias), modo Supervivencia/Creativo (`G`) y Mesa de Crafteo (`E`).
+4. ✅ **Punto 4 — Audio y Música Ambiental Generativa (Web Audio API, Completado):** Música estilo *C418* FM con *Reverb* algorítmica estéreo y paisaje sonoro adaptativo (`M` / `🎵`).
+5. ✅ **Punto 5 — Rendimiento Extremo (Multihilo y Escalado Dinámico, Completado):** `Web Worker` *inline* (`Blob URL` + `Transferable` *Zero-Copy*, `11.4×` más rápido en hilo principal) y escalado dinámico de `PixelRatio`.
+6. ✅ **Punto 6 — Estructuras Procedurales, Lava Fluida y Reacción Agua + Lava → Obsidiana (Completado):** *Pirámides del Desierto*, *Cabañas de Explorador*, `BLOCK.LAVA` (luz 15) y solidificación en `BLOCK.OBSIDIAN`.
+7. ✅ **Punto 7 — Clima Dinámico por Bioma (`1 Draw Call`, Completado):** Lluvia, Nieve en *Taiga Nevada* y Tormentas Eléctricas con relámpagos y truenos (`V` / `🌧`).
+8. ✅ **Punto 8 — Herramientas Especializadas, Arco con Flechas 3D y Curación (Completado):** Espada de Diamante (`5 dmg`), Arco con Flechas Balísticas 3D (`arrowInstanced`) y Manzana Curativa (`+4` ❤).
+9. ✅ **Punto 9 — Minimapa Radar 2D Topográfico + Semillas y Teletransporte (Completado):** Radar topográfico `68×68 px` a 10 Hz (`Uint32Array` $O(1)$), selector de semilla y teletransporte a biomas.
+10. ✅ **Punto 10 — Circuitos Vóxel / Redstone Ligero (`Coste 0 en Reposo`, Completado):** Palanca (`LEVER_OFF`/`ON`) y Lámpara de Redstone (`REDSTONE_LAMP_OFF`/`ON`, luz BFS 15).
+11. ✅ **Punto 11 — Smart Frustum Culling 3D (`Box3` vs `THREE.Frustum`, Completado):** Descarta en `6.6 µs/frame` los chunks y criaturas fuera del cono de visión (~50% menos draw calls).
+12. ✅ **Punto 12 — Agricultura Vóxel, Crecimiento Orgánico de Árboles y Pan Horneado (Completado):** Brotes de Roble (`SAPLING` $\rightarrow$ Árbol 3D), Trigo (`WHEAT_1..3`) y Pan Horneado (`+5` ❤).
+13. ✅ **Punto 13 — Cuevas Bioluminiscentes: Drusas de Amatista y Hongos Luminosos (Completado):** `BLOCK.AMETHYST` (luz BFS 5, sonido `'chime'`) y `BLOCK.GLOW_MUSHROOM` (luz BFS 12, pulso GPU).
+14. ✅ **Punto 14 — Bloques de Slime Elásticos y Puertas Mecánicas Redstone (Completado):** Rebote elástico en `BLOCK.SLIME` sin daño por caída y Puertas Mecánicas (`DOOR_CLOSED`/`OPEN`).
+15. ✅ **Punto 15 — Cámara en 3ª Persona con Avatar Vóxel Articulado (`C`) y Zoom Óptico Catalejo (`Z`) (Completado):** Avatar articulado de 6 piezas con raycast anticolisión y Zoom `24°`.
+16. ✅ **Punto 16 — Escaleras de Mano (`BLOCK.LADDER`) y Trampillas Mecánicas Redstone (`BLOCK.TRAPDOOR`) (Completado):** Escalada vertical sin daño por caída y escotillas accionables manualmente o con Redstone.
+17. ✅ **Punto 17 — Vías de Ferrocarril (`BLOCK.RAIL`) y Vagoneta de Tren 3D Montable (`R` / `🛤`) (Completado):** Vagonetas 3D a `11.5 m/s` con giro automático de 90° en curvas y subida de pendientes.
+18. ✅ **Punto 18 — Cofres del Tesoro y Almacenamiento Persistente (`BLOCK.CHEST`, `openVoxelChest`) (Completado):** Cofres con botín inicial, almacenamiento persistente en `localStorage` y modal interactivo `#chest-modal`.
+19. ✅ **Punto 19 — Creeper Explosivo (`'creeper'`) y Gólem de Hierro Guardián Aliado (`'golem'`, `trySummonIronGolem`) (Completado):** Creepers con mecha/hinchado y Gólems de Hierro aliados invocables con tótem.
+20. ✅ **Punto 20 — Sistema de Balizas GPS (`Waypoints`, `B` / `📍`), Brújula 360° en Radar y Teletransporte (Completado):** Marcadores GPS con nombre/color, brújula perimetral en el radar 2D y teletransporte en 1 clic.
+21. ✅ **Punto 21 — Barcas Navegables 3D (`BLOCK.ITEM_BOAT`) y Nenúfares Acuáticos (`BLOCK.LILY_PAD`) (Completado):**
+    - **Nenúfares (`BLOCK.LILY_PAD`):** Generados sobre lagos en *Llanura* y *Bosque*; tienen colisión sólida (`solid: true`) para caminar sobre el agua y mecido suave en el Vertex Shader.
+    - **Barca de Remo 3D (`BLOCK.ITEM_BOAT`, `spawnBoat`, `toggleRideBoat`, `updateBoats`):** Permite navegar sobre ríos y mares a `9.5 m/s` con sonido de chapoteo (`'splash'`) pulsando `R`, el botón táctil `🛤/⛵ Vehíc.` o clic derecho con la barca equipada.
+22. ✅ **Punto 22 — Pistones Mecánicos Redstone (`BLOCK.PISTON`, `triggerVoxelPiston`) (Completado):**
+    - Al activarse mediante una Palanca Redstone cercana (`propagateRedstoneSignal`), empujan filas de hasta **4 bloques sólidos contiguos** en una sola pasada por lotes (`setVoxelRawNoRebuild` + `rebuildAffectedChunksSet`) y catapultan al jugador (`vy = 13.5`) si está sobre ellos.
+23. ✅ **Punto 23 — Gancho de Agarre Balístico 3D (`BLOCK.TOOL_GRAPPLING_HOOK`, `shootGrappleHook`) (Completado):**
+    - Fabricable con *Mena de Hierro + Amatista + Madera*. Dispara un proyectil 3D veloz (`28 m/s`) reutilizando el pool `arrowInstanced` que al impactar contra un bloque sólido dentro de `24m` impulsa y tracciona elásticamente al jugador (`grapplePullPlayerTo`), anulando el daño por caída (`maxFallVel = 0`).
+24. ✅ **Punto 24 — Portales Dimensionales de Obsidiana (`BLOCK.PORTAL`, `activateObsidianPortal`, `useVoxelPortal`) (Completado):**
+    - Bloque translúcido con luz violeta BFS `12` y animación de vórtice dimensional en el *Fragment Shader*. Al interactuar con un bloque `BLOCK.PORTAL` (o encender Obsidiana con Amatista/Antorcha), enlaza portales distantes y teletransporta instantáneamente al jugador (creando automáticamente un portal hermano a `(+32, y, +32)` si solo existe uno).
+25. ✅ **Punto 25 — Esqueleto Arquero Hostil (`'skeleton'`) y Bloqueo con Escudo / Espada (`toggleShieldBlock`) (Completado):**
+    - **Esqueleto Arquero (`'skeleton'`):** Aparece en cuevas oscuras y de noche reutilizando `mobGeos`, mantiene la distancia óptima y dispara flechas balísticas 3D (`fromMob: true`) hacia el jugador.
+    - **Bloqueo con Escudo / Espada (`isShieldBlocking`, `toggleShieldBlock`):** Al mantener clic derecho (o pulsar acción secundaria) con la Espada de Diamante, activa la postura defensiva que **reduce un 80% el daño recibido** y **rebota las flechas de los Esqueletos** en sentido contrario con sonido metálico (`'shield'`).
+26. ✅ **Punto 26 + Mejoras Técnicas — Hielo Glaciar Resbaladizo (`BLOCK.ICE`), Modo Foto (`F2` / `📷`) y `< 800` Líneas por Archivo (Completado):**
+    - **Hielo Glaciar (`BLOCK.ICE`):** El agua superficial en *Taiga Nevada* se congela en bloques de hielo translúcido con *Hidden Face Culling* interno, destello helado en GPU y físicas de patinaje de baja fricción (`× 1.45` velocidad máxima + inercia `iceVx`, `iceVz`).
+    - **Modo Foto / Captura de Pantalla (`F2` / `K` / `📷 Foto`, `takeGameScreenshot`):** Captura instantáneamente el canvas WebGL en PNG (`toDataURL`), reproduce sonido de obturador (`'shutter'`) y descarga la imagen.
 
 ---
 
@@ -186,39 +149,41 @@ Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` p
 2. **Coste en FPS sobre el presupuesto de 60 Hz (`(ms / 16.67) × 60`)**: indica cuántos "FPS de los 60 disponibles" consume cada subsistema. Mientras la suma total sea inferior a `60.00 FPS` (`16.67 ms`), el juego se mantiene clavado a **60 FPS reales (0 FPS perdidos en pantalla)**.
 3. **% del presupuesto de 16.67 ms** y **FPS teóricos sin límite VSync (`1000 / ms`)**.
 
-### Hardware del PC de Referencia
-- **CPU:** 22 hilos lógicos (`navigator.hardwareConcurrency = 22`, Intel Core Ultra / Meteor Lake)
-- **GPU (WebGL):** `ANGLE (Intel, Mesa Intel(R) Graphics (MTL), OpenGL ES 3.2)`
+### Hardware del PC de Referencia Actual
+- **CPU:** `AMD Ryzen 7 5800X 8-Core Processor` (`16` hilos lógicos, `navigator.hardwareConcurrency = 16`)
+- **GPU (WebGL):** `ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 (0x0000220A) Direct3D11 vs_5_0 ps_5_0, D3D11)`
 - **Escena estándar:** Distancia de render 5 (`~81-145 chunks`, `~50% descartados por Frustum Culling`, `~22-41 draw calls`)
+- *(Nota histórica: En sesiones anteriores se midió sobre un portátil Linux con GPU integrada Intel MTL donde el total de los Puntos 1–20 era `0.140 ms` / `0.39 ms` Worker; a continuación se registran de forma homogénea los 16 subsistemas por frame y 5 operaciones bajo demanda de los **Puntos 1–26** medidos directamente en este PC con Ryzen 7 5800X + RTX 3080).*
 
 ### A. Coste por Frame (Subsistemas que se ejecutan cada frame a 60 Hz)
 
 | Funcionalidad / Subsistema | Etapa | Tiempo / Frame | Coste sobre 60 FPS | % de 16.67 ms | Impacto en FPS Reales (VSync) |
 | :--- | :--- | ---: | ---: | ---: | :--- |
-| **Render WebGL + Shaders GPU** *(Viento en vegetación/cultivos, olas 3D, lava, amatista, hongos bio)* | Base + Puntos 2, 6 y 13 | `210.0 µs` (`0.210 ms`) | **`-0.756 FPS`** (de 60) | `1.26 %` | **0 FPS** (60 FPS clavados) |
-| **Criaturas (Mobs)** *(IA, colisión AABB, iluminación y animación de 6-10 mobs)* | Punto 1 | `45.2 µs` (`0.045 ms`) | **`-0.163 FPS`** (de 60) | `0.27 %` | **0 FPS** (60 FPS clavados) |
-| **Clima Dinámico (`InstancedMesh` 180 trazas)** *(Lluvia/Nieve por bioma + chequeo techo `sunLight`)* | Punto 7 | `38.4 µs` (`0.038 ms`) | **`-0.138 FPS`** (de 60) | `0.23 %` | **0 FPS** (60 FPS clavados) |
-| **Minimapa Radar 2D + Balizas GPS (Amortizado a 10 Hz)** *(Copia `Uint32Array` $O(1)$ `ch.mapColors` + radar mobs + brújula 360°)* | Puntos 9 y 20 | `12.2 µs` (`0.012 ms`) | **`-0.044 FPS`** (de 60) | `0.07 %` | **0 FPS** (60 FPS clavados) |
-| **Smart Frustum Culling 3D (`Box3` vs `Frustum`)** *(Oculta ~50% de chunks y mobs traseros)* | Punto 11 | `7.6 µs` (`0.008 ms`) | **`-0.027 FPS`** (de 60) | `0.05 %` | **0 FPS** (ahorra ~50% draw calls GPU) |
-| **Drops 3D Flotantes e Imantados (`InstancedMesh`)** *(Gravedad, giro, bobbing e imán de 8-64 drops)* | Punto 3 | `5.6 µs` (`0.006 ms`) | **`-0.020 FPS`** (de 60) | `0.03 %` | **0 FPS** (60 FPS clavados) |
-| **Físicas del Jugador + Escalada (`LADDER`) + Avatar 3ªP + Slime Bounce** | Base + Puntos 14, 15 y 16 | `3.2 µs` (`0.003 ms`) | **`-0.012 FPS`** (de 60) | `0.02 %` | **0 FPS** (60 FPS clavados) |
-| **Música Generativa C418 FM + Paisaje Sonoro (`Web Audio API`)** *(DSP en hilo nativo de audio)* | Punto 4 | `1.5 µs` (`0.0015 ms`) | **`-0.005 FPS`** (de 60) | `0.009 %` | **0 FPS** (60 FPS clavados) |
-| **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `1.4 µs` (`0.0014 ms`) | **`-0.005 FPS`** (de 60) | `0.008 %` | **0 FPS** (60 FPS clavados) |
-| **Flechas Balísticas 3D (`arrowInstanced`)** *(Física parabólica, colisión con mobs/TNT)* | Punto 8 | `0.8 µs` (`0.0008 ms`) | **`-0.003 FPS`** (de 60) | `0.005 %` | **0 FPS** (60 FPS clavados) |
-| **Raycast Vóxel 3D (DDA)** *(Selección de bloque a 6.5m)* | Base | `0.5 µs` (`0.0005 ms`) | **`-0.002 FPS`** (de 60) | `0.003 %` | **0 FPS** (60 FPS clavados) |
+| **Render WebGL + Shaders GPU** *(Viento en vegetación/nenúfares, olas 3D, lava, vórtice en portales, hielo, amatista, hongos bio)* | Base + Puntos 2, 6, 13, 21, 24 y 26 | `134.2 µs` (`0.134 ms`) | **`-0.483 FPS`** (de 60) | `0.80 %` | **0 FPS** (60 FPS clavados) |
+| **Clima Dinámico (`InstancedMesh` 180 trazas)** *(Lluvia/Nieve por bioma + chequeo techo `sunLight`)* | Punto 7 | `30.8 µs` (`0.031 ms`) | **`-0.111 FPS`** (de 60) | `0.18 %` | **0 FPS** (60 FPS clavados) |
+| **Criaturas (Mobs)** *(IA, colisión AABB, iluminación y animación de Ovejas, Cerdos, Zombis, Esqueletos Arqueros, Creepers y Gólems)* | Puntos 1, 19 y 25 | `18.5 µs` (`0.0185 ms`) | **`-0.067 FPS`** (de 60) | `0.11 %` | **0 FPS** (60 FPS clavados) |
+| **Minimapa Radar 2D + Balizas GPS (Amortizado a 10 Hz)** *(Copia `Uint32Array` $O(1)$ `ch.mapColors` + radar mobs + brújula 360°)* | Puntos 9 y 20 | `12.8 µs` (`0.0128 ms`) | **`-0.046 FPS`** (de 60) | `0.08 %` | **0 FPS** (60 FPS clavados) |
+| **Drops 3D Flotantes e Imantados (`InstancedMesh`)** *(Gravedad, giro, bobbing e imán de 8-64 drops)* | Punto 3 | `8.0 µs` (`0.008 ms`) | **`-0.029 FPS`** (de 60) | `0.05 %` | **0 FPS** (60 FPS clavados) |
+| **Smart Frustum Culling 3D (`Box3` vs `Frustum`)** *(Oculta ~50% de chunks y mobs traseros)* | Punto 11 | `6.6 µs` (`0.0066 ms`) | **`-0.024 FPS`** (de 60) | `0.04 %` | **0 FPS** (ahorra ~50% draw calls GPU) |
+| **Físicas del Jugador + Escudo + Hielo (`ICE`) + Escalada (`LADDER`) + Avatar 3ªP + Slime Bounce** | Base + Puntos 14, 15, 16, 25 y 26 | `4.2 µs` (`0.0042 ms`) | **`-0.015 FPS`** (de 60) | `0.03 %` | **0 FPS** (60 FPS clavados) |
+| **Barcas Navegables 3D (`updateBoats`, `BLOCK.ITEM_BOAT`)** *(Física de navegación sobre agua y balanceo)* | Punto 21 | `1.8 µs` (`0.0018 ms`) | **`-0.006 FPS`** (de 60) | `0.011 %` | **0 FPS** (60 FPS clavados) |
+| **Flechas Balísticas 3D y Gancho de Agarre (`arrowInstanced`)** *(Trayectoria parabólica, rebote en escudo y tracción elástica)* | Puntos 8, 23 y 25 | `1.6 µs` (`0.0016 ms`) | **`-0.006 FPS`** (de 60) | `0.010 %` | **0 FPS** (60 FPS clavados) |
+| **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `1.6 µs` (`0.0016 ms`) | **`-0.006 FPS`** (de 60) | `0.010 %` | **0 FPS** (60 FPS clavados) |
+| **Raycast Vóxel 3D (DDA)** *(Selección de bloque a 6.5m)* | Base | `1.3 µs` (`0.0013 ms`) | **`-0.005 FPS`** (de 60) | `0.008 %` | **0 FPS** (60 FPS clavados) |
+| **Música Generativa C418 FM + Paisaje Sonoro (`Web Audio API`)** *(DSP en hilo nativo de audio)* | Punto 4 | `1.0 µs` (`0.0010 ms`) | **`-0.004 FPS`** (de 60) | `0.006 %` | **0 FPS** (60 FPS clavados) |
+| **Cielo Dinámico** *(Sol/Luna cúbicos, 220 estrellas y nubes 3D en 1 malla)* | Punto 1 | `0.7 µs` (`0.0007 ms`) | **`-0.002 FPS`** (de 60) | `0.004 %` | **0 FPS** (60 FPS clavados) |
 | **Actualización CPU de Shaders GPU + Detección Subacuática/Lava** | Puntos 2 y 6 | `0.5 µs` (`0.0005 ms`) | **`-0.002 FPS`** (de 60) | `0.003 %` | **0 FPS** (60 FPS clavados) |
-| **Cola de Simulación Vóxel (`Tick Queue`) + Cultivos + Redstone** *(Árboles, Trigo, Arena, Agua, Lava, TNT, Puertas, Trampillas)* | Puntos 1, 6, 10, 12, 14 y 16 | `0.3 µs` (`0.0003 ms`) | **`-0.001 FPS`** (de 60) | `0.002 %` | **0 FPS** (60 FPS clavados) |
+| **Cola de Simulación Vóxel (`Tick Queue`) + Cultivos + Redstone** *(Árboles, Trigo, Arena, Agua, Lava, TNT, Pistones, Puertas, Trampillas)* | Puntos 1, 6, 10, 12, 14, 16 y 22 | `0.5 µs` (`0.0005 ms`) | **`-0.002 FPS`** (de 60) | `0.003 %` | **0 FPS** (60 FPS clavados) |
 | **Vagonetas 3D y Físicas de Vías (`BLOCK.RAIL`)** *(Avance en rectas, giro 90° en curvas y pendientes)* | Punto 17 | `0.2 µs` (`0.0002 ms`) | **`-0.001 FPS`** (de 60) | `0.001 %` | **0 FPS** (60 FPS clavados) |
-| **Cielo Dinámico** *(Sol/Luna cúbicos, 220 estrellas y nubes 3D en 1 malla)* | Punto 1 | `0.2 µs` (`0.0002 ms`) | **`-0.001 FPS`** (de 60) | `0.001 %` | **0 FPS** (60 FPS clavados) |
-| **TOTAL ACUMULADO POR FRAME (15 subsistemas)** | **Puntos 1–20** | **`0.140 ms`** | **`-0.50 FPS` (de 60)** | **`0.84 %`** | **60 FPS fijos (sobra >99.1% del frame · ~7,134 FPS sin VSync)** |
+| **TOTAL ACUMULADO POR FRAME (16 subsistemas)** | **Puntos 1–26** | **`0.224 ms`** | **`-0.81 FPS` (de 60)** | **`1.35 %`** | **60 FPS fijos (sobra >98.6% del frame · ~4,459 FPS sin VSync)** |
 
 ### B. Coste de Operaciones Puntuales (Bajo Demanda / Al Cargar o Modificar un Chunk)
 
 | Operación Puntual | Tiempo Medio en este PC | % de 1 Frame (16.67 ms) | Notas de Optimización |
 | :--- | ---: | ---: | :--- |
-| **Generar Datos de 1 Chunk** *(Terreno + Biomas + Cuevas 3D Trilineales $4\times4\times4$ + Lava + Pirámides/Cabañas)* | `0.43 ms` | `2.6 %` | La interpolación trilineal $4\times4\times4$ evalúa el ruido 3D solo 425 veces en lugar de $16\,384$. |
-| **Iluminación Vóxel Flood-Fill BFS (1 Chunk)** *(Sol + Antorchas/Lava/Redstone en 1 byte + Caché Minimapa `ch.mapColors`)* | `0.76 ms` | `4.6 %` | Cola tipada estática `Int32Array` sin asignaciones en el *Garbage Collector* y pre-cálculo simultáneo del color topográfico de superficie. |
-| **Meshing de Chunk vía `Web Worker` (`Blob` + `Transferable`)** *(Coste en Hilo Principal: pack + subir a GPU)* | **`0.70 - 0.88 ms`** | **`4.2 % - 5.3 %`** | **Reducción del 91% (`11.2×` más rápido en hilo principal)** frente al meshing síncrono gracias a copia por filas contiguas de `1,024` bytes y transferencia *Zero-Copy* de `Float32Array` / `Uint32Array`. |
-| **Construcción Síncrona de Malla de 1 Chunk (`buildChunkMeshArrays`)** *(Edición instantánea de bloque por el jugador)* | `7.77 - 9.85 ms` | `46.6 % - 59.1 %` | Se usa de forma síncrona solo al picar/colocar un bloque para respuesta visual en `0 frames` de latencia. |
-| **Detonación de TNT (`explodeAt`)** *(Cráter + Onda expansiva + Reconstrucción por lotes)* | `~6.1 ms` (1 sola vez al explotar) | `36.6 %` | Gracias a `setVoxelRawNoRebuild` + `rebuildAffectedChunksSet`, reconstruye el cráter entero en una única pasada en vez de 180 veces. |
-
+| **Generar Datos de 1 Chunk** *(Terreno + Biomas + Hielo/Nenúfares + Cuevas 3D Trilineales $4\times4\times4$ + Lava + Pirámides/Cabañas)* | `0.12 ms` | `0.7 %` | La interpolación trilineal $4\times4\times4$ evalúa el ruido 3D solo 425 veces en lugar de $16\,384$. |
+| **Iluminación Vóxel Flood-Fill BFS (1 Chunk)** *(Sol + Antorchas/Lava/Redstone/Portales en 1 byte + Caché Minimapa `ch.mapColors`)* | `0.46 ms` | `2.8 %` | Cola tipada estática `Int32Array` sin asignaciones en el *Garbage Collector* y pre-cálculo simultáneo del color topográfico de superficie. |
+| **Meshing de Chunk vía `Web Worker` (`Blob` + `Transferable`)** *(Coste en Hilo Principal: pack + subir a GPU)* | **`0.34 ms`** | **`2.1 %`** | **Reducción del 91.2% (`11.4×` más rápido en hilo principal)** frente al meshing síncrono (`3.90 ms`) gracias a copia por filas contiguas de `1,024` bytes y transferencia *Zero-Copy* de `Float32Array` / `Uint32Array`. |
+| **Construcción Síncrona de Malla de 1 Chunk (`buildChunkMeshArrays`)** *(Edición instantánea de bloque por el jugador)* | `3.90 ms` | `23.4 %` | Se usa de forma síncrona solo al picar/colocar un bloque para respuesta visual en `0 frames` de latencia. |
+| **Pistón Mecánico Redstone (`triggerVoxelPiston`)** *(Empuje de fila de hasta 4 bloques en lote)* | `0.037 ms` (`36.7 µs`) | `0.2 %` | Desplaza toda la cadena de bloques con `setVoxelRawNoRebuild` y reconstruye una sola vez al final. |
+| **Detonación de TNT (`explodeAt`)** *(Cráter + Onda expansiva + Reconstrucción por lotes)* | `~2.8 ms` (1 sola vez al explotar) | `16.8 %` | Gracias a `setVoxelRawNoRebuild` + `rebuildAffectedChunksSet`, reconstruye el cráter entero en una única pasada en vez de 180 veces. |

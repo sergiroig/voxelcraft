@@ -2,7 +2,7 @@
 'use strict';
 
 // ============================================================================
-// 8D. OPTIMIZED MOB ENGINE (SHEEP, PIGS & DARKNESS-SPAWNING ZOMBIES)
+// 8D. OPTIMIZED MOB ENGINE (SHEEP, PIGS, ZOMBIES, CREEPERS, SKELETONS & GOLEMS)
 // ============================================================================
 const MAX_MOBS = 14;
 const mobs = [];
@@ -31,10 +31,11 @@ function createMobMesh(type) {
     return m;
   };
 
-  if (type === 'zombie') {
-    const skinMat  = mkMat(0x4d7c43);
-    const shirtMat = mkMat(0x0e7490);
-    const pantsMat = mkMat(0x312e81);
+  if (type === 'zombie' || type === 'skeleton') {
+    const isSkel = type === 'skeleton';
+    const skinMat  = mkMat(isSkel ? 0xe2e8f0 : 0x4d7c43);
+    const shirtMat = mkMat(isSkel ? 0xcbd5e1 : 0x0e7490);
+    const pantsMat = mkMat(isSkel ? 0x94a3b8 : 0x312e81);
 
     const body = new THREE.Mesh(mobGeos.bodyBiped, shirtMat);
     body.position.set(0, 0.98, 0);
@@ -48,7 +49,7 @@ function createMobMesh(type) {
     armL.position.set(-0.36, 1.22, 0.26);
     root.add(armL);
 
-    const armR = new THREE.Mesh(mobGeos.armZombie, skinMat);
+    const armR = new THREE.Mesh(mobGeos.armZombie, isSkel ? mkMat(0x92400e) : skinMat);
     armR.position.set(0.36, 1.22, 0.26);
     root.add(armR);
 
@@ -158,7 +159,7 @@ function spawnMob(type, x, y, z) {
     targetYaw: Math.random() * Math.PI * 2,
     aiTimer: 1 + Math.random() * 2,
     moving: true,
-    hp: type === 'golem' ? 24 : (type === 'zombie' ? 7 : (type === 'creeper' ? 6 : 4)),
+    hp: type === 'golem' ? 24 : (type === 'zombie' ? 7 : ((type === 'creeper' || type === 'skeleton') ? 6 : 4)),
     allied: type === 'golem',
     fuseTimer: 0,
     hurtTimer: 0,
@@ -205,8 +206,8 @@ function damageMob(mob, dmg, kdx, kdz) {
   mob.vy = 5.2;
 
   if (mob.hp <= 0) {
-    const pBlock = (mob.type === 'zombie' || mob.type === 'creeper') ? BLOCK.LEAVES : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK));
-    const lootId = mob.type === 'creeper' ? BLOCK.TNT : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.DIRT)));
+    const pBlock = (mob.type === 'zombie' || mob.type === 'creeper') ? BLOCK.LEAVES : (mob.type === 'golem' || mob.type === 'skeleton' ? BLOCK.IRON_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK));
+    const lootId = mob.type === 'creeper' ? BLOCK.TNT : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'skeleton' ? BLOCK.AMETHYST : (mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.DIRT))));
     spawnBlockParticles(mob.x - 0.5, mob.y + 0.4, mob.z - 0.5, pBlock, 22);
     spawnItemDrop(mob.x - 0.5, mob.y + 0.2, mob.z - 0.5, lootId, 2);
     const idx = mobs.indexOf(mob);
@@ -250,7 +251,6 @@ function trySpawnMobsAroundPlayer() {
   const cz = Math.floor(wz / CHUNK_SIZE);
   if (!chunks.has(chunkKey(cx, cz))) return;
 
-  // Decide whether to attempt cave/night zombie or surface animal
   const tryCaveOrNight = isNight || Math.random() < 0.45;
   if (tryCaveOrNight) {
     const minY = isNight ? SEA_LEVEL : 5;
@@ -266,14 +266,14 @@ function trySpawnMobsAroundPlayer() {
         const blkL = packed & 15;
         const effLight = Math.max(effSun, blkL);
         if (effLight < 7) {
-          const hType = Math.random() < 0.35 ? 'creeper' : 'zombie';
+          const r = Math.random();
+          const hType = r < 0.30 ? 'creeper' : (r < 0.58 ? 'skeleton' : 'zombie');
           spawnMob(hType, wx + 0.5, y, wz + 0.5);
           return;
         }
       }
     }
   } else {
-    // Find surface grass/snow for sheep or pig
     for (let y = CHUNK_HEIGHT - 3; y > SEA_LEVEL; y--) {
       const b = getVoxelGlobal(wx, y, wz);
       if (b === BLOCK.AIR) continue;
@@ -301,13 +301,11 @@ function updateMobs(dt) {
     const dzP = player.z - m.z;
     const distP = Math.hypot(dxP, dyP, dzP);
 
-    // Despawn distant mobs to save CPU/GPU (except allied Golems within 80m)
     if (distP > (m.type === 'golem' ? 80 : 54)) {
       removeMobAt(i);
       continue;
     }
 
-    // Recover from red hurt flash & apply local voxel lighting to mob color
     const packedL = getLightGlobal(Math.floor(m.x), Math.floor(m.y + 0.8), Math.floor(m.z));
     const sL = ((packedL >> 4) / 15) * sunFactor;
     const bL = (packedL & 15) / 15;
@@ -316,20 +314,16 @@ function updateMobs(dt) {
     if (m.hurtTimer > 0) {
       m.hurtTimer -= dt;
     } else if (m.type === 'creeper' && m.fuseTimer > 0 && Math.floor(m.fuseTimer * 12) % 2 === 0) {
-      for (const entry of m.mats) {
-        entry.mat.color.setHex(0xffffff);
-      }
+      for (const entry of m.mats) entry.mat.color.setHex(0xffffff);
     } else {
-      for (const entry of m.mats) {
-        entry.mat.color.setHex(entry.baseHex).multiplyScalar(shade);
-      }
+      for (const entry of m.mats) entry.mat.color.setHex(entry.baseHex).multiplyScalar(shade);
     }
 
-    // Zombies burn in bright direct sunlight!
-    if (m.type === 'zombie' && sunFactor > 0.8 && (packedL >> 4) >= 14) {
-      m.attackCooldown += dt;
-      if (m.attackCooldown > 1.2) {
-        m.attackCooldown = 0;
+    // Zombies and Skeletons burn in bright direct sunlight!
+    if ((m.type === 'zombie' || m.type === 'skeleton') && sunFactor > 0.8 && (packedL >> 4) >= 14) {
+      m.burnTimer = (m.burnTimer || 0) + dt;
+      if (m.burnTimer > 1.2) {
+        m.burnTimer = 0;
         damageMob(m, 1, 0, 0);
         if (!mobs.includes(m)) continue;
       }
@@ -339,7 +333,6 @@ function updateMobs(dt) {
     if (m.type === 'zombie' && distP < 16) {
       m.targetYaw = Math.atan2(dxP, dzP);
       m.moving = true;
-      // Attack player on contact
       if (distP < 1.15 && Math.abs(dyP) < 1.6) {
         m.attackCooldown += dt;
         if (m.attackCooldown > 0.95) {
@@ -347,6 +340,14 @@ function updateMobs(dt) {
           sfx.play('zombie');
           damagePlayer(2);
         }
+      }
+    } else if (m.type === 'skeleton' && distP < 18) {
+      m.targetYaw = Math.atan2(dxP, dzP);
+      m.moving = distP > 6.5;
+      m.attackCooldown += dt;
+      if (m.attackCooldown >= 1.6) {
+        m.attackCooldown = 0;
+        shootArrow(m.x, m.y + 1.35, m.z, dxP, dyP + 0.25, dzP, { fromMob: true });
       }
     } else if (m.type === 'creeper' && distP < 16) {
       m.targetYaw = Math.atan2(dxP, dzP);
@@ -371,12 +372,11 @@ function updateMobs(dt) {
         }
       }
     } else if (m.type === 'golem') {
-      // Allied Iron Golem hunts nearest hostile mob (zombie or creeper)
       let nearestHostile = null;
       let bestHDist = 20.0;
       for (let j = 0; j < mobs.length; j++) {
         const other = mobs[j];
-        if (!other || (other.type !== 'zombie' && other.type !== 'creeper')) continue;
+        if (!other || (other.type !== 'zombie' && other.type !== 'creeper' && other.type !== 'skeleton')) continue;
         const hd = Math.hypot(other.x - m.x, other.y - m.y, other.z - m.z);
         if (hd < bestHDist) {
           bestHDist = hd;
@@ -393,9 +393,7 @@ function updateMobs(dt) {
           m.attackCooldown = 0.75;
           sfx.play('golem');
           damageMob(nearestHostile, 6, hdx, hdz);
-          if (mobs.includes(nearestHostile)) {
-            nearestHostile.vy = 9.2;
-          }
+          if (mobs.includes(nearestHostile)) nearestHostile.vy = 9.2;
         }
       } else {
         m.aiTimer -= dt;
@@ -414,12 +412,11 @@ function updateMobs(dt) {
       }
     }
 
-    // Smooth yaw turn
     const diffYaw = Math.atan2(Math.sin(m.targetYaw - m.yaw), Math.cos(m.targetYaw - m.yaw));
     m.yaw += diffYaw * Math.min(1, dt * 6);
     m.root.rotation.y = m.yaw;
 
-    const moveSpeed = m.type === 'golem' ? 3.1 : ((m.type === 'zombie' || m.type === 'creeper') ? 2.65 : (m.hurtTimer > 0 ? 4.2 : 1.55));
+    const moveSpeed = m.type === 'golem' ? 3.1 : ((m.type === 'zombie' || m.type === 'creeper' || m.type === 'skeleton') ? 2.65 : (m.hurtTimer > 0 ? 4.2 : 1.55));
     if (m.hurtTimer <= 0) {
       m.vx = m.moving ? Math.sin(m.yaw) * moveSpeed : 0;
       m.vz = m.moving ? Math.cos(m.yaw) * moveSpeed : 0;
@@ -431,7 +428,6 @@ function updateMobs(dt) {
     m.vy -= 24.0 * dt;
     if (m.vy < -30) m.vy = -30;
 
-    // Horizontal movement + auto-jump over 1-block obstacle
     const nx = m.x + m.vx * dt;
     const nz = m.z + m.vz * dt;
     const footY = Math.floor(m.y + 0.05);
@@ -451,7 +447,6 @@ function updateMobs(dt) {
       }
     }
 
-    // Vertical collision
     const ny = m.y + m.vy * dt;
     const belowSolid = BLOCK_DEFS[getVoxelGlobal(Math.floor(m.x), Math.floor(ny), Math.floor(m.z))].solid;
     if (!belowSolid) {
@@ -467,7 +462,6 @@ function updateMobs(dt) {
 
     m.root.position.set(m.x, m.y, m.z);
 
-    // Limb walk animation
     if (m.moving) {
       m.animTime += dt * moveSpeed * 4.2;
       const a = Math.sin(m.animTime) * 0.55;
@@ -556,8 +550,8 @@ function rebuildChunkImmediate(cx, cz) {
 // ============================================================================
 // 8B. INLINE WEB WORKER (BLOB URL) FOR ZERO-COPY MULTITHREADED CHUNK MESHING
 // ============================================================================
-const PADDED_SIZE = CHUNK_SIZE + 2; // 18 (16 + 1-voxel border on each side)
-const PADDED_VOL  = PADDED_SIZE * PADDED_SIZE * CHUNK_HEIGHT; // 20,736 bytes
+const PADDED_SIZE = CHUNK_SIZE + 2;
+const PADDED_VOL  = PADDED_SIZE * PADDED_SIZE * CHUNK_HEIGHT;
 
 function packChunkPaddedBuffers(cx, cz) {
   for (let dz = -1; dz <= 1; dz++) {
@@ -572,7 +566,6 @@ function packChunkPaddedBuffers(cx, cz) {
   const paddedVoxels = new Uint8Array(PADDED_VOL);
   const paddedLight  = new Uint8Array(PADDED_VOL);
 
-  // Fast row-wise bulk copy for center 16x64x16 chunk (16 rows of 1,024 contiguous bytes)
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     const srcOff = lz * CHUNK_SIZE * CHUNK_HEIGHT;
     const dstOff = ((lz + 1) * PADDED_SIZE + 1) * CHUNK_HEIGHT;
@@ -580,7 +573,6 @@ function packChunkPaddedBuffers(cx, cz) {
     paddedLight.set(centerCh.light.subarray(srcOff, srcOff + 1024), dstOff);
   }
 
-  // Copy 1-voxel border columns (plx = 0, plx = 17, plz = 0, plz = 17)
   const copyBorderCol = (plx, plz) => {
     const wx = cx * CHUNK_SIZE + (plx - 1);
     const wz = cz * CHUNK_SIZE + (plz - 1);
@@ -730,4 +722,3 @@ function requestChunkMeshWorker(cx, cz) {
     );
   });
 }
-

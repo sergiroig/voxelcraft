@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html"></iframe>
+    <iframe id="game-frame" src="./index.html?v=7"></iframe>
   </div>
 
   <script>
@@ -1361,6 +1361,186 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 30: Punto 21 — Barcas Navegables 3D y Nenúfares Acuáticos
+      // =========================================================================
+      describe('30. Barcas Navegables 3D (ITEM_BOAT) y Nenúfares Acuáticos (LILY_PAD)', () => {
+        it('Permite caminar sobre Nenúfares (BLOCK.LILY_PAD) y navegar en Barcas 3D sobre el agua', () => {
+          assert(vc.BLOCK_DEFS[vc.BLOCK.LILY_PAD].solid === true, 'El Nenúfar (LILY_PAD) debe ser sólido para poder caminar sobre él');
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z, origYaw = vc.player.yaw;
+
+          vc.player.yaw = 0; // Mirando hacia -Z
+          const boat = vc.spawnBoat(12, 52, 12);
+          assert(boat && vc.boats.includes(boat), 'spawnBoat debe crear e insertar una Barca 3D en la escena');
+
+          const mounted = vc.toggleRideBoat(boat);
+          assert(mounted === true && vc.getRidingBoat() === boat, 'toggleRideBoat debe montar al jugador en la barca');
+
+          const zBefore = boat.z;
+          vc.updateBoats(0.10);
+          assert(boat.z < zBefore - 0.5, `La barca navegable debe avanzar rápidamente sobre el agua (z=${boat.z.toFixed(2)} vs ${zBefore.toFixed(2)})`);
+          assertApprox(vc.player.z, boat.z, 0.05, 'El jugador debe navegar sincronizado con la barca 3D');
+
+          const dismounted = vc.toggleRideBoat();
+          assert(dismounted === false && vc.getRidingBoat() === null, 'Volver a llamar a toggleRideBoat debe desmontar al jugador');
+
+          while (vc.boats.length > 0) {
+            const b = vc.boats.pop();
+            vc.scene.remove(b.root);
+          }
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ; vc.player.yaw = origYaw;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 31: Punto 22 — Pistones Mecánicos Redstone (BLOCK.PISTON)
+      // =========================================================================
+      describe('31. Pistones Mecánicos Redstone (Empuje de Bloques por Lotes e Impulso)', () => {
+        it('Empuja filas de bloques sólidos y catapulta al jugador al activarse con una Palanca Redstone', () => {
+          const px = 14, py = 53, pz = 14;
+          vc.setVoxelGlobal(px, py, pz, vc.BLOCK.PISTON);
+          vc.setVoxelGlobal(px, py + 1, pz, vc.BLOCK.GOLD_ORE);
+          vc.setVoxelGlobal(px, py + 2, pz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(px - 1, py, pz, vc.BLOCK.LEVER_OFF);
+
+          // Activar palanca -> el pistón empuja el bloque de Oro hacia arriba (py + 2)
+          vc.toggleVoxelLever(px - 1, py, pz);
+          assert(vc.getVoxelGlobal(px, py + 2, pz) === vc.BLOCK.GOLD_ORE, 'El Pistón Redstone debe empujar el bloque de Oro a (px, py+2, pz)');
+          assert(vc.getVoxelGlobal(px, py + 1, pz) === vc.BLOCK.AIR, 'El espacio original sobre el pistón debe quedar libre tras el empuje');
+
+          // Limpiar
+          vc.setVoxelGlobal(px, py + 2, pz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(px, py, pz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(px - 1, py, pz, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 32: Punto 23 — Gancho de Agarre (TOOL_GRAPPLING_HOOK)
+      // =========================================================================
+      describe('32. Gancho de Agarre Balístico 3D (TOOL_GRAPPLING_HOOK)', () => {
+        it('Dispara el Gancho de Agarre contra un bloque lejano e impulsa elásticamente al jugador sin daño por caída', () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          const tx = 18, ty = 55, tz = 18;
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.STONE);
+
+          vc.player.x = 10.5; vc.player.y = 50.0; vc.player.z = 18.5;
+          vc.player.maxFallVel = -25.0;
+
+          const proj = vc.shootGrappleHook(10.5, 51.5, 18.5, 1, 0.45, 0);
+          assert(proj && proj.isGrapple === true, 'shootGrappleHook debe disparar un proyectil con isGrapple=true');
+          assert(vc.player.x > 13.0 && vc.player.vy > 8.0, `El gancho debe traccionar e impulsar al jugador hacia el objetivo (x=${vc.player.x.toFixed(1)}, vy=${vc.player.vy.toFixed(1)})`);
+          assert(vc.player.maxFallVel === 0, 'El Gancho de Agarre debe anular maxFallVel para evitar daño por caída');
+
+          for (const a of vc.arrows) a.active = false;
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.player.vx = 0; vc.player.vy = 0; vc.player.vz = 0;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 33: Punto 24 — Portales Dimensionales de Obsidiana (BLOCK.PORTAL)
+      // =========================================================================
+      describe('33. Portales Dimensionales de Obsidiana (Luz BFS 12 y Teletransporte)', () => {
+        it('Emite luz violeta BFS 12, anima su vórtice en el Fragment Shader y teletransporta entre portales enlazados', () => {
+          assert(vc.BLOCK_DEFS[vc.BLOCK.PORTAL].light === 12, 'El Portal de Obsidiana debe emitir luz BFS de nivel 12');
+          const shaders = vc.getShaders();
+          assert(shaders.solidShaderRef.fragmentShader.includes('vTileIdx >= 48.5'), 'El Fragment Shader debe incluir el vórtice dimensional para BLOCK.PORTAL (tile 49)');
+
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          vc.portals.length = 0;
+
+          const p1 = vc.activateObsidianPortal(10, 53, 10);
+          const p2 = vc.activateObsidianPortal(42, 53, 42);
+          assert(p1 && p2 && vc.portals.length === 2, 'activateObsidianPortal debe registrar ambos portales dimensionales');
+
+          const dest = vc.useVoxelPortal(10, 53, 10);
+          assert(dest && dest.x === 42 && dest.z === 42, 'useVoxelPortal desde el portal 1 debe teletransportar al portal 2');
+          assertApprox(vc.player.x, 42.5, 0.2, 'La posición X del jugador debe estar en el portal de destino');
+
+          vc.setVoxelGlobal(10, 53, 10, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(42, 53, 42, vc.BLOCK.AIR);
+          vc.portals.length = 0;
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 34: Punto 25 — Esqueleto Arquero y Bloqueo con Escudo/Espada
+      // =========================================================================
+      describe('34. Esqueleto Arquero Hostil y Bloqueo con Escudo / Espada', () => {
+        it('El Esqueleto Arquero dispara flechas 3D al jugador y el Bloqueo con Espada reduce el daño y rebota proyectiles', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          const skel = vc.spawnMob('skeleton', vc.player.x + 6, vc.player.y, vc.player.z);
+          assert(skel && skel.type === 'skeleton', 'spawnMob("skeleton") debe crear un Esqueleto Arquero');
+
+          // Forzar disparo del esqueleto
+          skel.attackCooldown = 1.6;
+          vc.updateMobs(0.05);
+          const mobArrow = vc.arrows.find(a => a.active && a.fromMob);
+          assert(mobArrow !== undefined, 'El Esqueleto Arquero debe disparar flechas 3D con fromMob=true hacia el jugador');
+
+          // Activar bloqueo con escudo/espada: reduce daño un 80% y rebota flechas de esqueleto
+          vc.toggleShieldBlock(true);
+          assert(vc.isShieldBlocking() === true, 'toggleShieldBlock(true) debe activar la guardia');
+
+          const hpBefore = vc.player.health;
+          vc.damagePlayer(4); // 4 * 0.2 = 0.8 -> floor = 0 daño recibido!
+          assert(vc.player.health === hpBefore, 'El bloqueo con escudo debe absorber golpes menores o reducir un 80% el daño');
+
+          // Colocar la flecha del esqueleto junto al jugador con escudo activo -> debe rebotar (fromMob pasa a false y vx se invierte)
+          mobArrow.x = vc.player.x + 0.2;
+          mobArrow.y = vc.player.y + 0.9;
+          mobArrow.z = vc.player.z;
+          const vxBefore = mobArrow.vx;
+          vc.updateArrows(0.016);
+          assert(mobArrow.fromMob === false && Math.sign(mobArrow.vx) === -Math.sign(vxBefore), 'El bloqueo debe rebotar las flechas enemigas en sentido contrario');
+
+          vc.toggleShieldBlock(false);
+          for (const a of vc.arrows) a.active = false;
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 35: Punto 26 + Mejoras Técnicas — Hielo Resbaladizo y Modo Foto (F2)
+      // =========================================================================
+      describe('35. Hielo Glaciar Resbaladizo (BLOCK.ICE) y Captura de Pantalla (F2 / 📷)', () => {
+        it('Aplica patinaje de alta velocidad y baja fricción sobre Hielo Glaciar (BLOCK.ICE) y captura fotos PNG', () => {
+          const ix = Math.floor(vc.player.x), iy = 48, iz = Math.floor(vc.player.z);
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { vc.setVoxelGlobal(ix + dx, iy, iz + dz, vc.BLOCK.ICE); vc.setVoxelGlobal(ix + dx, iy + 1, iz + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(ix + dx, iy + 2, iz + dz, vc.BLOCK.AIR); }
+          vc.setVoxelGlobal(ix, iy + 1, iz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(ix, iy + 2, iz, vc.BLOCK.AIR);
+
+          const origY = vc.player.y, origFly = vc.player.flying;
+          vc.player.flying = false;
+          vc.player.y = iy + 1.01;
+          vc.player.yaw = 0;
+
+          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'KeyW' }));
+          vc.updatePlayerPhysics(0.10);
+          win.dispatchEvent(new win.KeyboardEvent('keyup', { code: 'KeyW' }));
+
+          const speedOnIce = Math.hypot(vc.player.iceVx, vc.player.iceVz);
+          assert(speedOnIce > 3.5, `Caminar sobre Hielo Glaciar debe acumular inercia de patinaje (iceSpeed=${speedOnIce.toFixed(2)})`);
+
+          // Incluso tras soltar W, el jugador conserva deslizamiento por baja fricción
+          vc.updatePlayerPhysics(0.05);
+          assert(Math.hypot(vc.player.vx, vc.player.vz) > 2.5, 'Al soltar las teclas sobre BLOCK.ICE el jugador debe seguir deslizándose suavemente');
+
+          vc.player.iceVx = 0; vc.player.iceVz = 0; vc.player.vx = 0; vc.player.vz = 0;
+          vc.player.y = origY; vc.player.flying = origFly;
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) vc.setVoxelGlobal(ix + dx, iy, iz + dz, vc.BLOCK.AIR);
+
+          // Probar Modo Foto / Screenshot (skipDownload=true para no abrir diálogo de descarga durante el test)
+          const shotsBefore = vc.getScreenshotState().screenshotsTakenCount;
+          const dataUrl = vc.takeGameScreenshot(true);
+          assert(vc.getScreenshotState().screenshotsTakenCount === shotsBefore + 1, 'takeGameScreenshot debe incrementar screenshotsTakenCount');
+          assert(typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png'), 'takeGameScreenshot debe generar un DataURL PNG válido del canvas WebGL');
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -1421,6 +1601,8 @@
       vc.setVoxelGlobal(11, 52, 10, vc.BLOCK.RAIL);
       const benchCart = vc.spawnMinecart(10, 52, 10);
       benchCart.speed = 11.5;
+      const benchBoat = vc.spawnBoat(12, 52, 12);
+      benchBoat.vx = 9.5;
 
       const perFrameFeatures = [
         { name: 'Render WebGL + Shaders GPU (Viento/Olas/Lava)',    ms: bench(() => { vc.renderer.render(vc.scene, vc.camera); }, 120) },
@@ -1430,6 +1612,7 @@
         { name: 'Smart Frustum Culling 3D (Box3 vs Camera)',        ms: bench(() => { vc.updateFrustumCulling(); }, 500) },
         { name: 'Minimapa Radar 2D + Balizas GPS (Amortizado 10 Hz)',ms: bench(() => { vc.updateMinimap(0.016, false); }, 500) },
         { name: 'Vagonetas 3D y Físicas de Vías (BLOCK.RAIL)',       ms: bench(() => { vc.updateMinecarts(0.016); }, 500) },
+        { name: 'Barcas Navegables 3D (Sailing Boats)',              ms: bench(() => { vc.updateBoats(0.016); }, 500) },
         { name: 'Flechas Balísticas 3D (Arco InstancedMesh)',       ms: bench(() => { vc.updateArrows(0.016); }, 500) },
         { name: 'Físicas del Jugador + Avatar 3ªP + Slime Bounce',  ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
         { name: 'Pool Partículas InstancedMesh (120 instancias)',   ms: bench(() => { vc.updateParticles(0.016); }, 500) },
@@ -1447,6 +1630,7 @@
       }
       vc.setVoxelGlobal(10, 52, 10, vc.BLOCK.AIR);
       vc.setVoxelGlobal(11, 52, 10, vc.BLOCK.AIR);
+      while (vc.boats.length > 0) { const b = vc.boats.pop(); vc.scene.remove(b.root); }
       for (const d of vc.itemDrops) d.active = false;
       for (const a of vc.arrows) a.active = false;
       vc.toggleWeather('clear');
@@ -1457,7 +1641,8 @@
         { name: 'Generación Chunk (Terreno + Cuevas 3D 4×4×4 + Menas)', ms: bench(() => { vc.getGenerator().generateChunkVoxels(50, 50, null); }, 40) },
         { name: 'Iluminación Vóxel Flood-Fill BFS (16,384 bloques)',    ms: bench(() => { vc.computeChunkLighting(ch0, (x, z) => vc.chunks.get(`${x},${z}`)); }, 40) },
         { name: 'Meshing Chunk Síncrono (Face Culling + AO + X-Mesh)',  ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0); }, 30) },
-        { name: 'Meshing vía Web Worker (Coste en Hilo Principal)',     ms: bench(() => { vc.packChunkPaddedBuffers(0, 0); vc.applyArraysToMesh(ch0, sampleMesh0); }, 40) }
+        { name: 'Meshing vía Web Worker (Coste en Hilo Principal)',     ms: bench(() => { vc.packChunkPaddedBuffers(0, 0); vc.applyArraysToMesh(ch0, sampleMesh0); }, 40) },
+        { name: 'Pistón Mecánico Redstone (Empuje de Bloques en Lote)', ms: bench(() => { ch0.data[(14 * 16 + 14) * 64 + 53] = vc.BLOCK.PISTON; ch0.data[(14 * 16 + 14) * 64 + 54] = vc.BLOCK.STONE; ch0.data[(14 * 16 + 14) * 64 + 55] = vc.BLOCK.AIR; vc.triggerVoxelPiston(14, 53, 14, 13, 53, 14, new Set()); }, 60) }
       ];
 
       const totalFrameMs = perFrameFeatures.reduce((acc, f) => acc + f.ms, 0);

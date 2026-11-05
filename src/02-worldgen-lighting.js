@@ -166,7 +166,14 @@ function createWorldGenerator(seed) {
 
         if (h < SEA_LEVEL) {
           for (let y = h + 1; y <= SEA_LEVEL; y++) {
-            data[colOffset + y] = BLOCK.WATER;
+            if (y === SEA_LEVEL && biome === 'Taiga Nevada') {
+              data[colOffset + y] = BLOCK.ICE;
+            } else {
+              data[colOffset + y] = BLOCK.WATER;
+            }
+          }
+          if ((biome === 'Llanura' || biome === 'Bosque') && hash3D(wx, SEA_LEVEL, wz) > 0.962) {
+            data[colOffset + SEA_LEVEL + 1] = BLOCK.LILY_PAD;
           }
         }
       }
@@ -522,4 +529,3 @@ function computeChunkLighting(ch, getChunkAt) {
 
   ch.lightReady = true;
 }
-

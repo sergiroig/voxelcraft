@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=4" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=4" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=4" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=4" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=4" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=4" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=4" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=4" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=4" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=4" />
+  <link rel="stylesheet" href="src/styles.css?v=7" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=7" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=7" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=7" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=7" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=7" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=7" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=7" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=7" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=7" />
 <body>
 
   <div id="water-overlay"></div>
@@ -35,8 +35,9 @@
       <button class="t-pill-btn" id="tbtn-weather">🌧 Clima</button>
       <button class="t-pill-btn" id="tbtn-cam">🎥 3ªP</button>
       <button class="t-pill-btn" id="tbtn-zoom">🔭</button>
-      <button class="t-pill-btn" id="tbtn-cart">🛤 Tren</button>
+      <button class="t-pill-btn" id="tbtn-cart">🛤/⛵ Vehíc.</button>
       <button class="t-pill-btn" id="tbtn-wp">📍 Baliza</button>
+      <button class="t-pill-btn" id="tbtn-photo">📷 Foto</button>
       <button class="t-pill-btn toggled" id="tbtn-music">🎵</button>
       <button class="t-pill-btn" id="tbtn-hud">📊 HUD</button>
       <button class="t-pill-btn" id="tbtn-menu">⏸</button>
@@ -77,7 +78,7 @@
   </div>
 
   <div id="hud-controls-pill">
-    <kbd>P</kbd> Menú &nbsp;|&nbsp; <kbd>E</kbd> Inv/Craft &nbsp;|&nbsp; <kbd>R</kbd> Tren &nbsp;|&nbsp; <kbd>B</kbd> Baliza &nbsp;|&nbsp; <kbd>C</kbd> 3ª Pers. &nbsp;|&nbsp; <kbd>Z</kbd> Zoom &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
+    <kbd>P</kbd> Menú &nbsp;|&nbsp; <kbd>E</kbd> Inv/Craft &nbsp;|&nbsp; <kbd>R</kbd> Tren/Barca &nbsp;|&nbsp; <kbd>B</kbd> Baliza &nbsp;|&nbsp; <kbd>F2</kbd> Foto &nbsp;|&nbsp; <kbd>C</kbd> 3ª Pers. &nbsp;|&nbsp; <kbd>Z</kbd> Zoom &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
   </div>
 
   <div id="status-bar">
@@ -131,14 +132,14 @@
         <span class="badge">Edición Completa</span>
       </h1>
       <p class="sub">
-        Clon de Minecraft en un único archivo <code>.html</code> con cuevas 3D, iluminación por inundación (Antorchas), rotura progresiva con partículas y biomas.
+        Clon de Minecraft en HTML5 modular con cuevas 3D, iluminación por inundación (Antorchas), rotura progresiva con partículas y biomas.
       </p>
 
       <div class="opt-list">
-        <div><span>✓ Shaders en GPU (Coste 0 en CPU):</span> Viento orgánico en hojas, flores y hierba alta, olas 3D con espuma en el agua y destello en menas/antorchas.</div>
-        <div><span>✓ Mundo Vivo y Físicas Vóxel:</span> Criaturas con geometría compartida, gravedad de arena, flujo de agua, TNT con reacciones en cadena y cielo con nubes 3D.</div>
-        <div><span>✓ Iluminación Vóxel BFS (1 byte):</span> 4 bits de sol + 4 bits de luz cálida de antorchas horneados en vértices (0 luces dinámicas GPU).</div>
-        <div><span>✓ Cuevas 3D (Interpolación Trilineal 4×4×4):</span> Calcula el ruido 3D 38× más rápido con vetas de Carbón, Hierro, Oro y Diamante.</div>
+        <div><span>✓ Shaders en GPU (Coste 0 en CPU):</span> Viento orgánico en hojas, flores, nenúfares y hierba alta, olas 3D con espuma, vórtice en portales y destello en hielo/menas.</div>
+        <div><span>✓ Mundo Vivo y Físicas Vóxel:</span> Criaturas con geometría compartida (Esqueletos Arqueros, Creepers, Gólems), gravedad de arena, flujo de agua/lava, pistones Redstone y TNT.</div>
+        <div><span>✓ Vehículos, Gancho y Portales:</span> Vagonetas 3D sobre raíles, Barcas navegables sobre agua, Gancho de Agarre elástico y Portales Dimensionales de Obsidiana.</div>
+        <div><span>✓ Cuevas 3D e Iluminación BFS (1 byte):</span> Interpolación trilineal 4×4×4 con vetas de minerales + 4 bits sol y 4 bits luz cálida en vértices.</div>
       </div>
 
       <div class="settings-grid">
@@ -162,9 +163,9 @@
         <div><b>WASD + Espacio</b> Moverse y Saltar</div>
         <div><b>Mantener Click Izq.</b> Picar / Atacar</div>
         <div><b>P / Enter</b> Mostrar / Ocultar Menú</div>
-        <div><b>Click Der.</b> Poner bloque / Usar</div>
-        <div><b>E / G</b> Inventario / Modo Juego</div>
-        <div><b>F / T / V</b> Volar / Hora / Clima</div>
+        <div><b>Click Der.</b> Poner / Usar / Escudo</div>
+        <div><b>E / G / F2</b> Inventario / Modo / Foto</div>
+        <div><b>F / T / V / R</b> Volar / Hora / Clima / Vehíc.</div>
       </div>
 
       <div class="btn-row" style="margin-bottom: 10px;">
@@ -187,15 +188,14 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-
-  <script src="src/01-config-atlas.js?v=4"></script>
-  <script src="src/02-worldgen-lighting.js?v=4"></script>
-  <script src="src/03-mesher-audio.js?v=4"></script>
-  <script src="src/04-world-renderer.js?v=4"></script>
-  <script src="src/05-simulation-entities.js?v=4"></script>
-  <script src="src/06-mobs-worker.js?v=4"></script>
-  <script src="src/07-physics-camera.js?v=4"></script>
-  <script src="src/08-ui-minimap.js?v=4"></script>
-  <script src="src/09-controls-loop.js?v=4"></script>
+  <script src="src/01-config-atlas.js?v=7"></script>
+  <script src="src/02-worldgen-lighting.js?v=7"></script>
+  <script src="src/03-mesher-audio.js?v=7"></script>
+  <script src="src/04-world-renderer.js?v=7"></script>
+  <script src="src/05-simulation-entities.js?v=7"></script>
+  <script src="src/06-mobs-worker.js?v=7"></script>
+  <script src="src/07-physics-camera.js?v=7"></script>
+  <script src="src/08-ui-minimap.js?v=7"></script>
+  <script src="src/09-controls-loop.js?v=7"></script>
 </body>
 </html>

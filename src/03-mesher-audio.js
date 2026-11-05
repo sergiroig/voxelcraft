@@ -100,7 +100,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
 
         const def = BLOCK_DEFS[blockId];
 
-        // Cross-Quad Geometry (Torches, Tall Grass, Flowers)
+        // Cross-Quad Geometry (Torches, Tall Grass, Flowers, Lily Pads)
         if (def.shape === 'cross') {
           const tileIdx = def.tiles[0];
           const u0 = tileIdx * uvStep + uvPad;
@@ -164,8 +164,8 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
           // Hidden Face Culling
           if (isWater) {
             if (neighborId === BLOCK.WATER || nDef.opaque) continue;
-          } else if (blockId === BLOCK.GLASS) {
-            if (neighborId === BLOCK.GLASS || nDef.opaque) continue;
+          } else if (blockId === BLOCK.GLASS || blockId === BLOCK.ICE || blockId === BLOCK.PORTAL) {
+            if (neighborId === blockId || nDef.opaque) continue;
           } else {
             if (nDef.opaque) continue;
           }
@@ -319,7 +319,6 @@ class SoundFX {
         this.musicGain.gain.value = this.musicEnabled ? 0.28 : 0.0;
         this.musicGain.connect(this.masterGain);
 
-        // Algorithmic 2.0s stereo hall impulse response for lush C418 reverb
         const sr = this.ctx.sampleRate;
         const len = Math.floor(sr * 2.0);
         const irBuf = this.ctx.createBuffer(2, len, sr);
@@ -329,7 +328,7 @@ class SoundFX {
           for (let i = 0; i < len; i++) {
             const decay = Math.pow(1 - i / len, 2.6);
             const white = Math.random() * 2 - 1;
-            prev = prev * 0.78 + white * 0.22; // Warm low-passed tail
+            prev = prev * 0.78 + white * 0.22;
             data[i] = prev * decay * 0.45;
           }
         }
@@ -337,7 +336,6 @@ class SoundFX {
         this.reverbNode.buffer = irBuf;
         this.reverbNode.connect(this.musicGain);
 
-        // Continuous looped noise buffer for zero-CPU wind & cave ambience
         const nLen = Math.floor(sr * 2.0);
         const nBuf = this.ctx.createBuffer(1, nLen, sr);
         const nData = nBuf.getChannelData(0);
@@ -376,7 +374,6 @@ class SoundFX {
     if (!this.ctx || !this.musicEnabled) return false;
     const start = this.ctx.currentTime + delaySec;
 
-    // Warm FM/additive felt piano voice (sine fundamental + soft detuned triangle)
     const osc1 = this.ctx.createOscillator();
     const osc2 = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
@@ -428,7 +425,6 @@ class SoundFX {
       const freq = C418_SCALE_HZ[chord[i]];
       this.playMusicNote(freq, i * 0.42, 3.6, 0.14);
     }
-    // Optional gentle high melody note
     const topFreq = C418_SCALE_HZ[8 + (idx % 5)];
     this.playMusicNote(topFreq, 1.85, 3.2, 0.12);
     this.chordsPlayedCount++;
@@ -633,6 +629,49 @@ class SoundFX {
       gain.gain.setValueAtTime(0.14, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
       osc.start(now); osc.stop(now + 0.14);
+    } else if (type === 'splash') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(480, now + 0.09);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.start(now); osc.stop(now + 0.09);
+    } else if (type === 'piston') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(125, now);
+      osc.frequency.exponentialRampToValueAtTime(295, now + 0.11);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      osc.start(now); osc.stop(now + 0.11);
+    } else if (type === 'grapple') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(340, now);
+      osc.frequency.exponentialRampToValueAtTime(960, now + 0.18);
+      gain.gain.setValueAtTime(0.17, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now); osc.stop(now + 0.18);
+    } else if (type === 'portal') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(392, now);
+      osc.frequency.exponentialRampToValueAtTime(784, now + 0.34);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+      if (this.reverbNode) gain.connect(this.reverbNode);
+      osc.start(now); osc.stop(now + 0.34);
+    } else if (type === 'shield') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.08);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.start(now); osc.stop(now + 0.08);
+    } else if (type === 'shutter') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.05);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.start(now); osc.stop(now + 0.05);
     }
   }
 }
@@ -660,7 +699,6 @@ function updateAmbientAudio(dt) {
   const elapsed = ambientStepAccum;
   ambientStepAccum = 0;
 
-  // Determine environment acoustics (Surface Breeze, Deep Cave, or Underwater)
   const px = Math.floor(player.x);
   const py = Math.floor(player.y + 1);
   const pz = Math.floor(player.z);
@@ -702,4 +740,3 @@ function updateAmbientAudio(dt) {
     }
   }
 }
-

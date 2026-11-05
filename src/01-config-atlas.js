@@ -55,17 +55,23 @@ const BLOCK = {
   TRAPDOOR_OPEN: 42,
   RAIL: 43,
   CHEST: 44,
+  LILY_PAD: 45,
+  PISTON: 46,
+  PORTAL: 47,
+  ICE: 48,
   // Special Tool & Consumable IDs (not placed as blocks)
   TOOL_PICKAXE: 100,
   TOOL_SWORD: 101,
   TOOL_BOW: 102,
   ITEM_APPLE: 103,
   ITEM_BREAD: 104,
-  ITEM_MINECART: 105
+  ITEM_MINECART: 105,
+  ITEM_BOAT: 106,
+  TOOL_GRAPPLING_HOOK: 107
 };
 
-// Atlas has 47 tiles (columns) of 16x16 pixels
-const ATLAS_COLS = 47;
+// Atlas has 51 tiles (columns) of 16x16 pixels
+const ATLAS_COLS = 51;
 const TILE_PX = 16;
 
 // Block Definitions:
@@ -73,67 +79,79 @@ const TILE_PX = 16;
 // light: 0..15 emitted block light
 // hardness: seconds to break by hand (pickaxe mines stone/ores 3.2x faster)
 const BLOCK_DEFS = {
-  [BLOCK.AIR]:               { name: 'Aire',                  solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xffffff, tiles: [0,0,0,0,0,0] },
-  [BLOCK.GRASS]:             { name: 'Césped',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x58a83a, tiles: [0, 2, 1, 1, 1, 1] },
-  [BLOCK.DIRT]:              { name: 'Tierra',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.38, stoneLike: false, color: 0x866043, tiles: [2, 2, 2, 2, 2, 2] },
-  [BLOCK.STONE]:             { name: 'Piedra',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.05, stoneLike: true,  color: 0x7d8084, tiles: [3, 3, 3, 3, 3, 3] },
-  [BLOCK.SAND]:              { name: 'Arena',                 solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xe0ce94, tiles: [4, 4, 4, 4, 4, 4] },
-  [BLOCK.WOOD]:              { name: 'Tronco de Roble',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0x6b4e2e, tiles: [6, 6, 5, 5, 5, 5] },
-  [BLOCK.LEAVES]:            { name: 'Hojas',                 solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.18, stoneLike: false, color: 0x34802a, tiles: [7, 7, 7, 7, 7, 7] },
-  [BLOCK.PLANKS]:            { name: 'Madera',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xb08852, tiles: [8, 8, 8, 8, 8, 8] },
-  [BLOCK.COBBLE]:            { name: 'Adoquín',               solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.10, stoneLike: true,  color: 0x73767a, tiles: [9, 9, 9, 9, 9, 9] },
-  [BLOCK.BRICK]:             { name: 'Ladrillos',             solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.15, stoneLike: true,  color: 0xa8483a, tiles: [10,10,10,10,10,10] },
-  [BLOCK.GLASS]:             { name: 'Cristal',               solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xdaf0ff, tiles: [11,11,11,11,11,11] },
-  [BLOCK.WATER]:             { name: 'Agua',                  solid: false, opaque: false, shape: 'water', light: 0,  hardness: 0,    stoneLike: false, color: 0x1c76d8, tiles: [12,12,12,12,12,12] },
-  [BLOCK.SNOW]:              { name: 'Nieve',                 solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xf0f8ff, tiles: [13, 2,14,14,14,14] },
-  [BLOCK.GLOWSTONE]:         { name: 'Piedra Luminosa',       solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.40, stoneLike: false, color: 0xffeba8, tiles: [15,15,15,15,15,15] },
-  [BLOCK.BEDROCK]:           { name: 'Roca Madre',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 999,  stoneLike: true,  color: 0x2d2d32, tiles: [16,16,16,16,16,16] },
-  [BLOCK.COAL_ORE]:          { name: 'Mena de Carbón',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.25, stoneLike: true,  color: 0x3b3d40, tiles: [17,17,17,17,17,17] },
-  [BLOCK.IRON_ORE]:          { name: 'Mena de Hierro',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.35, stoneLike: true,  color: 0xd8af93, tiles: [18,18,18,18,18,18] },
-  [BLOCK.GOLD_ORE]:          { name: 'Mena de Oro',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfcee4b, tiles: [19,19,19,19,19,19] },
-  [BLOCK.DIAMOND_ORE]:       { name: 'Mena de Diamante',      solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.65, stoneLike: true,  color: 0x5decf5, tiles: [20,20,20,20,20,20] },
-  [BLOCK.TORCH]:             { name: 'Antorcha (Luz)',        solid: false, opaque: false, shape: 'cross', light: 15, hardness: 0.05, stoneLike: false, color: 0xffd066, tiles: [21,21,21,21,21,21] },
-  [BLOCK.TALL_GRASS]:        { name: 'Hierba Alta',           solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x52a238, tiles: [22,22,22,22,22,22] },
-  [BLOCK.FLOWER_RED]:        { name: 'Rosa Roja',             solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xe83b3b, tiles: [23,23,23,23,23,23] },
-  [BLOCK.FLOWER_YELLOW]:     { name: 'Diente de León',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xfacc15, tiles: [24,24,24,24,24,24] },
-  [BLOCK.CACTUS]:            { name: 'Cactus',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [25,25,25,25,25,25] },
-  [BLOCK.TNT]:               { name: 'TNT (Explosivo)',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,27,26,26,26,26] },
-  [BLOCK.LAVA]:              { name: 'Lava Ardiente',         solid: false, opaque: true,  shape: 'cube',  light: 15, hardness: 0.25, stoneLike: false, color: 0xff5a1f, tiles: [28,28,28,28,28,28] },
-  [BLOCK.OBSIDIAN]:          { name: 'Obsidiana',             solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 2.20, stoneLike: true,  color: 0x2e1a47, tiles: [29,29,29,29,29,29] },
-  [BLOCK.LEVER_OFF]:         { name: 'Palanca Redstone',      solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.08, stoneLike: false, color: 0x94a3b8, tiles: [30,30,30,30,30,30] },
-  [BLOCK.LEVER_ON]:          { name: 'Palanca Redstone (ON)', solid: false, opaque: false, shape: 'cross', light: 7,  hardness: 0.08, stoneLike: false, color: 0xef4444, tiles: [31,31,31,31,31,31] },
-  [BLOCK.REDSTONE_LAMP_OFF]: { name: 'Lámpara Redstone',      solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x6b3e26, tiles: [32,32,32,32,32,32] },
-  [BLOCK.REDSTONE_LAMP_ON]:  { name: 'Lámpara Redstone (ON)', solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.35, stoneLike: false, color: 0xffd166, tiles: [33,33,33,33,33,33] },
-  [BLOCK.SAPLING]:           { name: 'Brote de Árbol',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.05, stoneLike: false, color: 0x4ade80, tiles: [34,34,34,34,34,34] },
-  [BLOCK.WHEAT_1]:           { name: 'Semillas de Trigo',     solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x84cc16, tiles: [35,35,35,35,35,35] },
-  [BLOCK.WHEAT_2]:           { name: 'Trigo en Crecimiento',  solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xa3e635, tiles: [36,36,36,36,36,36] },
-  [BLOCK.WHEAT_3]:           { name: 'Trigo Maduro',          solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.05, stoneLike: false, color: 0xeab308, tiles: [37,37,37,37,37,37] },
-  [BLOCK.AMETHYST]:          { name: 'Cristal de Amatista',   solid: true,  opaque: true,  shape: 'cube',  light: 5,  hardness: 1.30, stoneLike: true,  color: 0xa855f7, tiles: [38,38,38,38,38,38] },
-  [BLOCK.GLOW_MUSHROOM]:     { name: 'Seta Bioluminiscente',  solid: false, opaque: false, shape: 'cross', light: 12, hardness: 0.06, stoneLike: false, color: 0x22d3ee, tiles: [39,39,39,39,39,39] },
-  [BLOCK.SLIME]:             { name: 'Bloque de Slime (Rebote)', solid: true, opaque: true, shape: 'cube', light: 0,  hardness: 0.25, stoneLike: false, color: 0x4ade80, tiles: [40,40,40,40,40,40] },
-  [BLOCK.DOOR_CLOSED]:       { name: 'Compuerta Mecánica',    solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.55, stoneLike: false, color: 0x92400e, tiles: [41,41,41,41,41,41] },
-  [BLOCK.DOOR_OPEN]:         { name: 'Compuerta (Abierta)',   solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.55, stoneLike: false, color: 0xb45309, tiles: [41,41,41,41,41,41] },
-  [BLOCK.LADDER]:            { name: 'Escalera de Mano',      solid: false, opaque: false, climbable: true, shape: 'cube', light: 0, hardness: 0.30, stoneLike: false, color: 0xc28e4c, tiles: [42,42,42,42,42,42] },
-  [BLOCK.TRAPDOOR_CLOSED]:   { name: 'Trampilla Mecánica',    solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.45, stoneLike: false, color: 0x854d0e, tiles: [43,43,43,43,43,43] },
-  [BLOCK.TRAPDOOR_OPEN]:     { name: 'Trampilla (Abierta)',   solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.45, stoneLike: false, color: 0xa16207, tiles: [43,43,43,43,43,43] },
-  [BLOCK.RAIL]:              { name: 'Vía de Ferrocarril',    solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.25, stoneLike: true,  color: 0x94a3b8, tiles: [44,44,44,44,44,44] },
-  [BLOCK.CHEST]:             { name: 'Cofre de Tesoro',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xd97706, tiles: [45,45,46,46,46,46] },
-  [BLOCK.TOOL_PICKAXE]:      { name: 'Pico de Diamante',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
-  [BLOCK.TOOL_SWORD]:        { name: 'Espada de Diamante',    solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
-  [BLOCK.TOOL_BOW]:          { name: 'Arco y Flechas',        solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
-  [BLOCK.ITEM_APPLE]:        { name: 'Manzana Curativa (+4❤)',solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xef4444, tiles: [23,23,23,23,23,23] },
-  [BLOCK.ITEM_BREAD]:        { name: 'Pan Crujiente (+5❤)',   solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] },
-  [BLOCK.ITEM_MINECART]:     { name: 'Vagoneta de Tren (R)',  solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x94a3b8, tiles: [44,44,44,44,44,44] }
+  [BLOCK.AIR]:                 { name: 'Aire',                     solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xffffff, tiles: [0,0,0,0,0,0] },
+  [BLOCK.GRASS]:               { name: 'Césped',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x58a83a, tiles: [0, 2, 1, 1, 1, 1] },
+  [BLOCK.DIRT]:                { name: 'Tierra',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.38, stoneLike: false, color: 0x866043, tiles: [2, 2, 2, 2, 2, 2] },
+  [BLOCK.STONE]:               { name: 'Piedra',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.05, stoneLike: true,  color: 0x7d8084, tiles: [3, 3, 3, 3, 3, 3] },
+  [BLOCK.SAND]:                { name: 'Arena',                    solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xe0ce94, tiles: [4, 4, 4, 4, 4, 4] },
+  [BLOCK.WOOD]:                { name: 'Tronco de Roble',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0x6b4e2e, tiles: [6, 6, 5, 5, 5, 5] },
+  [BLOCK.LEAVES]:              { name: 'Hojas',                    solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.18, stoneLike: false, color: 0x34802a, tiles: [7, 7, 7, 7, 7, 7] },
+  [BLOCK.PLANKS]:              { name: 'Madera',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xb08852, tiles: [8, 8, 8, 8, 8, 8] },
+  [BLOCK.COBBLE]:              { name: 'Adoquín',                  solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.10, stoneLike: true,  color: 0x73767a, tiles: [9, 9, 9, 9, 9, 9] },
+  [BLOCK.BRICK]:               { name: 'Ladrillos',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.15, stoneLike: true,  color: 0xa8483a, tiles: [10,10,10,10,10,10] },
+  [BLOCK.GLASS]:               { name: 'Cristal',                  solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xdaf0ff, tiles: [11,11,11,11,11,11] },
+  [BLOCK.WATER]:               { name: 'Agua',                     solid: false, opaque: false, shape: 'water', light: 0,  hardness: 0,    stoneLike: false, color: 0x1c76d8, tiles: [12,12,12,12,12,12] },
+  [BLOCK.SNOW]:                { name: 'Nieve',                    solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xf0f8ff, tiles: [13, 2,14,14,14,14] },
+  [BLOCK.GLOWSTONE]:           { name: 'Piedra Luminosa',          solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.40, stoneLike: false, color: 0xffeba8, tiles: [15,15,15,15,15,15] },
+  [BLOCK.BEDROCK]:             { name: 'Roca Madre',               solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 999,  stoneLike: true,  color: 0x2d2d32, tiles: [16,16,16,16,16,16] },
+  [BLOCK.COAL_ORE]:            { name: 'Mena de Carbón',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.25, stoneLike: true,  color: 0x3b3d40, tiles: [17,17,17,17,17,17] },
+  [BLOCK.IRON_ORE]:            { name: 'Mena de Hierro',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.35, stoneLike: true,  color: 0xd8af93, tiles: [18,18,18,18,18,18] },
+  [BLOCK.GOLD_ORE]:            { name: 'Mena de Oro',              solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfcee4b, tiles: [19,19,19,19,19,19] },
+  [BLOCK.DIAMOND_ORE]:         { name: 'Mena de Diamante',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.65, stoneLike: true,  color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+  [BLOCK.TORCH]:               { name: 'Antorcha (Luz)',           solid: false, opaque: false, shape: 'cross', light: 15, hardness: 0.05, stoneLike: false, color: 0xffd066, tiles: [21,21,21,21,21,21] },
+  [BLOCK.TALL_GRASS]:          { name: 'Hierba Alta',              solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x52a238, tiles: [22,22,22,22,22,22] },
+  [BLOCK.FLOWER_RED]:          { name: 'Rosa Roja',                solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xe83b3b, tiles: [23,23,23,23,23,23] },
+  [BLOCK.FLOWER_YELLOW]:       { name: 'Diente de León',           solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xfacc15, tiles: [24,24,24,24,24,24] },
+  [BLOCK.CACTUS]:              { name: 'Cactus',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [25,25,25,25,25,25] },
+  [BLOCK.TNT]:                 { name: 'TNT (Explosivo)',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,27,26,26,26,26] },
+  [BLOCK.LAVA]:                { name: 'Lava Ardiente',            solid: false, opaque: true,  shape: 'cube',  light: 15, hardness: 0.25, stoneLike: false, color: 0xff5a1f, tiles: [28,28,28,28,28,28] },
+  [BLOCK.OBSIDIAN]:            { name: 'Obsidiana',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 2.20, stoneLike: true,  color: 0x2e1a47, tiles: [29,29,29,29,29,29] },
+  [BLOCK.LEVER_OFF]:           { name: 'Palanca Redstone',         solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.08, stoneLike: false, color: 0x94a3b8, tiles: [30,30,30,30,30,30] },
+  [BLOCK.LEVER_ON]:            { name: 'Palanca Redstone (ON)',    solid: false, opaque: false, shape: 'cross', light: 7,  hardness: 0.08, stoneLike: false, color: 0xef4444, tiles: [31,31,31,31,31,31] },
+  [BLOCK.REDSTONE_LAMP_OFF]:   { name: 'Lámpara Redstone',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x6b3e26, tiles: [32,32,32,32,32,32] },
+  [BLOCK.REDSTONE_LAMP_ON]:    { name: 'Lámpara Redstone (ON)',    solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.35, stoneLike: false, color: 0xffd166, tiles: [33,33,33,33,33,33] },
+  [BLOCK.SAPLING]:             { name: 'Brote de Árbol',           solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.05, stoneLike: false, color: 0x4ade80, tiles: [34,34,34,34,34,34] },
+  [BLOCK.WHEAT_1]:             { name: 'Semillas de Trigo',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x84cc16, tiles: [35,35,35,35,35,35] },
+  [BLOCK.WHEAT_2]:             { name: 'Trigo en Crecimiento',     solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xa3e635, tiles: [36,36,36,36,36,36] },
+  [BLOCK.WHEAT_3]:             { name: 'Trigo Maduro',             solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.05, stoneLike: false, color: 0xeab308, tiles: [37,37,37,37,37,37] },
+  [BLOCK.AMETHYST]:            { name: 'Cristal de Amatista',      solid: true,  opaque: true,  shape: 'cube',  light: 5,  hardness: 1.30, stoneLike: true,  color: 0xa855f7, tiles: [38,38,38,38,38,38] },
+  [BLOCK.GLOW_MUSHROOM]:       { name: 'Seta Bioluminiscente',     solid: false, opaque: false, shape: 'cross', light: 12, hardness: 0.06, stoneLike: false, color: 0x22d3ee, tiles: [39,39,39,39,39,39] },
+  [BLOCK.SLIME]:               { name: 'Bloque de Slime (Rebote)', solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0x4ade80, tiles: [40,40,40,40,40,40] },
+  [BLOCK.DOOR_CLOSED]:         { name: 'Compuerta Mecánica',       solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.55, stoneLike: false, color: 0x92400e, tiles: [41,41,41,41,41,41] },
+  [BLOCK.DOOR_OPEN]:           { name: 'Compuerta (Abierta)',      solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.55, stoneLike: false, color: 0xb45309, tiles: [41,41,41,41,41,41] },
+  [BLOCK.LADDER]:              { name: 'Escalera de Mano',         solid: false, opaque: false, climbable: true, shape: 'cube', light: 0, hardness: 0.30, stoneLike: false, color: 0xc28e4c, tiles: [42,42,42,42,42,42] },
+  [BLOCK.TRAPDOOR_CLOSED]:     { name: 'Trampilla Mecánica',       solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.45, stoneLike: false, color: 0x854d0e, tiles: [43,43,43,43,43,43] },
+  [BLOCK.TRAPDOOR_OPEN]:       { name: 'Trampilla (Abierta)',      solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.45, stoneLike: false, color: 0xa16207, tiles: [43,43,43,43,43,43] },
+  [BLOCK.RAIL]:                { name: 'Vía de Ferrocarril',       solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.25, stoneLike: true,  color: 0x94a3b8, tiles: [44,44,44,44,44,44] },
+  [BLOCK.CHEST]:               { name: 'Cofre de Tesoro',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xd97706, tiles: [45,45,46,46,46,46] },
+  [BLOCK.LILY_PAD]:            { name: 'Nenúfar Acuático',         solid: true,  opaque: false, shape: 'cross', light: 0,  hardness: 0.06, stoneLike: false, color: 0x22c55e, tiles: [47,47,47,47,47,47] },
+  [BLOCK.PISTON]:              { name: 'Pistón Mecánico Redstone', solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.85, stoneLike: true,  color: 0x94a3b8, tiles: [48, 9,48,48,48,48] },
+  [BLOCK.PORTAL]:              { name: 'Portal de Obsidiana',      solid: false, opaque: false, shape: 'cube',  light: 12, hardness: 0.50, stoneLike: false, color: 0xc084fc, tiles: [49,49,49,49,49,49] },
+  [BLOCK.ICE]:                 { name: 'Hielo Resbaladizo',        solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: true,  color: 0x7dd3fc, tiles: [50,50,50,50,50,50] },
+  [BLOCK.TOOL_PICKAXE]:        { name: 'Pico de Diamante',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+  [BLOCK.TOOL_SWORD]:          { name: 'Espada de Diamante',       solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
+  [BLOCK.TOOL_BOW]:            { name: 'Arco y Flechas',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
+  [BLOCK.ITEM_APPLE]:          { name: 'Manzana Curativa (+4❤)',   solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xef4444, tiles: [23,23,23,23,23,23] },
+  [BLOCK.ITEM_BREAD]:          { name: 'Pan Crujiente (+5❤)',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] },
+  [BLOCK.ITEM_MINECART]:       { name: 'Vagoneta de Tren (R)',     solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x94a3b8, tiles: [44,44,44,44,44,44] },
+  [BLOCK.ITEM_BOAT]:           { name: 'Barca Navegable (R)',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xb45309, tiles: [8,8,8,8,8,8] },
+  [BLOCK.TOOL_GRAPPLING_HOOK]: { name: 'Gancho de Agarre',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xa855f7, tiles: [38,38,38,38,38,38] }
 };
 
 const ALL_INVENTORY_ITEMS = [
   BLOCK.TOOL_PICKAXE,
   BLOCK.TOOL_SWORD,
   BLOCK.TOOL_BOW,
+  BLOCK.TOOL_GRAPPLING_HOOK,
   BLOCK.ITEM_APPLE,
   BLOCK.ITEM_BREAD,
   BLOCK.ITEM_MINECART,
+  BLOCK.ITEM_BOAT,
   BLOCK.RAIL,
+  BLOCK.LILY_PAD,
+  BLOCK.PISTON,
+  BLOCK.PORTAL,
+  BLOCK.ICE,
   BLOCK.LADDER,
   BLOCK.TRAPDOOR_CLOSED,
   BLOCK.CHEST,
@@ -186,132 +204,33 @@ const hotbarSlots = [
 
 // Fast Crafting Recipes (1-click / 1-tap in Inventory Modal E)
 const CRAFTING_RECIPES = [
-  {
-    name: '4× Madera (Tablones)',
-    outId: BLOCK.PLANKS,
-    outCount: 4,
-    ingredients: [{ id: BLOCK.WOOD, count: 1 }]
-  },
-  {
-    name: '4× Antorchas',
-    outId: BLOCK.TORCH,
-    outCount: 4,
-    ingredients: [{ id: BLOCK.COAL_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
-  },
-  {
-    name: '2× Ladrillos',
-    outId: BLOCK.BRICK,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.DIRT, count: 2 }, { id: BLOCK.SAND, count: 1 }]
-  },
-  {
-    name: '2× Cristal',
-    outId: BLOCK.GLASS,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.SAND, count: 2 }, { id: BLOCK.COAL_ORE, count: 1 }]
-  },
-  {
-    name: '2× Piedra Luminosa',
-    outId: BLOCK.GLOWSTONE,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.TORCH, count: 1 }, { id: BLOCK.GOLD_ORE, count: 1 }]
-  },
-  {
-    name: '2× TNT (Explosivo)',
-    outId: BLOCK.TNT,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.SAND, count: 2 }, { id: BLOCK.COAL_ORE, count: 1 }]
-  },
-  {
-    name: '2× Piedra Lisa',
-    outId: BLOCK.STONE,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.COBBLE, count: 2 }]
-  },
-  {
-    name: '1× Pico de Diamante',
-    outId: BLOCK.TOOL_PICKAXE,
-    outCount: 1,
-    ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 2 }, { id: BLOCK.PLANKS, count: 1 }]
-  },
-  {
-    name: '1× Espada de Diamante',
-    outId: BLOCK.TOOL_SWORD,
-    outCount: 1,
-    ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
-  },
-  {
-    name: '1× Arco y Flechas',
-    outId: BLOCK.TOOL_BOW,
-    outCount: 1,
-    ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.TALL_GRASS, count: 1 }]
-  },
-  {
-    name: '2× Manzana Curativa (+4❤)',
-    outId: BLOCK.ITEM_APPLE,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.FLOWER_RED, count: 1 }, { id: BLOCK.GOLD_ORE, count: 1 }]
-  },
-  {
-    name: '2× Palanca Redstone',
-    outId: BLOCK.LEVER_OFF,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.COBBLE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
-  },
-  {
-    name: '2× Lámpara Redstone',
-    outId: BLOCK.REDSTONE_LAMP_OFF,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.GLOWSTONE, count: 1 }, { id: BLOCK.IRON_ORE, count: 1 }]
-  },
-  {
-    name: '1× Pan Crujiente (+5❤)',
-    outId: BLOCK.ITEM_BREAD,
-    outCount: 1,
-    ingredients: [{ id: BLOCK.WHEAT_3, count: 2 }]
-  },
-  {
-    name: '2× Bloque de Slime (Rebote)',
-    outId: BLOCK.SLIME,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.TALL_GRASS, count: 2 }, { id: BLOCK.GLOW_MUSHROOM, count: 1 }]
-  },
-  {
-    name: '2× Compuerta Mecánica',
-    outId: BLOCK.DOOR_CLOSED,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.COBBLE, count: 1 }]
-  },
-  {
-    name: '4× Escalera de Mano',
-    outId: BLOCK.LADDER,
-    outCount: 4,
-    ingredients: [{ id: BLOCK.PLANKS, count: 2 }]
-  },
-  {
-    name: '2× Trampilla Mecánica',
-    outId: BLOCK.TRAPDOOR_CLOSED,
-    outCount: 2,
-    ingredients: [{ id: BLOCK.PLANKS, count: 2 }]
-  },
-  {
-    name: '6× Vía de Ferrocarril',
-    outId: BLOCK.RAIL,
-    outCount: 6,
-    ingredients: [{ id: BLOCK.IRON_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
-  },
-  {
-    name: '1× Vagoneta de Tren (R)',
-    outId: BLOCK.ITEM_MINECART,
-    outCount: 1,
-    ingredients: [{ id: BLOCK.IRON_ORE, count: 2 }]
-  },
-  {
-    name: '1× Cofre de Tesoro',
-    outId: BLOCK.CHEST,
-    outCount: 1,
-    ingredients: [{ id: BLOCK.PLANKS, count: 4 }]
-  }
+  { name: '4× Madera (Tablones)',       outId: BLOCK.PLANKS,              outCount: 4, ingredients: [{ id: BLOCK.WOOD, count: 1 }] },
+  { name: '4× Antorchas',               outId: BLOCK.TORCH,               outCount: 4, ingredients: [{ id: BLOCK.COAL_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }] },
+  { name: '2× Ladrillos',               outId: BLOCK.BRICK,               outCount: 2, ingredients: [{ id: BLOCK.DIRT, count: 2 }, { id: BLOCK.SAND, count: 1 }] },
+  { name: '2× Cristal',                 outId: BLOCK.GLASS,               outCount: 2, ingredients: [{ id: BLOCK.SAND, count: 2 }, { id: BLOCK.COAL_ORE, count: 1 }] },
+  { name: '2× Piedra Luminosa',         outId: BLOCK.GLOWSTONE,           outCount: 2, ingredients: [{ id: BLOCK.TORCH, count: 1 }, { id: BLOCK.GOLD_ORE, count: 1 }] },
+  { name: '2× TNT (Explosivo)',         outId: BLOCK.TNT,                 outCount: 2, ingredients: [{ id: BLOCK.SAND, count: 2 }, { id: BLOCK.COAL_ORE, count: 1 }] },
+  { name: '2× Piedra Lisa',             outId: BLOCK.STONE,               outCount: 2, ingredients: [{ id: BLOCK.COBBLE, count: 2 }] },
+  { name: '1× Pico de Diamante',        outId: BLOCK.TOOL_PICKAXE,        outCount: 1, ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 2 }, { id: BLOCK.PLANKS, count: 1 }] },
+  { name: '1× Espada de Diamante',      outId: BLOCK.TOOL_SWORD,          outCount: 1, ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }] },
+  { name: '1× Arco y Flechas',          outId: BLOCK.TOOL_BOW,            outCount: 1, ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.TALL_GRASS, count: 1 }] },
+  { name: '2× Manzana Curativa (+4❤)',  outId: BLOCK.ITEM_APPLE,          outCount: 2, ingredients: [{ id: BLOCK.FLOWER_RED, count: 1 }, { id: BLOCK.GOLD_ORE, count: 1 }] },
+  { name: '2× Palanca Redstone',        outId: BLOCK.LEVER_OFF,           outCount: 2, ingredients: [{ id: BLOCK.COBBLE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }] },
+  { name: '2× Lámpara Redstone',        outId: BLOCK.REDSTONE_LAMP_OFF,   outCount: 2, ingredients: [{ id: BLOCK.GLOWSTONE, count: 1 }, { id: BLOCK.IRON_ORE, count: 1 }] },
+  { name: '1× Pan Crujiente (+5❤)',     outId: BLOCK.ITEM_BREAD,          outCount: 1, ingredients: [{ id: BLOCK.WHEAT_3, count: 2 }] },
+  { name: '2× Bloque de Slime (Rebote)',outId: BLOCK.SLIME,               outCount: 2, ingredients: [{ id: BLOCK.TALL_GRASS, count: 2 }, { id: BLOCK.GLOW_MUSHROOM, count: 1 }] },
+  { name: '2× Compuerta Mecánica',      outId: BLOCK.DOOR_CLOSED,         outCount: 2, ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.COBBLE, count: 1 }] },
+  { name: '4× Escalera de Mano',        outId: BLOCK.LADDER,              outCount: 4, ingredients: [{ id: BLOCK.PLANKS, count: 2 }] },
+  { name: '2× Trampilla Mecánica',      outId: BLOCK.TRAPDOOR_CLOSED,     outCount: 2, ingredients: [{ id: BLOCK.PLANKS, count: 2 }] },
+  { name: '6× Vía de Ferrocarril',      outId: BLOCK.RAIL,                outCount: 6, ingredients: [{ id: BLOCK.IRON_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }] },
+  { name: '1× Vagoneta de Tren (R)',    outId: BLOCK.ITEM_MINECART,       outCount: 1, ingredients: [{ id: BLOCK.IRON_ORE, count: 2 }] },
+  { name: '1× Cofre de Tesoro',         outId: BLOCK.CHEST,               outCount: 1, ingredients: [{ id: BLOCK.PLANKS, count: 4 }] },
+  { name: '1× Barca Navegable (R)',     outId: BLOCK.ITEM_BOAT,           outCount: 1, ingredients: [{ id: BLOCK.PLANKS, count: 3 }] },
+  { name: '4× Nenúfar Acuático',        outId: BLOCK.LILY_PAD,            outCount: 4, ingredients: [{ id: BLOCK.TALL_GRASS, count: 2 }] },
+  { name: '2× Pistón Mecánico Redstone',outId: BLOCK.PISTON,              outCount: 2, ingredients: [{ id: BLOCK.COBBLE, count: 2 }, { id: BLOCK.PLANKS, count: 1 }, { id: BLOCK.IRON_ORE, count: 1 }] },
+  { name: '1× Gancho de Agarre',        outId: BLOCK.TOOL_GRAPPLING_HOOK, outCount: 1, ingredients: [{ id: BLOCK.IRON_ORE, count: 1 }, { id: BLOCK.AMETHYST, count: 1 }] },
+  { name: '2× Portal de Obsidiana',     outId: BLOCK.PORTAL,              outCount: 2, ingredients: [{ id: BLOCK.OBSIDIAN, count: 2 }, { id: BLOCK.AMETHYST, count: 1 }] },
+  { name: '2× Hielo Resbaladizo',       outId: BLOCK.ICE,                 outCount: 2, ingredients: [{ id: BLOCK.SNOW, count: 2 }] }
 ];
 
 function createInitialInventoryCounts() {
@@ -320,9 +239,15 @@ function createInitialInventoryCounts() {
   counts[BLOCK.TOOL_PICKAXE] = 1;
   counts[BLOCK.TOOL_SWORD] = 1;
   counts[BLOCK.TOOL_BOW] = 1;
+  counts[BLOCK.TOOL_GRAPPLING_HOOK] = 1;
   counts[BLOCK.ITEM_APPLE] = 6;
   counts[BLOCK.ITEM_BREAD] = 4;
   counts[BLOCK.ITEM_MINECART] = 2;
+  counts[BLOCK.ITEM_BOAT] = 2;
+  counts[BLOCK.LILY_PAD] = 12;
+  counts[BLOCK.PISTON] = 8;
+  counts[BLOCK.PORTAL] = 6;
+  counts[BLOCK.ICE] = 16;
   counts[BLOCK.RAIL] = 24;
   counts[BLOCK.LADDER] = 16;
   counts[BLOCK.TRAPDOOR_CLOSED] = 8;
@@ -534,7 +459,6 @@ function createProceduralAtlas() {
   // 26: TNT Side
   drawTile(26, (x, y, r) => {
     if (y >= 5 && y <= 10) {
-      // White label band with dark "TNT" pixel letters
       const inText = (y >= 6 && y <= 9) && (
         (x >= 2 && x <= 4 && (y === 6 || x === 3)) ||
         (x >= 6 && x <= 9 && (x === 6 || x === 9 || x - 6 === y - 6)) ||
@@ -700,6 +624,36 @@ function createProceduralAtlas() {
     return shade(176, 112, 38, 0.88 + r * 0.16);
   });
 
+  // 47: Water Lily Pad (Floating green leaf with pink lotus blossom)
+  drawTile(47, (x, y, r) => {
+    const dist = Math.hypot(x - 7.5, y - 9.5);
+    if (x >= 6 && x <= 9 && y >= 7 && y <= 10) return shade(244, 114, 182, 0.95 + r * 0.1);
+    if (dist <= 6.2 && !(x > 8 && y < 8)) return shade(34, 197, 94, 0.86 + r * 0.22);
+    return null;
+  });
+
+  // 48: Mechanical Redstone Piston (Oak push head + iron shaft + cobblestone housing)
+  drawTile(48, (x, y, r) => {
+    if (y <= 3) return shade(184, 134, 72, 0.92 + r * 0.12);
+    if (y === 4) return shade(203, 213, 225, 0.95);
+    if (x >= 6 && x <= 9 && y <= 10) return shade(148, 163, 184, 0.94);
+    return shade(105, 110, 118, 0.84 + r * 0.22);
+  });
+
+  // 49: Dimensional Obsidian Portal (Glowing violet-magenta vortex)
+  drawTile(49, (x, y, r) => {
+    const swirl = Math.sin(x * 0.65 + y * 0.65) + Math.cos((x - 7.5) * 0.5 - (y - 7.5) * 0.5);
+    if (swirl > 0.7) return shade(240, 171, 252, 0.98);
+    return shade(168, 85, 247, 0.85 + r * 0.2);
+  });
+
+  // 50: Slippery Glacial Ice (Translucent frost blue with white crystal streaks)
+  drawTile(50, (x, y, r) => {
+    const streak = ((x + y) === 7) || ((x + y) === 8) || ((x + y) === 18);
+    if (streak) return shade(240, 249, 255, 0.98);
+    return shade(125, 211, 252, 0.88 + r * 0.14);
+  });
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter;
   texture.minFilter = THREE.NearestFilter;
@@ -735,4 +689,3 @@ function createCrackTextures() {
   }
   return stages;
 }
-

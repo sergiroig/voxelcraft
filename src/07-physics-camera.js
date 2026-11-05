@@ -1,14 +1,11 @@
-// VoxelCraft HTML5 — 07-physics-camera.js (9. 3D DDA RAYCASTER, 10. PLAYER PHYSICS, FRUSTUM CULLING, 3RD-PERSON & STREAMING)
+// VoxelCraft HTML5 — 07-physics-camera.js (9. DDA RAYCASTER, 10. PLAYER PHYSICS, SHIELD, ICE, BOATS, PORTALS, FRUSTUM CULLING & STREAMING)
 'use strict';
 
 // ============================================================================
 // 9. FAST 3D DDA VOXEL RAYCASTER
 // ============================================================================
 function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
-  let x = Math.floor(ox);
-  let y = Math.floor(oy);
-  let z = Math.floor(oz);
-
+  let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
   const stepX = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
   const stepY = dy > 0 ? 1 : (dy < 0 ? -1 : 0);
   const stepZ = dz > 0 ? 1 : (dz < 0 ? -1 : 0);
@@ -21,16 +18,13 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
   let tMaxY = stepY > 0 ? (y + 1 - oy) * tDeltaY : (oy - y) * tDeltaY;
   let tMaxZ = stepZ > 0 ? (z + 1 - oz) * tDeltaZ : (oz - z) * tDeltaZ;
 
-  let nx = 0, ny = 0, nz = 0;
-  let dist = 0;
+  let nx = 0, ny = 0, nz = 0, dist = 0;
 
   while (dist <= maxDist) {
     const b = getVoxelGlobal(x, y, z);
     if (b !== BLOCK.AIR && b !== BLOCK.WATER) {
       if (b === BLOCK.TORCH) {
-        const hx = ox + dx * dist - x;
-        const hy = oy + dy * dist - y;
-        const hz = oz + dz * dist - z;
+        const hx = ox + dx * dist - x, hy = oy + dy * dist - y, hz = oz + dz * dist - z;
         if (hx >= 0.28 && hx <= 0.72 && hz >= 0.28 && hz <= 0.72 && hy <= 0.75) {
           return { x, y, z, nx, ny, nz, block: b };
         }
@@ -40,19 +34,15 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
     }
     if (tMaxX < tMaxY) {
       if (tMaxX < tMaxZ) {
-        x += stepX; dist = tMaxX; tMaxX += tDeltaX;
-        nx = -stepX; ny = 0; nz = 0;
+        x += stepX; dist = tMaxX; tMaxX += tDeltaX; nx = -stepX; ny = 0; nz = 0;
       } else {
-        z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ;
-        nx = 0; ny = 0; nz = -stepZ;
+        z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ; nx = 0; ny = 0; nz = -stepZ;
       }
     } else {
       if (tMaxY < tMaxZ) {
-        y += stepY; dist = tMaxY; tMaxY += tDeltaY;
-        nx = 0; ny = -stepY; nz = 0;
+        y += stepY; dist = tMaxY; tMaxY += tDeltaY; nx = 0; ny = -stepY; nz = 0;
       } else {
-        z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ;
-        nx = 0; ny = 0; nz = -stepZ;
+        z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ; nx = 0; ny = 0; nz = -stepZ;
       }
     }
   }
@@ -60,30 +50,28 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
 }
 
 // ============================================================================
-// 10. PLAYER PHYSICS, HEALTH, PROGRESSIVE MINING & CONTROLS
+// 10. PLAYER PHYSICS, SHIELD BLOCK (PUNTO 25), SLIPPERY ICE (PUNTO 26) & BOATS/PORTALS
 // ============================================================================
 const player = {
-  x: 8.5,
-  y: 42,
-  z: 8.5,
-  vx: 0,
-  vy: 0,
-  vz: 0,
-  yaw: 0,
-  pitch: -0.15,
-  radius: 0.3,
-  height: 1.75,
-  eyeHeight: 1.58,
-  onGround: false,
-  flying: false,
-  stepAccum: 0,
-  bobTime: 0,
-  swingTime: 0,
-  health: 10,
-  maxHealth: 10,
-  regenTimer: 0,
-  maxFallVel: 0
+  x: 8.5, y: 42, z: 8.5,
+  vx: 0, vy: 0, vz: 0,
+  iceVx: 0, iceVz: 0,
+  yaw: 0, pitch: -0.15,
+  radius: 0.3, height: 1.75, eyeHeight: 1.58,
+  onGround: false, flying: false,
+  stepAccum: 0, bobTime: 0, swingTime: 0,
+  health: 10, maxHealth: 10, regenTimer: 0,
+  maxFallVel: 0, portalCooldown: 0
 };
+
+let isShieldBlocking = false;
+
+function toggleShieldBlock(forceState) {
+  const next = typeof forceState === 'boolean' ? forceState : !isShieldBlocking;
+  if (next !== isShieldBlocking && next) sfx.play('shield');
+  isShieldBlocking = next;
+  return isShieldBlocking;
+}
 
 const heartsRowEl = document.getElementById('hearts-row');
 function renderHeartsUI() {
@@ -97,6 +85,11 @@ renderHeartsUI();
 
 function damagePlayer(amount) {
   if (player.flying) return;
+  if (isShieldBlocking) {
+    sfx.play('shield');
+    amount = Math.floor(amount * 0.2);
+    if (amount <= 0) return;
+  }
   player.health = Math.max(1, player.health - amount);
   renderHeartsUI();
   sfx.play('hurt');
@@ -114,6 +107,131 @@ function findSpawnHeight(wx, wz) {
   return 35;
 }
 
+// ============================================================================
+// 10A. DIMENSIONAL OBSIDIAN PORTALS (PUNTO 24) & SAILING BOATS (PUNTO 21)
+// ============================================================================
+const portals = [];
+
+function registerPortalAt(wx, wy, wz) {
+  const bx = Math.floor(wx), by = Math.floor(wy), bz = Math.floor(wz);
+  let existing = portals.find(p => Math.hypot(p.x - bx, p.y - by, p.z - bz) < 2.5);
+  if (!existing) {
+    existing = { x: bx, y: by, z: bz };
+    portals.push(existing);
+  }
+  return existing;
+}
+
+function activateObsidianPortal(wx, wy, wz) {
+  const bx = Math.floor(wx), by = Math.floor(wy), bz = Math.floor(wz);
+  setVoxelGlobal(bx, by, bz, BLOCK.PORTAL);
+  sfx.play('portal');
+  spawnBlockParticles(bx, by, bz, BLOCK.AMETHYST, 20);
+  return registerPortalAt(bx, by, bz);
+}
+
+function useVoxelPortal(wx, wy, wz) {
+  const bx = Math.floor(wx), by = Math.floor(wy), bz = Math.floor(wz);
+  registerPortalAt(bx, by, bz);
+  let target = portals.find(p => Math.hypot(p.x - bx, p.y - by, p.z - bz) >= 4.0);
+  if (!target) {
+    const destX = bx + 32, destZ = bz + 32;
+    const destY = Math.max(SEA_LEVEL + 4, Math.floor(findSpawnHeight(destX, destZ)));
+    setVoxelGlobal(destX, destY - 1, destZ, BLOCK.OBSIDIAN);
+    setVoxelGlobal(destX, destY, destZ, BLOCK.PORTAL);
+    target = registerPortalAt(destX, destY, destZ);
+  }
+  player.x = target.x + 0.5;
+  player.y = target.y + 0.1;
+  player.z = target.z + 1.2;
+  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
+  player.portalCooldown = 2.0;
+  sfx.play('portal');
+  spawnBlockParticles(target.x, target.y, target.z, BLOCK.PORTAL, 24);
+  if (typeof updateMinimap === 'function') updateMinimap(0, true);
+  return target;
+}
+
+const boats = [];
+let ridingBoat = null;
+const boatMatOak = new THREE.MeshBasicMaterial({ color: 0xb45309 });
+const boatMatTrim = new THREE.MeshBasicMaterial({ color: 0x78350f });
+
+function spawnBoat(wx, wy, wz) {
+  const bx = Math.floor(wx), by = Math.floor(wy), bz = Math.floor(wz);
+  for (const existing of boats) {
+    if (Math.hypot(existing.x - (bx + 0.5), existing.y - (by + 0.5), existing.z - (bz + 0.5)) < 1.1) return existing;
+  }
+  const root = new THREE.Group();
+  const hull = new THREE.Mesh(cartOuterGeo, boatMatOak); hull.scale.set(1.15, 0.75, 1.35); hull.position.y = 0.22; root.add(hull);
+  const deck = new THREE.Mesh(cartInnerGeo, boatMatTrim); deck.scale.set(1.05, 0.55, 1.20); deck.position.y = 0.28; root.add(deck);
+  const boat = { x: bx + 0.5, y: by + 0.65, z: bz + 0.5, vx: 0, vz: 0, yaw: player.yaw, splashTimer: 0, root };
+  root.position.set(boat.x, boat.y, boat.z);
+  scene.add(root);
+  boats.push(boat);
+  sfx.play('splash');
+  return boat;
+}
+
+function toggleRideBoat(boatOverride) {
+  const btn = document.getElementById('tbtn-cart');
+  if (ridingBoat) {
+    ridingBoat.vx = 0; ridingBoat.vz = 0; ridingBoat = null; player.vy = 4.5;
+    if (btn) btn.classList.remove('toggled');
+    sfx.play('splash');
+    return false;
+  }
+  let targetBoat = boatOverride || null;
+  if (!targetBoat) {
+    for (const b of boats) {
+      if (Math.hypot(b.x - player.x, b.y - player.y, b.z - player.z) < 4.5) { targetBoat = b; break; }
+    }
+  }
+  if (!targetBoat) targetBoat = spawnBoat(player.x, player.y, player.z);
+  ridingBoat = targetBoat;
+  targetBoat.yaw = player.yaw;
+  targetBoat.vx = -Math.sin(player.yaw) * 9.5;
+  targetBoat.vz = -Math.cos(player.yaw) * 9.5;
+  player.x = targetBoat.x; player.y = targetBoat.y + 0.35; player.z = targetBoat.z;
+  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
+  if (btn) btn.classList.add('toggled');
+  sfx.play('splash');
+  return true;
+}
+
+function updateBoats(dt) {
+  for (let i = 0; i < boats.length; i++) {
+    const b = boats[i];
+    if (ridingBoat === b) {
+      const fwd = (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) + joyY;
+      b.yaw = player.yaw;
+      if (Math.abs(fwd) > 0.05) {
+        b.vx = -Math.sin(b.yaw) * 9.5 * Math.sign(fwd);
+        b.vz = -Math.cos(b.yaw) * 9.5 * Math.sign(fwd);
+      }
+    }
+    const speed = Math.hypot(b.vx, b.vz);
+    if (speed > 0.05) {
+      const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
+      if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(nx), Math.floor(b.y + 0.2), Math.floor(nz))].solid) {
+        b.x = nx; b.z = nz;
+      } else {
+        b.vx = 0; b.vz = 0;
+      }
+      b.vx *= Math.max(0.85, 1.0 - dt * 1.2);
+      b.vz *= Math.max(0.85, 1.0 - dt * 1.2);
+      b.splashTimer += dt;
+      if (b.splashTimer > 0.35) { b.splashTimer = 0; sfx.play('splash'); }
+    }
+    b.root.position.set(b.x, b.y + Math.sin(gpuShaderUniforms.uTime.value * 3.0 + i) * 0.04, b.z);
+    b.root.rotation.y = b.yaw;
+    if (ridingBoat === b) {
+      player.x = b.x; player.y = b.y + 0.35; player.z = b.z;
+      player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
+    }
+  }
+}
+
 const keys = {};
 let isLocked = false;
 let isTouchMode = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -128,34 +246,23 @@ let renderDistance = 5;
 let isNight = false;
 let hudVisible = true;
 
-// Multi-touch state (Virtual Joystick + Camera Look + Action Buttons)
-let joyX = 0;       // -1 (left) to +1 (right)
-let joyY = 0;       // -1 (back) to +1 (forward)
-let joySprint = false;
-let touchJump = false;
-let touchDown = false;
-
+let joyX = 0, joyY = 0, joySprint = false, touchJump = false, touchDown = false;
 const isGameActive = () => (!menuOpen || isLocked || touchPlaying) && !invOpen && !chestOpen;
 
-// Progressive Mining state
 let isMiningHeld = false;
 let mineTargetKey = '';
 let mineProgress = 0;
 let mineHitTimer = 0;
 
 function checkAABBCollision(px, py, pz) {
-  const minX = Math.floor(px - player.radius);
-  const maxX = Math.floor(px + player.radius);
-  const minY = Math.floor(py);
-  const maxY = Math.floor(py + player.height - 0.01);
-  const minZ = Math.floor(pz - player.radius);
-  const maxZ = Math.floor(pz + player.radius);
+  const minX = Math.floor(px - player.radius), maxX = Math.floor(px + player.radius);
+  const minY = Math.floor(py), maxY = Math.floor(py + player.height - 0.01);
+  const minZ = Math.floor(pz - player.radius), maxZ = Math.floor(pz + player.radius);
 
   for (let y = minY; y <= maxY; y++) {
     for (let z = minZ; z <= maxZ; z++) {
       for (let x = minX; x <= maxX; x++) {
-        const b = getVoxelGlobal(x, y, z);
-        if (BLOCK_DEFS[b].solid) return true;
+        if (BLOCK_DEFS[getVoxelGlobal(x, y, z)].solid) return true;
       }
     }
   }
@@ -174,36 +281,18 @@ let culledChunksCount = 0;
 const projScreenMat = new THREE.Matrix4();
 const viewFrustum = new THREE.Frustum();
 
-// Build 6-part articulated voxel player avatar for 3rd-person view
 const playerAvatar = (() => {
   const grp = new THREE.Group();
   const skinMat  = new THREE.MeshBasicMaterial({ color: 0xf1c27d });
   const shirtMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
   const pantsMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
 
-  const torso = new THREE.Mesh(mobGeos.bodyBiped, shirtMat);
-  torso.position.set(0, 0.90, 0);
-  grp.add(torso);
-
-  const head = new THREE.Mesh(mobGeos.head, skinMat);
-  head.position.set(0, 1.46, 0);
-  grp.add(head);
-
-  const leftArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat);
-  leftArm.position.set(-0.32, 0.94, 0);
-  grp.add(leftArm);
-
-  const rightArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat);
-  rightArm.position.set(0.32, 0.94, 0);
-  grp.add(rightArm);
-
-  const leftLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat);
-  leftLeg.position.set(-0.12, 0.31, 0);
-  grp.add(leftLeg);
-
-  const rightLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat);
-  rightLeg.position.set(0.12, 0.31, 0);
-  grp.add(rightLeg);
+  const torso = new THREE.Mesh(mobGeos.bodyBiped, shirtMat); torso.position.set(0, 0.90, 0); grp.add(torso);
+  const head = new THREE.Mesh(mobGeos.head, skinMat); head.position.set(0, 1.46, 0); grp.add(head);
+  const leftArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat); leftArm.position.set(-0.32, 0.94, 0); grp.add(leftArm);
+  const rightArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat); rightArm.position.set(0.32, 0.94, 0); grp.add(rightArm);
+  const leftLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat); leftLeg.position.set(-0.12, 0.31, 0); grp.add(leftLeg);
+  const rightLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat); rightLeg.position.set(0.12, 0.31, 0); grp.add(rightLeg);
 
   grp.userData = { head, torso, leftArm, rightArm, leftLeg, rightLeg };
   grp.visible = false;
@@ -228,9 +317,7 @@ function toggleZoom(forceZoom) {
   camera.fov = isZoomed ? 24 : baseFov;
   camera.updateProjectionMatrix();
   const tbtnZoom = document.getElementById('tbtn-zoom');
-  if (tbtnZoom) {
-    tbtnZoom.classList.toggle('toggled', isZoomed);
-  }
+  if (tbtnZoom) tbtnZoom.classList.toggle('toggled', isZoomed);
   return isZoomed;
 }
 
@@ -239,55 +326,40 @@ function updateFrustumCulling() {
   projScreenMat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   viewFrustum.setFromProjectionMatrix(projScreenMat);
 
-  const pcx = Math.floor(player.x / CHUNK_SIZE);
-  const pcz = Math.floor(player.z / CHUNK_SIZE);
-  let vis = 0;
-  let culled = 0;
+  const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
+  let vis = 0, culled = 0;
 
   for (const ch of chunks.values()) {
     if (!ch.solidMesh && !ch.waterMesh) continue;
-    const dx = ch.cx - pcx;
-    const dz = ch.cz - pcz;
-    // Always keep the immediate 3x3 chunk neighborhood around the player visible
+    const dx = ch.cx - pcx, dz = ch.cz - pcz;
     const inView = (dx * dx + dz * dz <= 2) || (ch.worldBox ? viewFrustum.intersectsBox(ch.worldBox) : true);
     if (ch.solidMesh) ch.solidMesh.visible = inView;
     if (ch.waterMesh) ch.waterMesh.visible = inView;
-    if (inView) vis++;
-    else culled++;
+    if (inView) vis++; else culled++;
   }
-
   visibleChunksCount = vis;
   culledChunksCount = culled;
 
-  // Also cull distant mobs outside the camera frustum
   for (let i = 0; i < mobs.length; i++) {
     const m = mobs[i];
     if (!m.root) continue;
-    const mdx = m.x - player.x;
-    const mdz = m.z - player.z;
-    if (mdx * mdx + mdz * mdz <= 64) {
-      m.root.visible = true;
-    } else {
-      m.root.visible = viewFrustum.containsPoint(m.root.position);
-    }
+    const mdx = m.x - player.x, mdz = m.z - player.z;
+    m.root.visible = (mdx * mdx + mdz * mdz <= 64) || viewFrustum.containsPoint(m.root.position);
   }
 }
 
 function updatePlayerPhysics(dt) {
-  const forwardX = -Math.sin(player.yaw);
-  const forwardZ = -Math.cos(player.yaw);
-  const rightX   =  Math.cos(player.yaw);
-  const rightZ   = -Math.sin(player.yaw);
+  if (player.portalCooldown > 0) player.portalCooldown = Math.max(0, player.portalCooldown - dt);
+
+  const forwardX = -Math.sin(player.yaw), forwardZ = -Math.cos(player.yaw);
+  const rightX   =  Math.cos(player.yaw), rightZ   = -Math.sin(player.yaw);
 
   let inputFwd = 0, inputRight = 0;
   if (keys['KeyW'] || keys['ArrowUp'])    inputFwd += 1;
   if (keys['KeyS'] || keys['ArrowDown'])  inputFwd -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) inputRight += 1;
   if (keys['KeyA'] || keys['ArrowLeft'])  inputRight -= 1;
-
-  // Merge virtual analog joystick
-  inputFwd   += joyY;
-  inputRight += joyX;
+  inputFwd += joyY; inputRight += joyX;
 
   let moveX = forwardX * inputFwd + rightX * inputRight;
   let moveZ = forwardZ * inputFwd + rightZ * inputRight;
@@ -299,51 +371,61 @@ function updatePlayerPhysics(dt) {
     moveZ = (moveZ / len) * moveMag;
   }
 
-  const inWater = getVoxelGlobal(
-    Math.floor(player.x),
-    Math.floor(player.y + 0.6),
-    Math.floor(player.z)
-  ) === BLOCK.WATER;
-
+  const inWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
   const wantJump = keys['Space'] || touchJump;
   const wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown;
   const sprint   = keys['ShiftLeft'] || keys['ShiftRight'] || joySprint;
 
-  const speed = player.flying
+  const groundBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z));
+  const onIce = !player.flying && !inWater && (
+    groundBlock === BLOCK.ICE ||
+    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.55), Math.floor(player.z)) === BLOCK.ICE
+  );
+
+  const baseSpeed = player.flying
     ? (sprint ? 22 : 12)
     : (inWater ? 3.8 : (sprint ? 7.2 : 4.7));
+  const speed = baseSpeed * (onIce ? 1.45 : 1.0) * (isShieldBlocking ? 0.65 : 1.0);
 
-  player.vx = moveX * speed;
-  player.vz = moveZ * speed;
+  if (onIce) {
+    if (moveMag > 0.05) {
+      const accel = Math.min(1, dt * 8.5);
+      player.iceVx += (moveX * speed - player.iceVx) * accel;
+      player.iceVz += (moveZ * speed - player.iceVz) * accel;
+    } else {
+      const decay = Math.pow(0.18, dt);
+      player.iceVx *= decay;
+      player.iceVz *= decay;
+    }
+    player.vx = player.iceVx;
+    player.vz = player.iceVz;
+  } else {
+    player.iceVx = moveX * speed;
+    player.iceVz = moveZ * speed;
+    player.vx = moveX * speed;
+    player.vz = moveZ * speed;
+  }
 
-  const groundBlock = getVoxelGlobal(
-    Math.floor(player.x),
-    Math.floor(player.y - 0.15),
-    Math.floor(player.z)
-  );
   const onLadder =
     getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LADDER ||
     getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 1.05), Math.floor(player.z)) === BLOCK.LADDER;
 
   if (ridingCart) {
-    if (wantDown) {
-      toggleRideMinecart();
-    } else {
-      player.x = ridingCart.x;
-      player.y = ridingCart.y + 0.35;
-      player.z = ridingCart.z;
-      player.vx = 0;
-      player.vy = 0;
-      player.vz = 0;
-      player.maxFallVel = 0;
-      player.onGround = true;
+    if (wantDown) toggleRideMinecart();
+    else {
+      player.x = ridingCart.x; player.y = ridingCart.y + 0.35; player.z = ridingCart.z;
+      player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0; player.onGround = true;
+    }
+  } else if (ridingBoat) {
+    if (wantDown) toggleRideBoat();
+    else {
+      player.x = ridingBoat.x; player.y = ridingBoat.y + 0.35; player.z = ridingBoat.z;
+      player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0; player.onGround = true;
     }
   } else if (player.flying) {
-    player.vy = 0;
-    player.maxFallVel = 0;
+    player.vy = 0; player.maxFallVel = 0;
     if (wantJump) player.vy = speed * 0.75;
     if (wantDown) player.vy = -speed * 0.75;
-
     player.x += player.vx * dt;
     player.y += player.vy * dt;
     player.z += player.vz * dt;
@@ -353,10 +435,7 @@ function updatePlayerPhysics(dt) {
       if (wantJump || inputFwd > 0.15) {
         player.vy = 4.6;
         player.stepAccum += dt * 5.0;
-        if (player.stepAccum > 1.4) {
-          player.stepAccum = 0;
-          sfx.play('climb');
-        }
+        if (player.stepAccum > 1.4) { player.stepAccum = 0; sfx.play('climb'); }
       } else if (wantDown) {
         player.vy = 0;
       } else {
@@ -373,8 +452,7 @@ function updatePlayerPhysics(dt) {
       if (player.vy < player.maxFallVel) player.maxFallVel = player.vy;
       if (wantJump && player.onGround) {
         if (groundBlock === BLOCK.SLIME) {
-          player.vy = 12.8;
-          sfx.play('boing');
+          player.vy = 12.8; sfx.play('boing');
         } else {
           player.vy = 8.6;
         }
@@ -394,30 +472,21 @@ function updatePlayerPhysics(dt) {
       player.onGround = false;
     } else {
       if (player.vy < 0) {
-        const landBlock = getVoxelGlobal(
-          Math.floor(player.x),
-          Math.floor(nextY - 0.08),
-          Math.floor(player.z)
-        );
+        const landBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(nextY - 0.08), Math.floor(player.z));
         if (landBlock === BLOCK.SLIME) {
-          // Slime Block cancels all fall damage and bounces the player elastically!
           player.maxFallVel = 0;
           if (player.vy < -3.0 && !wantDown) {
             player.vy = Math.min(16.5, Math.max(9.2, -player.vy * 0.86));
             player.onGround = false;
             sfx.play('boing');
           } else {
-            player.vy = 0;
-            player.onGround = true;
+            player.vy = 0; player.onGround = true;
           }
         } else {
           if (player.maxFallVel < -16.5) {
-            const dmg = Math.max(1, Math.floor((-player.maxFallVel - 15.0) * 0.45));
-            damagePlayer(dmg);
+            damagePlayer(Math.max(1, Math.floor((-player.maxFallVel - 15.0) * 0.45)));
           }
-          player.maxFallVel = 0;
-          player.onGround = true;
-          player.vy = 0;
+          player.maxFallVel = 0; player.onGround = true; player.vy = 0;
         }
       } else {
         player.vy = 0;
@@ -428,11 +497,7 @@ function updatePlayerPhysics(dt) {
       player.stepAccum += dt * speed * moveMag;
       if (player.stepAccum > 2.2) {
         player.stepAccum = 0;
-        if (groundBlock === BLOCK.AMETHYST) {
-          sfx.play('chime');
-        } else {
-          sfx.play('step');
-        }
+        sfx.play(groundBlock === BLOCK.AMETHYST ? 'chime' : 'step');
       }
     }
   }
@@ -441,13 +506,11 @@ function updatePlayerPhysics(dt) {
   if (player.health < player.maxHealth) {
     player.regenTimer += dt;
     if (player.regenTimer > 4.0) {
-      player.regenTimer = 0;
-      player.health++;
-      renderHeartsUI();
+      player.regenTimer = 0; player.health++; renderHeartsUI();
     }
   }
 
-  // 1st-person hand bobbing & swing animation
+  // 1st-person hand bobbing, shield block pose & swing animation
   if (moveMag > 0.1 && (player.onGround || player.flying)) {
     player.bobTime += dt * speed * moveMag * 1.6;
   }
@@ -455,12 +518,17 @@ function updatePlayerPhysics(dt) {
     player.swingTime = Math.max(0, player.swingTime - dt * 5.0);
   }
   const swingAngle = Math.sin(player.swingTime * Math.PI);
-  handGroup.position.set(
-    0.42 + Math.cos(player.bobTime) * 0.022 - swingAngle * 0.08,
-    -0.34 + Math.abs(Math.sin(player.bobTime)) * 0.025 - swingAngle * 0.06,
-    -0.58 - swingAngle * 0.14
-  );
-  handGroup.rotation.x = -swingAngle * 0.65;
+  if (isShieldBlocking) {
+    handGroup.position.set(0.18, -0.22, -0.46);
+    handGroup.rotation.set(-0.35, 0.55, 0.85);
+  } else {
+    handGroup.position.set(
+      0.42 + Math.cos(player.bobTime) * 0.022 - swingAngle * 0.08,
+      -0.34 + Math.abs(Math.sin(player.bobTime)) * 0.025 - swingAngle * 0.06,
+      -0.58 - swingAngle * 0.14
+    );
+    handGroup.rotation.set(-swingAngle * 0.65, 0, 0);
+  }
 
   // Update 3rd-person player avatar position & limb animations
   playerAvatar.position.set(player.x, player.y, player.z);
@@ -473,12 +541,8 @@ function updatePlayerPhysics(dt) {
   av.rightArm.rotation.x =  limbSwing * 0.8 - swingAngle * 1.25;
   av.head.rotation.x     =  player.pitch * 0.65;
 
-  const eyeX = player.x;
-  const eyeY = player.y + player.eyeHeight;
-  const eyeZ = player.z;
-
+  const eyeX = player.x, eyeY = player.y + player.eyeHeight, eyeZ = player.z;
   if (thirdPersonMode) {
-    // Raycast backward from eye position so the 3rd-person camera never clips into solid walls
     const backX =  Math.sin(player.yaw) * Math.cos(player.pitch);
     const backY = -Math.sin(player.pitch);
     const backZ =  Math.cos(player.yaw) * Math.cos(player.pitch);
@@ -489,11 +553,7 @@ function updatePlayerPhysics(dt) {
       const hitDist = Math.hypot(wallHit.x + 0.5 - eyeX, wallHit.y + 0.5 - eyeY, wallHit.z + 0.5 - eyeZ);
       camDist = Math.max(0.45, Math.min(maxCamDist, hitDist - 0.55));
     }
-    camera.position.set(
-      eyeX + backX * camDist,
-      eyeY + backY * camDist,
-      eyeZ + backZ * camDist
-    );
+    camera.position.set(eyeX + backX * camDist, eyeY + backY * camDist, eyeZ + backZ * camDist);
   } else {
     camera.position.set(eyeX, eyeY, eyeZ);
   }
@@ -502,13 +562,8 @@ function updatePlayerPhysics(dt) {
   camera.rotation.y = player.yaw;
   camera.rotation.x = player.pitch;
 
-  const headBlock = getVoxelGlobal(
-    Math.floor(camera.position.x),
-    Math.floor(camera.position.y),
-    Math.floor(camera.position.z)
-  );
-  document.getElementById('water-overlay').style.display =
-    headBlock === BLOCK.WATER ? 'block' : 'none';
+  const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
+  document.getElementById('water-overlay').style.display = headBlock === BLOCK.WATER ? 'block' : 'none';
 }
 
 const mineBarWrap = document.getElementById('mine-progress-wrap');
@@ -516,28 +571,20 @@ const mineBarEl   = document.getElementById('mine-progress-bar');
 
 function updateMining(dt, currentHit) {
   if (!isGameActive() || !isMiningHeld || !currentHit || currentHit.block === BLOCK.BEDROCK) {
-    mineProgress = 0;
-    mineTargetKey = '';
-    crackBox.visible = false;
-    mineBarWrap.style.display = 'none';
+    mineProgress = 0; mineTargetKey = '';
+    crackBox.visible = false; mineBarWrap.style.display = 'none';
     return;
   }
 
-  // Clicking / punching a placed TNT block ignites it immediately!
   if (currentHit.block === BLOCK.TNT) {
     igniteTNT(currentHit.x, currentHit.y, currentHit.z, 2.6);
-    isMiningHeld = false;
-    mineProgress = 0;
-    crackBox.visible = false;
-    mineBarWrap.style.display = 'none';
+    isMiningHeld = false; mineProgress = 0;
+    crackBox.visible = false; mineBarWrap.style.display = 'none';
     return;
   }
 
   const key = `${currentHit.x},${currentHit.y},${currentHit.z}`;
-  if (key !== mineTargetKey) {
-    mineTargetKey = key;
-    mineProgress = 0;
-  }
+  if (key !== mineTargetKey) { mineTargetKey = key; mineProgress = 0; }
 
   const def = BLOCK_DEFS[currentHit.block];
   const holdingPickaxe = hotbarSlots[selectedSlot] === BLOCK.TOOL_PICKAXE;
@@ -549,23 +596,19 @@ function updateMining(dt, currentHit) {
 
   mineHitTimer += dt;
   if (mineHitTimer > 0.16) {
-    mineHitTimer = 0;
-    sfx.play('hit');
+    mineHitTimer = 0; sfx.play('hit');
     spawnBlockParticles(currentHit.x, currentHit.y, currentHit.z, currentHit.block, 3);
   }
 
   if (mineProgress >= 1.0) {
     const brokenId = currentHit.block;
     if (setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR)) {
-      if (brokenId === BLOCK.AMETHYST) sfx.play('chime');
-      else sfx.play('break');
+      sfx.play(brokenId === BLOCK.AMETHYST ? 'chime' : 'break');
       spawnBlockParticles(currentHit.x, currentHit.y, currentHit.z, brokenId, 18);
       spawnItemDrop(currentHit.x, currentHit.y, currentHit.z, brokenId, 1);
     }
-    mineProgress = 0;
-    mineTargetKey = '';
-    crackBox.visible = false;
-    mineBarWrap.style.display = 'none';
+    mineProgress = 0; mineTargetKey = '';
+    crackBox.visible = false; mineBarWrap.style.display = 'none';
   } else {
     const stage = Math.min(7, Math.floor(mineProgress * 8));
     crackMat.map = crackTextures[stage];
@@ -584,19 +627,15 @@ let lastPlayerChunkX = null;
 let lastPlayerChunkZ = null;
 
 function updateChunkStreaming() {
-  const pcx = Math.floor(player.x / CHUNK_SIZE);
-  const pcz = Math.floor(player.z / CHUNK_SIZE);
+  const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
 
   if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ || buildQueue.length === 0) {
-    lastPlayerChunkX = pcx;
-    lastPlayerChunkZ = pcz;
-
+    lastPlayerChunkX = pcx; lastPlayerChunkZ = pcz;
     const maxDistSq = (renderDistance + 0.5) * (renderDistance + 0.5);
-    // Prune any queued chunks that are now outside renderDistance when player moves
+
     for (let i = buildQueue.length - 1; i >= 0; i--) {
       const qCh = buildQueue[i];
-      const qdx = qCh.cx - pcx;
-      const qdz = qCh.cz - pcz;
+      const qdx = qCh.cx - pcx, qdz = qCh.cz - pcz;
       if (qdx * qdx + qdz * qdz > maxDistSq) {
         qCh.queued = false;
         buildQueue.splice(i, 1);
@@ -605,11 +644,8 @@ function updateChunkStreaming() {
 
     for (let dz = -renderDistance; dz <= renderDistance; dz++) {
       for (let dx = -renderDistance; dx <= renderDistance; dx++) {
-        const distSq = dx * dx + dz * dz;
-        if (distSq > maxDistSq) continue;
-        const cx = pcx + dx;
-        const cz = pcz + dz;
-        const ch = getChunkData(cx, cz);
+        if (dx * dx + dz * dz > maxDistSq) continue;
+        const ch = getChunkData(pcx + dx, pcz + dz);
         if (ch.dirty && !ch.queued) {
           ch.queued = true;
           buildQueue.push(ch);
@@ -627,8 +663,7 @@ function updateChunkStreaming() {
 
     const unloadDistSq = (renderDistance + 2) * (renderDistance + 2);
     for (const [key, ch] of chunks.entries()) {
-      const dx = ch.cx - pcx;
-      const dz = ch.cz - pcz;
+      const dx = ch.cx - pcx, dz = ch.cz - pcz;
       if (dx * dx + dz * dz > unloadDistSq) {
         if (ch.solidMesh) { scene.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
         if (ch.waterMesh) { scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); }
@@ -644,10 +679,7 @@ function updateChunkStreaming() {
       buildQueue.shift();
       continue;
     }
-    const dx = nextCh.cx - pcx;
-    const dz = nextCh.cz - pcz;
-    // Build inner chunks immediately so player stands on solid ground on frame 1;
-    // offload outer streaming chunks to the multithreaded Web Worker with Zero-Copy Transferables
+    const dx = nextCh.cx - pcx, dz = nextCh.cz - pcz;
     if (meshWorker && (dx * dx + dz * dz) > 2) {
       if (workerJobsInFlight >= 8) break;
       buildQueue.shift();
@@ -658,4 +690,3 @@ function updateChunkStreaming() {
     }
   }
 }
-

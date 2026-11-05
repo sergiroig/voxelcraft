@@ -166,7 +166,6 @@ function setVoxelGlobal(wx, wy, wz, blockId) {
   }
   if (!found) dArr.push(idx, blockId);
 
-  // If block broken had flora/torch directly on top of it, break that too
   if (blockId === BLOCK.AIR && wy + 1 < CHUNK_HEIGHT) {
     const above = ch.data[idx + 1];
     if (BLOCK_DEFS[above].shape === 'cross') {
@@ -178,17 +177,14 @@ function setVoxelGlobal(wx, wy, wz, blockId) {
   enqueueSimNeighbors(wx, wy, wz);
   saveWorldData();
 
-  // Recompute lighting on current chunk + 4 neighbors so torches illuminate across chunk borders
   computeChunkLighting(ch, getChunkIfLoaded);
   for (const [dx, dz] of [[-1,0],[1,0],[0,-1],[0,1]]) {
     const nCh = getChunkIfLoaded(cx + dx, cz + dz);
     if (nCh) computeChunkLighting(nCh, getChunkIfLoaded);
   }
-  // Second pass on center chunk so reflected border light is exact
   computeChunkLighting(ch, getChunkIfLoaded);
 
   rebuildChunkImmediate(cx, cz);
-  // Rebuild adjacent chunks if edit or torch light reaches them
   const isLightChange = BLOCK_DEFS[blockId].light > 0 || true;
   if (lx <= 14 || isLightChange) {
     if (lx < 4 || isLightChange) rebuildChunkImmediate(cx - 1, cz);
@@ -286,8 +282,8 @@ solidMaterial.onBeforeCompile = (shader) => {
       float tileIdx = floor(uv.x * ${ATLAS_COLS}.0 + 0.0001);
       vTileIdx = tileIdx;
 
-      // Cross-Quad Flora & Crop Wind Sway (22-24: Grass/Flowers, 34-37: Sapling/Wheat, 39: Glow Mushroom)
-      if ((tileIdx >= 21.5 && tileIdx <= 24.5) || (tileIdx >= 33.5 && tileIdx <= 37.5) || (tileIdx >= 38.5 && tileIdx <= 39.5)) {
+      // Cross-Quad Flora & Crop Wind Sway (22-24: Grass/Flowers, 34-37: Sapling/Wheat, 39: Glow Mushroom, 47: Lily Pad)
+      if ((tileIdx >= 21.5 && tileIdx <= 24.5) || (tileIdx >= 33.5 && tileIdx <= 37.5) || (tileIdx >= 38.5 && tileIdx <= 39.5) || (tileIdx >= 46.5 && tileIdx <= 47.5)) {
         float rootMask = clamp(uv.y, 0.0, 1.0);
         float windPhase = uTime * 2.8 + wp.x * 0.75 + wp.z * 0.65;
         transformed.x += sin(windPhase) * 0.12 * rootMask * uWindStrength;
@@ -334,6 +330,12 @@ solidMaterial.onBeforeCompile = (shader) => {
       } else if (vTileIdx >= 38.5 && vTileIdx <= 39.5) {
         float bioPulse = 0.94 + 0.14 * sin(uTime * 3.8 + vWorldPos.x * 2.2 + vWorldPos.z * 2.2);
         gl_FragColor.rgb *= vec3(bioPulse * 0.88, bioPulse * 1.08, bioPulse * 1.12);
+      } else if (vTileIdx >= 48.5 && vTileIdx <= 49.5) {
+        float vortex = 0.92 + 0.18 * sin(uTime * 5.2 + vWorldPos.x * 3.2 + vWorldPos.y * 3.2 + vWorldPos.z * 3.2);
+        gl_FragColor.rgb *= vec3(vortex * 1.12, vortex * 0.82, vortex * 1.24);
+      } else if (vTileIdx >= 49.5 && vTileIdx <= 50.5) {
+        float frostGlint = max(0.0, sin(uTime * 2.6 + vWorldPos.x * 3.0 + vWorldPos.z * 3.0));
+        gl_FragColor.rgb += vec3(0.08, 0.12, 0.16) * pow(frostGlint, 5.0);
       }
       #include <fog_fragment>`
     );
@@ -472,10 +474,10 @@ function updateHeldItemVisual() {
   if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) {
     handMesh.scale.set(0.28, 1.35, 0.28);
     handMesh.rotation.set(0.4, 0.3, -0.3);
-  } else if (bId === BLOCK.TOOL_BOW) {
+  } else if (bId === BLOCK.TOOL_BOW || bId === BLOCK.TOOL_GRAPPLING_HOOK) {
     handMesh.scale.set(0.24, 1.15, 0.45);
     handMesh.rotation.set(0.2, 0.15, -0.1);
-  } else if (bId === BLOCK.ITEM_APPLE) {
+  } else if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) {
     handMesh.scale.set(0.65, 0.65, 0.65);
     handMesh.rotation.set(0.15, 0.4, 0);
   } else if (def.shape === 'cross') {
@@ -633,7 +635,6 @@ function updateItemDrops(dt) {
     d.age += dt;
     if (d.pickupDelay > 0) d.pickupDelay = Math.max(0, d.pickupDelay - dt);
 
-    // Despawn after 90 seconds to keep world clean
     if (d.age > 90) {
       d.active = false;
       dummyMatrix.makeTranslation(0, -999, 0);
@@ -646,10 +647,8 @@ function updateItemDrops(dt) {
     const dz = pz - d.z;
     const dist = Math.hypot(dx, dy, dz);
 
-    // Magnetize toward player within 2.8 blocks once pickupDelay expires
     if (d.pickupDelay <= 0 && dist < 2.8) {
       if (dist < 0.88) {
-        // Collect item drop!
         d.active = false;
         dummyMatrix.makeTranslation(0, -999, 0);
         dropInstanced.setMatrixAt(i, dummyMatrix);
@@ -663,7 +662,6 @@ function updateItemDrops(dt) {
       d.z += dz * pull;
       d.vy = 0;
     } else {
-      // Gravity & ground resting
       d.vy -= 16.0 * dt;
       if (d.vy < -20) d.vy = -20;
 
@@ -704,7 +702,6 @@ scene.add(skyGroup);
 const celestialOrbit = new THREE.Group();
 skyGroup.add(celestialOrbit);
 
-// Cubic Sun
 const sunMesh = new THREE.Mesh(
   new THREE.BoxGeometry(14, 14, 14),
   new THREE.MeshBasicMaterial({ color: 0xfff48f, fog: false })
@@ -712,7 +709,6 @@ const sunMesh = new THREE.Mesh(
 sunMesh.position.set(0, 145, -60);
 celestialOrbit.add(sunMesh);
 
-// Cubic Moon
 const moonMesh = new THREE.Mesh(
   new THREE.BoxGeometry(11, 11, 11),
   new THREE.MeshBasicMaterial({ color: 0xdbeafe, fog: false })
@@ -720,7 +716,6 @@ const moonMesh = new THREE.Mesh(
 moonMesh.position.set(0, -145, 60);
 celestialOrbit.add(moonMesh);
 
-// Night Starfield (1 Points draw call)
 const starPositions = new Float32Array(220 * 3);
 for (let i = 0; i < 220; i++) {
   const theta = Math.random() * Math.PI * 2;
@@ -760,12 +755,12 @@ const cloudMesh = (() => {
     const x0 = b.x, x1 = b.x + b.w;
     const y0 = 65,  y1 = 67.2;
     const z0 = b.z, z1 = b.z + b.d;
-    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]); // Top
-    pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]); // Bottom
-    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]); // North
-    pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]); // South
-    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]); // East
-    pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]); // West
+    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]);
+    pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]);
+    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]);
+    pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]);
+    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]);
+    pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -796,4 +791,3 @@ function updateDynamicSky(dt) {
   cloudMesh.position.set(snapX + cloudDrift - 110, 0, snapZ);
   cloudMesh.material.color.setScalar(isNight ? 0.28 : 0.96);
 }
-

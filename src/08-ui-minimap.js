@@ -1,4 +1,4 @@
-// VoxelCraft HTML5 — 08-ui-minimap.js (12. UI, HOTBAR, INVENTORY/CRAFTING MODAL, SEED/BIOME TELEPORT & 2D MINIMAP)
+// VoxelCraft HTML5 — 08-ui-minimap.js (12. UI, HOTBAR, INVENTORY/CRAFTING, SCREENSHOTS, SEED/BIOME TELEPORT & 2D MINIMAP)
 'use strict';
 
 // ============================================================================
@@ -16,7 +16,6 @@ function drawItemIcon(canvas, itemId) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 16, 16);
   if (itemId === BLOCK.TOOL_PICKAXE) {
-    // Draw pixel-art Diamond Pickaxe icon
     ctx.fillStyle = '#7a542e';
     for (let i = 2; i <= 12; i++) ctx.fillRect(i, 15 - i, 2, 2);
     ctx.fillStyle = '#5decf5';
@@ -24,7 +23,6 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillRect(12, 4, 2, 4);
     ctx.fillRect(7, 3, 2, 2);
   } else if (itemId === BLOCK.TOOL_SWORD) {
-    // Draw pixel-art Diamond Sword icon
     ctx.fillStyle = '#7a542e';
     ctx.fillRect(2, 12, 3, 3);
     ctx.fillStyle = '#facc15';
@@ -32,7 +30,6 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#38bdf8';
     for (let i = 5; i <= 13; i++) ctx.fillRect(i, 15 - i, 2, 2);
   } else if (itemId === BLOCK.TOOL_BOW) {
-    // Draw pixel-art Bow & Arrow icon
     ctx.fillStyle = '#cbd5e1';
     for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
     ctx.fillStyle = '#92400e';
@@ -42,7 +39,6 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#fef08a';
     ctx.fillRect(3, 7, 10, 2);
   } else if (itemId === BLOCK.ITEM_APPLE) {
-    // Draw pixel-art Healing Apple icon
     ctx.fillStyle = '#22c55e';
     ctx.fillRect(8, 2, 3, 2);
     ctx.fillStyle = '#ef4444';
@@ -51,7 +47,6 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#fca5a5';
     ctx.fillRect(5, 5, 2, 2);
   } else if (itemId === BLOCK.ITEM_BREAD) {
-    // Draw pixel-art Baked Bread Loaf icon (+5 Hearts)
     ctx.fillStyle = '#92400e';
     ctx.fillRect(2, 6, 12, 6);
     ctx.fillStyle = '#d97706';
@@ -59,7 +54,6 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#fbbf24';
     ctx.fillRect(4, 6, 8, 3);
   } else if (itemId === BLOCK.ITEM_MINECART) {
-    // Draw pixel-art Steel Minecart icon
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(2, 5, 12, 6);
     ctx.fillStyle = '#475569';
@@ -67,6 +61,21 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(3, 11, 3, 3);
     ctx.fillRect(10, 11, 3, 3);
+  } else if (itemId === BLOCK.ITEM_BOAT) {
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(1, 8, 14, 5);
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(3, 7, 10, 4);
+    ctx.fillStyle = '#fcd34d';
+    ctx.fillRect(6, 3, 2, 6);
+    ctx.fillRect(9, 3, 2, 6);
+  } else if (itemId === BLOCK.TOOL_GRAPPLING_HOOK) {
+    ctx.fillStyle = '#cbd5e1';
+    for (let i = 2; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#c084fc';
+    ctx.fillRect(9, 2, 5, 2);
+    ctx.fillRect(12, 4, 2, 4);
+    ctx.fillRect(7, 4, 3, 2);
   } else {
     const def = BLOCK_DEFS[itemId];
     const tileIndex = def.tiles[2];
@@ -79,6 +88,7 @@ function formatItemCountBadge(itemId) {
     itemId === BLOCK.TOOL_PICKAXE ||
     itemId === BLOCK.TOOL_SWORD ||
     itemId === BLOCK.TOOL_BOW ||
+    itemId === BLOCK.TOOL_GRAPPLING_HOOK ||
     gameMode === 'creative'
   ) {
     return '∞';
@@ -119,8 +129,7 @@ function buildCraftingUI() {
     card.className = 'craft-item ' + (craftable ? 'craftable' : 'locked');
 
     const icon = document.createElement('canvas');
-    icon.width = 16;
-    icon.height = 16;
+    icon.width = 16; icon.height = 16;
     drawItemIcon(icon, rec.outId);
 
     const info = document.createElement('div');
@@ -128,19 +137,12 @@ function buildCraftingUI() {
     const costStr = rec.ingredients
       .map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (tienes ${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`)
       .join(' + ');
-    info.innerHTML = `
-      <div class="craft-title">${rec.name}</div>
-      <div class="craft-cost">Requiere: ${costStr}</div>
-    `;
+    info.innerHTML = `<div class="craft-title">${rec.name}</div><div class="craft-cost">Requiere: ${costStr}</div>`;
 
     card.appendChild(icon);
     card.appendChild(info);
 
-    const onCraft = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      craftRecipe(idx);
-    };
+    const onCraft = (e) => { e.preventDefault(); e.stopPropagation(); craftRecipe(idx); };
     card.addEventListener('click', onCraft);
     card.addEventListener('touchend', onCraft, { passive: false });
     craftGridEl.appendChild(card);
@@ -155,15 +157,13 @@ function buildHotbarUI() {
     slot.innerHTML = `<span class="key">${idx + 1}</span><span class="count">${formatItemCountBadge(bId)}</span>`;
 
     const icon = document.createElement('canvas');
-    icon.width = 16;
-    icon.height = 16;
+    icon.width = 16; icon.height = 16;
     drawItemIcon(icon, bId);
 
     slot.appendChild(icon);
     slot.addEventListener('click', () => updateHotbarSelection(idx));
     slot.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       updateHotbarSelection(idx);
     }, { passive: false });
     hotbarEl.appendChild(slot);
@@ -189,9 +189,7 @@ function addWaypoint(customName) {
   saveWorldData();
   buildWaypointsUI();
   updateMinimap(0, true);
-  if (blockLabelEl) {
-    blockLabelEl.textContent = `📍 ${wp.name} guardada en (${wp.x}, ${wp.y}, ${wp.z})`;
-  }
+  if (blockLabelEl) blockLabelEl.textContent = `📍 ${wp.name} guardada en (${wp.x}, ${wp.y}, ${wp.z})`;
   return wp;
 }
 
@@ -208,15 +206,14 @@ function teleportToWaypoint(idx) {
   const wp = waypoints[idx];
   if (!wp) return null;
   if (ridingCart) toggleRideMinecart();
-  const cx = Math.floor(wp.x / CHUNK_SIZE);
-  const cz = Math.floor(wp.z / CHUNK_SIZE);
+  if (ridingBoat) toggleRideBoat();
+  const cx = Math.floor(wp.x / CHUNK_SIZE), cz = Math.floor(wp.z / CHUNK_SIZE);
   getChunkData(cx, cz);
   rebuildChunkImmediate(cx, cz);
   player.x = wp.x + 0.5;
   player.z = wp.z + 0.5;
   player.y = Math.max(wp.y, findSpawnHeight(player.x, player.z));
-  player.vx = 0; player.vy = 0; player.vz = 0;
-  player.maxFallVel = 0;
+  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
   lastPlayerChunkX = null;
   sfx.play('waypoint');
   updateMinimap(0, true);
@@ -238,11 +235,7 @@ function buildWaypointsUI() {
         <div class="craft-cost">Coords: (${wp.x}, ${wp.y}, ${wp.z}) • Distancia: ${dist}m — Clic para Teletransportar</div>
       </div>
     `;
-    const onTp = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      teleportToWaypoint(idx);
-    };
+    const onTp = (e) => { e.preventDefault(); e.stopPropagation(); teleportToWaypoint(idx); };
     card.addEventListener('click', onTp);
     card.addEventListener('touchend', onTp, { passive: false });
     waypointGridEl.appendChild(card);
@@ -250,11 +243,7 @@ function buildWaypointsUI() {
 }
 
 if (btnAddWaypointEl) {
-  btnAddWaypointEl.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    addWaypoint();
-  });
+  btnAddWaypointEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); addWaypoint(); });
 }
 
 function buildInventoryModal() {
@@ -268,8 +257,7 @@ function buildInventoryModal() {
     badge.textContent = formatItemCountBadge(bId);
 
     const icon = document.createElement('canvas');
-    icon.width = 16;
-    icon.height = 16;
+    icon.width = 16; icon.height = 16;
     drawItemIcon(icon, bId);
     const lbl = document.createElement('span');
     lbl.textContent = def.name;
@@ -293,13 +281,9 @@ function buildInventoryModal() {
 
 function refreshInventoryCountsUI() {
   buildHotbarUI();
-  if (invOpen) {
-    buildInventoryModal();
-  }
+  if (invOpen) buildInventoryModal();
   const isCreative = gameMode === 'creative';
-  if (btnModeToggleEl) {
-    btnModeToggleEl.textContent = `Modo: ${isCreative ? 'Creativo (∞)' : 'Supervivencia'} (G)`;
-  }
+  if (btnModeToggleEl) btnModeToggleEl.textContent = `Modo: ${isCreative ? 'Creativo (∞)' : 'Supervivencia'} (G)`;
   if (tbtnModeEl) {
     tbtnModeEl.textContent = isCreative ? '⚒ Creat.' : '⚒ Superv.';
     tbtnModeEl.classList.toggle('toggled', isCreative);
@@ -307,19 +291,40 @@ function refreshInventoryCountsUI() {
 }
 
 function toggleGameMode(forceMode) {
-  if (forceMode === 'survival' || forceMode === 'creative') {
-    gameMode = forceMode;
-  } else {
-    gameMode = gameMode === 'survival' ? 'creative' : 'survival';
-  }
+  if (forceMode === 'survival' || forceMode === 'creative') gameMode = forceMode;
+  else gameMode = gameMode === 'survival' ? 'creative' : 'survival';
   refreshInventoryCountsUI();
 }
 
 if (btnModeToggleEl) {
-  btnModeToggleEl.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleGameMode();
-  });
+  btnModeToggleEl.addEventListener('click', (e) => { e.preventDefault(); toggleGameMode(); });
+}
+
+// ============================================================================
+// 12A-0. SCREENSHOT / PHOTO MODE (F2 / KeyK / 📷)
+// ============================================================================
+let screenshotsTakenCount = 0;
+let lastScreenshotDataUrl = '';
+
+function takeGameScreenshot(skipDownload = false) {
+  renderer.render(scene, camera);
+  try {
+    lastScreenshotDataUrl = canvasEl.toDataURL('image/png');
+  } catch (_) {
+    lastScreenshotDataUrl = 'data:image/png;base64,';
+  }
+  screenshotsTakenCount++;
+  sfx.play('shutter');
+  if (blockLabelEl) {
+    blockLabelEl.textContent = `📷 ¡Captura #${screenshotsTakenCount} guardada! (${canvasEl.width}×${canvasEl.height}px)`;
+  }
+  if (!skipDownload && lastScreenshotDataUrl.length > 32) {
+    const a = document.createElement('a');
+    a.href = lastScreenshotDataUrl;
+    a.download = `voxelcraft_foto_${worldSeed}_${screenshotsTakenCount}.png`;
+    a.click();
+  }
+  return lastScreenshotDataUrl;
 }
 
 const touchControlsEl = document.getElementById('touch-controls');
@@ -413,8 +418,18 @@ function toggleFlyingMode() {
 function placeBlockAtCurrentTarget() {
   const bId = hotbarSlots[selectedSlot];
 
-  // 1. Always prioritize interacting with targeted interactive world blocks (Chest, Lever, Door, Trapdoor, Rail)
+  // 1. Always prioritize interacting with targeted interactive world blocks (Chest, Lever, Door, Trapdoor, Portal, Obsidian)
   if (currentHit) {
+    if (currentHit.block === BLOCK.PORTAL) {
+      useVoxelPortal(currentHit.x, currentHit.y, currentHit.z);
+      player.swingTime = 1.0;
+      return true;
+    }
+    if (currentHit.block === BLOCK.OBSIDIAN && (bId === BLOCK.AMETHYST || bId === BLOCK.TORCH)) {
+      activateObsidianPortal(currentHit.x, currentHit.y + 1, currentHit.z);
+      player.swingTime = 1.0;
+      return true;
+    }
     if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) {
       toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z);
       player.swingTime = 1.0;
@@ -437,7 +452,7 @@ function placeBlockAtCurrentTarget() {
     }
   }
 
-  // 2. Consumable Apple, Bread, or Bow can be used even without pointing at a nearby block
+  // 2. Consumable Apple, Bread, Bow, Grappling Hook or Sword Shield can be used without pointing at a nearby block
   if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) {
     return eatHeldApple(bId);
   }
@@ -445,6 +460,16 @@ function placeBlockAtCurrentTarget() {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
     player.swingTime = 1.0;
+    return true;
+  }
+  if (bId === BLOCK.TOOL_GRAPPLING_HOOK) {
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+    shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
+    player.swingTime = 1.0;
+    return true;
+  }
+  if (bId === BLOCK.TOOL_SWORD) {
+    toggleShieldBlock();
     return true;
   }
 
@@ -466,7 +491,22 @@ function placeBlockAtCurrentTarget() {
     return true;
   }
 
-  // Right-clicking a Rail when not holding another Rail mounts a Minecart on that track!
+  // Placing or mounting a Wooden Boat (Punto 21)
+  if (bId === BLOCK.ITEM_BOAT) {
+    if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
+    const bx = currentHit.x + currentHit.nx;
+    const by = currentHit.y + currentHit.ny;
+    const bz = currentHit.z + currentHit.nz;
+    const boat = spawnBoat(bx, by, bz);
+    if (gameMode === 'survival') {
+      inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
+      refreshInventoryCountsUI();
+    }
+    toggleRideBoat(boat);
+    player.swingTime = 1.0;
+    return true;
+  }
+
   if (currentHit.block === BLOCK.RAIL && bId !== BLOCK.RAIL) {
     const cart = spawnMinecart(currentHit.x, currentHit.y, currentHit.z);
     toggleRideMinecart(cart);
@@ -474,7 +514,7 @@ function placeBlockAtCurrentTarget() {
     return true;
   }
 
-  if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) return false;
+  if (bId === BLOCK.TOOL_PICKAXE) return false;
   if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
 
   const isReplaceable = currentHit.block === BLOCK.TALL_GRASS;
@@ -483,12 +523,9 @@ function placeBlockAtCurrentTarget() {
   const pz = isReplaceable ? currentHit.z : currentHit.z + currentHit.nz;
 
   const placeDef = BLOCK_DEFS[bId];
-  const minX = player.x - player.radius;
-  const maxX = player.x + player.radius;
-  const minY = player.y;
-  const maxY = player.y + player.height;
-  const minZ = player.z - player.radius;
-  const maxZ = player.z + player.radius;
+  const minX = player.x - player.radius, maxX = player.x + player.radius;
+  const minY = player.y, maxY = player.y + player.height;
+  const minZ = player.z - player.radius, maxZ = player.z + player.radius;
 
   const overlapsPlayer = placeDef.solid && (
     px + 1 > minX && px < maxX &&
@@ -516,9 +553,8 @@ function placeBlockAtCurrentTarget() {
         inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
         refreshInventoryCountsUI();
       }
-      if (actualPlaceId === BLOCK.GLOWSTONE) {
-        trySummonIronGolem(px, py, pz);
-      }
+      if (actualPlaceId === BLOCK.GLOWSTONE) trySummonIronGolem(px, py, pz);
+      if (actualPlaceId === BLOCK.PORTAL) registerPortalAt(px, py, pz);
       player.swingTime = 1.0;
       sfx.play('place');
       return true;
@@ -549,10 +585,7 @@ const lblDist = document.getElementById('lbl-dist');
 const rngFov = document.getElementById('rng-fov');
 const lblFov = document.getElementById('lbl-fov');
 
-if (isTouchMode) {
-  btnPlay.textContent = 'Jugar (Controles Táctiles)';
-}
-
+if (isTouchMode) btnPlay.textContent = 'Jugar (Controles Táctiles)';
 btnPlay.addEventListener('click', startGameplay);
 
 document.addEventListener('pointerlockchange', () => {
@@ -616,8 +649,7 @@ function applyWorldSeed(newSeed) {
   activeTNTs.length = 0;
   lastPlayerChunkX = null;
 
-  player.x = 8.5;
-  player.z = 8.5;
+  player.x = 8.5; player.z = 8.5;
   player.y = findSpawnHeight(player.x, player.z);
   player.health = player.maxHealth;
   renderHeartsUI();
@@ -627,19 +659,16 @@ function applyWorldSeed(newSeed) {
 }
 
 function teleportToBiome(targetBiome) {
-  // Spiral search outward in steps of 16 blocks until matching biome is found
   for (let radius = 0; radius <= 180; radius++) {
     for (let step = 0; step < Math.max(1, radius * 8); step++) {
       const angle = (step / Math.max(1, radius * 8)) * Math.PI * 2;
       const wx = Math.floor(8 + Math.cos(angle) * radius * 16);
       const wz = Math.floor(8 + Math.sin(angle) * radius * 16);
       if (generator.getBiomeAt(wx, wz) === targetBiome) {
-        const cx = Math.floor(wx / CHUNK_SIZE);
-        const cz = Math.floor(wz / CHUNK_SIZE);
+        const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
         getChunkData(cx, cz);
         rebuildChunkImmediate(cx, cz);
-        player.x = wx + 0.5;
-        player.z = wz + 0.5;
+        player.x = wx + 0.5; player.z = wz + 0.5;
         player.y = findSpawnHeight(player.x, player.z);
         player.vx = 0; player.vy = 0; player.vz = 0;
         lastPlayerChunkX = null;
@@ -669,9 +698,7 @@ function updateMinimap(dt, forceRender = false) {
   minimapAccum = 0;
   minimapUpdatesCount++;
 
-  const px = Math.floor(player.x);
-  const pz = Math.floor(player.z);
-  const half = MAP_SIZE >> 1;
+  const px = Math.floor(player.x), pz = Math.floor(player.z), half = MAP_SIZE >> 1;
 
   for (let mz = 0; mz < MAP_SIZE; mz++) {
     const wz = pz + (mz - half);
@@ -697,7 +724,6 @@ function updateMinimap(dt, forceRender = false) {
 
   minimapCtx.putImageData(minimapImgData, 0, 0);
 
-  // Draw nearby Mobs on Radar (Red = Zombie, Green = Creeper, Cyan = Golem, White = Sheep/Pig)
   for (let i = 0; i < mobs.length; i++) {
     const m = mobs[i];
     const rx = Math.round(half + (m.x - player.x));
@@ -705,25 +731,21 @@ function updateMinimap(dt, forceRender = false) {
     if (rx >= 1 && rx < MAP_SIZE - 1 && rz >= 1 && rz < MAP_SIZE - 1) {
       minimapCtx.fillStyle = m.type === 'zombie'
         ? '#ef4444'
-        : (m.type === 'creeper' ? '#22c55e' : (m.type === 'golem' ? '#38bdf8' : '#f8fafc'));
+        : (m.type === 'creeper' ? '#22c55e' : (m.type === 'skeleton' ? '#fde047' : (m.type === 'golem' ? '#38bdf8' : '#f8fafc')));
       minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
     }
   }
 
-  // Draw GPS Waypoint Beacons (clamped to radar edge ring when distant for 360° compass navigation)
   for (let i = 0; i < waypoints.length; i++) {
     const wp = waypoints[i];
-    const dx = wp.x - player.x;
-    const dz = wp.z - player.z;
-    const rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + dx)));
-    const rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + dz)));
+    const rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x))));
+    const rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
     minimapCtx.fillStyle = '#0f172a';
     minimapCtx.fillRect(rx - 2, rz - 2, 5, 5);
     minimapCtx.fillStyle = wp.color || '#f43f5e';
     minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
   }
 
-  // Draw Player center marker & look direction line
   minimapCtx.strokeStyle = '#38bdf8';
   minimapCtx.lineWidth = 1.5;
   minimapCtx.beginPath();
@@ -753,23 +775,15 @@ if (btnApplySeed) {
 }
 const btnTpDesert = document.getElementById('btn-tp-desert');
 if (btnTpDesert) {
-  btnTpDesert.addEventListener('click', () => {
-    teleportToBiome('Desierto');
-    startGameplay();
-  });
+  btnTpDesert.addEventListener('click', () => { teleportToBiome('Desierto'); startGameplay(); });
 }
 const btnTpSnow = document.getElementById('btn-tp-snow');
 if (btnTpSnow) {
-  btnTpSnow.addEventListener('click', () => {
-    teleportToBiome('Taiga Nevada');
-    startGameplay();
-  });
+  btnTpSnow.addEventListener('click', () => { teleportToBiome('Taiga Nevada'); startGameplay(); });
 }
 
 btnExport.addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ seed: worldSeed, deltas: worldDeltas }, null, 2)], {
-    type: 'application/json'
-  });
+  const blob = new Blob([JSON.stringify({ seed: worldSeed, deltas: worldDeltas }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
