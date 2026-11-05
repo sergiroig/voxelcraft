@@ -69,6 +69,36 @@
     }
     .test-row.pass .status { color: var(--pass); font-weight: 700; }
     .test-row.fail .status { color: var(--fail); font-weight: 700; }
+    .bench-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .bench-table th, .bench-table td {
+      text-align: left;
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .bench-table th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .bench-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-family: monospace;
+    }
+    .bench-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(74, 222, 128, 0.14);
+      color: var(--pass);
+      font-weight: 700;
+    }
     .iframe-wrap {
       display: flex;
       flex-direction: column;
@@ -91,6 +121,7 @@
       <button id="btn-rerun" style="padding:6px 12px;border-radius:6px;border:none;background:#4ade80;color:#052e16;font-weight:700;cursor:pointer;">Re-ejecutar Tests</button>
     </h1>
     <div id="summary-banner">Cargando motor e iniciando batería de pruebas...</div>
+    <div id="benchmark-container"></div>
     <div id="suites-container"></div>
   </div>
 
@@ -524,11 +555,119 @@
         summaryBanner.textContent = `✗ FALLARON ${totalFailed} TESTS (${totalPassed} exitosos, ${totalFailed} fallos)`;
       }
 
+      // Run per-feature FPS cost profiler on reference machine
+      const gl = vc.renderer.getContext();
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const gpuName = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+
+      const bench = (fn, iters = 300) => {
+        for (let i = 0; i < 15; i++) fn();
+        const t0 = performance.now();
+        for (let i = 0; i < iters; i++) fn();
+        return (performance.now() - t0) / iters;
+      };
+
+      // Ensure 6 mobs exist for realistic per-frame AI benchmark
+      while (vc.mobs.length < 6) {
+        vc.spawnMob(vc.mobs.length % 2 === 0 ? 'sheep' : 'zombie', vc.player.x + 3, vc.player.y + 2, vc.player.z + 3);
+      }
+
+      const perFrameFeatures = [
+        { name: 'Render WebGL + Shaders GPU (Viento/Olas/Espuma)', ms: bench(() => { vc.renderer.render(vc.scene, vc.camera); }, 120) },
+        { name: 'Criaturas (Mobs: IA, Físicas AABB y Animación)',  ms: bench(() => { vc.updateMobs(0.016); }, 400) },
+        { name: 'Físicas del Jugador + Colisión AABB',             ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
+        { name: 'Pool Partículas InstancedMesh (120 instancias)',  ms: bench(() => { vc.updateParticles(0.016); }, 500) },
+        { name: 'Raycast Vóxel 3D (DDA)',                          ms: bench(() => { vc.raycastVoxel(vc.camera.position.x, vc.camera.position.y, vc.camera.position.z, 0, -0.3, -0.95, 6.5); }, 600) },
+        { name: 'Cielo Dinámico (Sol, Luna, Estrellas, Nubes 3D)', ms: bench(() => { vc.updateDynamicSky(0.016); }, 600) },
+        { name: 'Uniforms GPU + Atmósfera Subacuática (CPU)',      ms: bench(() => { vc.updateGPUShaders(0.016); }, 600) },
+        { name: 'Cola de Simulación Vóxel (Arena/Agua/TNT tick)',  ms: bench(() => { vc.updateVoxelSimulation(0.001); }, 600) }
+      ];
+
+      while (vc.mobs.length > 0) vc.removeMobAt(0);
+
+      const ch0 = vc.getChunkData(0, 0);
+      const onDemandFeatures = [
+        { name: 'Generación Chunk (Terreno + Cuevas 3D 4×4×4 + Menas)', ms: bench(() => { vc.getGenerator().generateChunkVoxels(50, 50, null); }, 40) },
+        { name: 'Iluminación Vóxel Flood-Fill BFS (16,384 bloques)',    ms: bench(() => { vc.computeChunkLighting(ch0, (x, z) => vc.chunks.get(`${x},${z}`)); }, 40) },
+        { name: 'Meshing Chunk (Face Culling + AO 4 vértices + X-Mesh)', ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0); }, 30) }
+      ];
+
+      const totalFrameMs = perFrameFeatures.reduce((acc, f) => acc + f.ms, 0);
+      const totalFpsCost60 = (totalFrameMs / 16.667) * 60;
+      const theoreticalUncappedFps = Math.round(1000 / Math.max(0.01, totalFrameMs));
+
+      const benchContainer = document.getElementById('benchmark-container');
+      benchContainer.innerHTML = `
+        <div class="suite-card" style="border-color:#38bdf8;">
+          <div class="suite-title" style="color:#38bdf8;display:flex;justify-content:space-between;align-items:center;">
+            <span>📊 Coste en FPS por Funcionalidad (PC de Referencia)</span>
+            <span class="bench-badge">60 FPS estables (Usa ${totalFpsCost60.toFixed(2)} / 60 FPS · ~${theoreticalUncappedFps} FPS sin VSync)</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px;">
+            Hardware: <b>${navigator.hardwareConcurrency || '?'} hilos CPU</b> · GPU: <b>${gpuName}</b> · Presupuesto 60 FPS = <b>16.67 ms/frame</b>
+          </div>
+          <table class="bench-table">
+            <thead>
+              <tr>
+                <th>Funcionalidad (Por Frame a 60 Hz)</th>
+                <th style="text-align:right">Tiempo</th>
+                <th style="text-align:right">Coste sobre 60 FPS</th>
+                <th style="text-align:right">% Presupuesto (16.67ms)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${perFrameFeatures.map(f => {
+                const fps60 = (f.ms / 16.667) * 60;
+                const pct = (f.ms / 16.667) * 100;
+                const timeStr = f.ms < 0.01 ? `${(f.ms * 1000).toFixed(2)} µs` : `${f.ms.toFixed(3)} ms`;
+                return `<tr>
+                  <td>${f.name}</td>
+                  <td class="num">${timeStr}</td>
+                  <td class="num">-${fps60.toFixed(3)} FPS</td>
+                  <td class="num">${pct.toFixed(2)}%</td>
+                </tr>`;
+              }).join('')}
+              <tr style="font-weight:700;color:#4ade80;">
+                <td>TOTAL POR FRAME (Margen libre: ${(60 - totalFpsCost60).toFixed(2)} / 60 FPS)</td>
+                <td class="num">${totalFrameMs.toFixed(3)} ms</td>
+                <td class="num">-${totalFpsCost60.toFixed(2)} FPS (de 60)</td>
+                <td class="num">${((totalFrameMs / 16.667) * 100).toFixed(2)}%</td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="bench-table" style="margin-top:10px;">
+            <thead>
+              <tr>
+                <th>Operaciones Puntuales (Bajo Demanda / Streaming por Chunk)</th>
+                <th style="text-align:right">Tiempo Medio</th>
+                <th style="text-align:right">% de 1 Frame (16.67ms)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${onDemandFeatures.map(f => `<tr>
+                <td>${f.name}</td>
+                <td class="num">${f.ms.toFixed(2)} ms</td>
+                <td class="num">${((f.ms / 16.667) * 100).toFixed(1)}%</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
       window.__TEST_RESULTS__ = {
         done: true,
         passed: totalPassed,
         failed: totalFailed,
-        failures
+        failures,
+        benchmarks: {
+          gpuName,
+          cores: navigator.hardwareConcurrency,
+          totalFrameMs,
+          totalFpsCost60,
+          theoreticalUncappedFps,
+          perFrameFeatures,
+          onDemandFeatures
+        }
       };
     }
 

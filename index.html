@@ -4036,11 +4036,13 @@
 
       if (fpsAccum >= 0.35) {
         const fps = Math.round(frames / fpsAccum);
-        const avgMs = (frameDurationSum / frames).toFixed(1);
+        const avgMsNum = frameDurationSum / frames;
+        const avgMs = avgMsNum.toFixed(2);
+        const fpsCost60 = ((avgMsNum / 16.667) * 60).toFixed(2);
         const biome = generator.getBiomeAt(player.x, player.z);
         const pLight = getLightGlobal(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z));
 
-        elFps.textContent = `${fps} FPS (${avgMs} ms)`;
+        elFps.textContent = `${fps} FPS (${avgMs} ms | usa ${fpsCost60}/60 FPS)`;
         elDraws.textContent = renderer.info.render.calls;
         elTris.textContent = renderer.info.render.triangles.toLocaleString();
         elChunks.textContent = `${chunks.size} | Mobs: ${mobs.length}`;
@@ -4113,7 +4115,9 @@
       checkAABBCollision,
       damagePlayer,
       updateMining,
+      updateParticles,
       updateDynamicSky,
+      getGenerator: () => generator,
       updateChunkStreaming,
       toggleDayNight,
       toggleFlyingMode,

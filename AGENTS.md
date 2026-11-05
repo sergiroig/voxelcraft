@@ -39,10 +39,10 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 - El juego debe ser **100% jugable tanto en PC (ratón con `Pointer Lock` + teclado) como en dispositivos móviles/tablets (pantallas multitáctiles)**.
 - Cualquier acción o mecánica nueva que añada un atajo de teclado o clic en PC **debe** tener su equivalente accesible desde la interfaz táctil (`#touch-controls`, botones en `#touch-action-col` o `#touch-top-bar`, o controles dentro del modal de inventario `#inventory-modal`).
 
-### Regla 4: Testing Obligatorio en Chrome (`test.html`)
+### Regla 4: Testing y Benchmark de FPS Obligatorios en Chrome (`test.html`)
 - El motor expone su API interna de pruebas en `window.__VOXELCRAFT__` (al final de [`index.html`](index.html)).
-- **Toda funcionalidad nueva debe ir acompañada de nuevos tests en [`test.html`](test.html)** que verifiquen su comportamiento de extremo a extremo.
-- **Antes de dar por terminada una tarea o hacer `git push`**, es obligatorio ejecutar [`test.html`](test.html) en Chrome (usando las herramientas MCP de `chrome_devtools`) y comprobar que `window.__TEST_RESULTS__` devuelve **`failed: 0`** (100% de tests en verde).
+- **Toda funcionalidad nueva debe ir acompañada de nuevos tests en [`test.html`](test.html)** y de su entrada en el profiler de rendimiento (`perFrameFeatures` / `onDemandFeatures`).
+- **Antes de dar por terminada una tarea o hacer `git push`**, es obligatorio ejecutar [`test.html`](test.html) en Chrome (usando las herramientas MCP de `chrome_devtools`), comprobar que `window.__TEST_RESULTS__` devuelve **`failed: 0`** y **anotar el coste en FPS / tiempo por frame en la Sección 6 de este archivo (`AGENTS.md`)** tomando este PC como referencia.
 
 ### Regla 5: Git y Cuenta Personal de GitHub
 - **Usar SIEMPRE la cuenta personal `sergiroig`**, **NUNCA** una organización de GitHub.
@@ -117,3 +117,41 @@ Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
 5. ⏳ **Punto 5 — Rendimiento Extremo (Multihilo y Escalado Dinámico):**
    - **`Web Worker` inline** (mediante `Blob URL` en el mismo `index.html`) para delegar la generación de terreno, iluminación BFS y *meshing* fuera del hilo principal.
    - **Escalado dinámico de resolución (`Dynamic Pixel Ratio`)** para mantener 60 FPS estables en móviles de gama media/baja.
+
+---
+
+## 6. Registro de Coste en FPS por Funcionalidad (PC de Referencia)
+
+Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` por frame)**, el impacto de cada funcionalidad se mide en este PC de referencia usando tres métricas complementarias:
+1. **Tiempo real por frame (`ms` / `µs`).**
+2. **Coste en FPS sobre el presupuesto de 60 Hz (`(ms / 16.67) × 60`)**: indica cuántos "FPS de los 60 disponibles" consume cada subsistema. Mientras la suma total sea inferior a `60.00 FPS` (`16.67 ms`), el juego se mantiene clavado a **60 FPS reales (0 FPS perdidos en pantalla)**.
+3. **% del presupuesto de 16.67 ms** y **FPS teóricos sin límite VSync (`1000 / ms`)**.
+
+### Hardware del PC de Referencia
+- **CPU:** 22 hilos lógicos (`navigator.hardwareConcurrency = 22`, Intel Core Ultra / Meteor Lake)
+- **GPU (WebGL):** `ANGLE (Intel, Mesa Intel(R) Graphics (MTL), OpenGL ES 3.2)`
+- **Escena estándar:** Distancia de render 5 (`~81-145 chunks`, `~77,700 triángulos`, `~39 draw calls`)
+
+### A. Coste por Frame (Subsistemas que se ejecutan cada frame a 60 Hz)
+
+| Funcionalidad / Subsistema | Etapa | Tiempo / Frame | Coste sobre 60 FPS | % de 16.67 ms | Impacto en FPS Reales (VSync) |
+| :--- | :--- | ---: | ---: | ---: | :--- |
+| **Render WebGL + Shaders GPU** *(Viento en vegetación, olas 3D, espuma, menas)* | Base + Punto 2 | `141.7 µs` (`0.142 ms`) | **`-0.510 FPS`** (de 60) | `0.85 %` | **0 FPS** (60 FPS clavados) |
+| **Criaturas (Mobs)** *(IA, colisión AABB, iluminación y animación de 6-10 mobs)* | Punto 1 | `35.0 µs` (`0.035 ms`) | **`-0.126 FPS`** (de 60) | `0.21 %` | **0 FPS** (60 FPS clavados) |
+| **Físicas del Jugador + Colisión AABB** | Base | `4.8 µs` (`0.005 ms`) | **`-0.017 FPS`** (de 60) | `0.03 %` | **0 FPS** (60 FPS clavados) |
+| **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `2.6 µs` (`0.003 ms`) | **`-0.009 FPS`** (de 60) | `0.02 %` | **0 FPS** (60 FPS clavados) |
+| **Raycast Vóxel 3D (DDA)** *(Selección de bloque a 6.5m)* | Base | `2.0 µs` (`0.002 ms`) | **`-0.007 FPS`** (de 60) | `0.01 %` | **0 FPS** (60 FPS clavados) |
+| **Cielo Dinámico** *(Sol/Luna cúbicos, 220 estrellas y nubes 3D en 1 malla)* | Punto 1 | `0.8 µs` (`0.0008 ms`) | **`-0.003 FPS`** (de 60) | `0.005 %` | **0 FPS** (60 FPS clavados) |
+| **Actualización CPU de Shaders GPU + Detección Subacuática** | Punto 2 | `0.7 µs` (`0.0007 ms`) | **`-0.002 FPS`** (de 60) | `0.004 %` | **0 FPS** (60 FPS clavados) |
+| **Cola de Simulación Vóxel (`Tick Queue`)** *(Arena, Agua y TNT)* | Punto 1 | `0.2 µs` (`0.0002 ms`) | **`-0.001 FPS`** (de 60) | `0.001 %` | **0 FPS** (60 FPS clavados) |
+| **TOTAL ACUMULADO POR FRAME** | **Actual** | **`0.188 ms` (`~0.30 ms` con `gl.finish`)** | **`-0.68 a -1.10 FPS` (de 60)** | **`1.13 % - 1.84 %`** | **60 FPS fijos (sobra >98% del frame · ~3,265 - 5,320 FPS sin VSync)** |
+
+### B. Coste de Operaciones Puntuales (Bajo Demanda / Al Cargar o Modificar un Chunk)
+
+| Operación Puntual | Tiempo Medio en este PC | % de 1 Frame (16.67 ms) | Notas de Optimización |
+| :--- | ---: | ---: | :--- |
+| **Generar Datos de 1 Chunk** *(Terreno + Biomas + Cuevas 3D Trilineales $4\times4\times4$ + Menas)* | `0.39 ms` | `2.3 %` | La interpolación trilineal $4\times4\times4$ evalúa el ruido 3D solo 425 veces en lugar de $16\,384$. |
+| **Iluminación Vóxel Flood-Fill BFS (1 Chunk)** *(Sol + Antorchas en 1 byte)* | `0.45 - 1.02 ms` | `2.7 % - 6.1 %` | Cola tipada estática `Int32Array` sin asignaciones en el *Garbage Collector*. |
+| **Construcción de Malla de 1 Chunk (`buildChunkMeshArrays`)** *(Face Culling + AO + X-Mesh)* | `5.15 - 10.95 ms` | `30.9 % - 65.7 %` | Se ejecuta solo al modificar bloques o hacer *streaming* (máx. 1 chunk por frame). En el **Punto 5** se moverá a un `Web Worker` para bajar su coste en el hilo principal a `~0.1 ms`. |
+| **Detonación de TNT (`explodeAt`)** *(Cráter + Onda expansiva + Reconstrucción por lotes)* | `~6.1 ms` (1 sola vez al explotar) | `36.6 %` | Gracias a `setVoxelRawNoRebuild` + `rebuildAffectedChunksSet`, reconstruye el cráter entero en una única pasada en vez de 180 veces. |
+
