@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=18"></iframe>
+    <iframe id="game-frame" src="./index.html?v=19"></iframe>
   </div>
 
   <script>
@@ -960,6 +960,8 @@
           // Verify center pixel alpha is 255 (opaque rendered terrain)
           const centerAlpha = vc.minimapImgData.data[(34 * 68 + 34) * 4 + 3];
           assert(centerAlpha === 255, 'El ImageData del minimapa debe contener píxeles opacos (alpha=255)');
+          const mapRect = vc.minimapCanvas.getBoundingClientRect();
+          assert(mapRect.width >= 116 && mapRect.height >= 116, `El minimapa debe mostrarse con un tamaño legible >= 116px (actual=${mapRect.width}x${mapRect.height})`);
         });
 
         it('Localiza y teletransporta al jugador a un bioma específico (Desierto / Taiga Nevada)', () => {

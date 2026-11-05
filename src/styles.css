@@ -148,30 +148,31 @@ html, body {
   background: var(--bg-panel);
   backdrop-filter: blur(6px);
   border: 1px solid var(--border-panel);
-  border-radius: 10px;
-  padding: 6px;
+  border-radius: 12px;
+  padding: 8px;
   z-index: 15;
   pointer-events: none;
   user-select: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 5px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 #minimap-canvas {
-  width: 84px;
-  height: 84px;
-  border-radius: 6px;
+  width: 168px;
+  height: 168px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   image-rendering: pixelated;
   background: #0b1320;
 }
 #minimap-label {
-  font-size: 10px;
+  font-size: 11px;
   font-family: monospace;
   color: #94a3b8;
   font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 /* Hearts & Status Bar above Hotbar */
@@ -684,6 +685,10 @@ html, body {
 @media (max-width: 820px), (pointer: coarse) {
   #hud-controls-pill {
     display: none;
+  }
+  #minimap-canvas {
+    width: 116px;
+    height: 116px;
   }
   #hud-stats {
     font-size: 10px;
