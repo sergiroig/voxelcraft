@@ -161,12 +161,11 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
           const neighborId = ny < 0 ? BLOCK.BEDROCK : (ny >= CHUNK_HEIGHT ? BLOCK.AIR : getVoxelGlobal(nx, ny, nz));
           const nDef = BLOCK_DEFS[neighborId];
 
-          // Hidden Face Culling (do not cull between swaying leaves and stationary blocks, and seal canopy bottom over trunk)
+          // Hidden Face Culling (do not cull between swaying leaves and stationary blocks)
           const isLeaves = blockId === BLOCK.LEAVES || blockId === BLOCK.SNOW_LEAVES;
           const neighborIsLeaves = neighborId === BLOCK.LEAVES || neighborId === BLOCK.SNOW_LEAVES;
-          const isWoodCanopyCap = f === 1 && blockId === BLOCK.WOOD && getVoxelGlobal(wx + 1, y, wz) === BLOCK.LEAVES;
           if (isLeaves) { if (neighborId === blockId) continue; }
-          else if (neighborIsLeaves || isWoodCanopyCap) { /* keep face against swaying leaves */ }
+          else if (neighborIsLeaves) { /* keep face against swaying leaves */ }
           else if (isWater) {
             if (neighborId === BLOCK.WATER || nDef.opaque) continue;
           } else if (blockId === BLOCK.GLASS || blockId === BLOCK.ICE || blockId === BLOCK.PORTAL) {
@@ -175,11 +174,11 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
             if (nDef.opaque) continue;
           }
 
-          const tileIdx = isWoodCanopyCap ? BLOCK_DEFS[BLOCK.LEAVES].tiles[1] : def.tiles[f];
+          const tileIdx = def.tiles[f];
           const u0 = tileIdx * uvStep + uvPad;
           const u1 = (tileIdx + 1) * uvStep - uvPad;
 
-          const rawL = isGlow ? 0xFF : (isWoodCanopyCap ? getLightGlobal(wx + 1, Math.max(0, y - 1), wz) : getLightGlobal(nx, ny, nz));
+          const rawL = isGlow ? 0xFF : getLightGlobal(nx, ny, nz);
           const packedL = (rawL === 0 && nDef.opaque) ? (getLightGlobal(nx, Math.max(0, ny - 1), nz) || 0x90) : rawL;
           const sunLevel = ((packedL >> 4) / 15) * sunFactor;
           const blkLevel = (packedL & 15) / 15;
@@ -239,7 +238,18 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
                 aoScores[c] = aoLevel;
                 aoFactor = face.shade * AO_CURVE[aoLevel];
               }
-              scratchCol[pIdx]     = aoFactor * baseR;
+              const vx = wx + corner[0], vy = y + corner[1], vz = wz + corner[2];
+              const touchesWood = isLeaves && (
+                getVoxelGlobal(vx - 1, vy - 1, vz - 1) === BLOCK.WOOD ||
+                getVoxelGlobal(vx,     vy - 1, vz - 1) === BLOCK.WOOD ||
+                getVoxelGlobal(vx - 1, vy,     vz - 1) === BLOCK.WOOD ||
+                getVoxelGlobal(vx,     vy,     vz - 1) === BLOCK.WOOD ||
+                getVoxelGlobal(vx - 1, vy - 1, vz)     === BLOCK.WOOD ||
+                getVoxelGlobal(vx,     vy - 1, vz)     === BLOCK.WOOD ||
+                getVoxelGlobal(vx - 1, vy,     vz)     === BLOCK.WOOD ||
+                getVoxelGlobal(vx,     vy,     vz)     === BLOCK.WOOD
+              );
+              scratchCol[pIdx]     = (touchesWood ? -1 : 1) * aoFactor * baseR;
               scratchCol[pIdx + 1] = aoFactor * baseG;
               scratchCol[pIdx + 2] = aoFactor * baseB;
             }

@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=13"></iframe>
+    <iframe id="game-frame" src="./index.html?v=14"></iframe>
   </div>
 
   <script>
@@ -1064,9 +1064,35 @@
           assert(vc.getVoxelGlobal(tx, ty + 4, tz) === vc.BLOCK.LEAVES, 'La copa del árbol debe generar Hojas (LEAVES)');
 
           // Verificar que las caras entre el tronco (WOOD) y las hojas (LEAVES) NO se descartan por culling
-          // para que al moverse las hojas con el viento en el Vertex Shader nunca falte el cuadro inferior ni se vea hueco
+          // y que los vértices de hojas en contacto con el tronco quedan anclados (col.r < 0 -> leafWindMask = 0)
+          // sin poner nunca textura de hoja encima/debajo de un bloque de madera al romper el tronco hasta las hojas
           const chTree = vc.getChunkData(0, 0);
           const trisWithWoodTrunk = chTree.solidMesh.geometry.index.count / 3;
+          vc.setVoxelGlobal(tx, ty + 2, tz, vc.BLOCK.AIR); // Romper madera hasta coincidir con la capa de hojas (ty + 3)
+          const posAttr = chTree.solidMesh.geometry.getAttribute('position').array;
+          const uvAttr = chTree.solidMesh.geometry.getAttribute('uv').array;
+          const colAttr = chTree.solidMesh.geometry.getAttribute('color').array;
+          let woodBottomHasLeafTile = false;
+          let anchoredLeafVerts = 0;
+          for (let v = 0; v < posAttr.length / 3; v++) {
+            const vx = posAttr[v * 3], vy = posAttr[v * 3 + 1], vz = posAttr[v * 3 + 2];
+            const tileIdx = Math.floor(uvAttr[v * 2] * vc.ATLAS_COLS + 0.0001);
+            if (vy === ty + 3 && vx > tx + 0.1 && vx < tx + 0.9 && vz > tz + 0.1 && vz < tz + 0.9 && tileIdx === 7) {
+              woodBottomHasLeafTile = true;
+            }
+            if (
+              Math.abs(vx - (tx + 1)) < 0.01 &&
+              Math.abs(vy - (ty + 3)) < 0.01 &&
+              Math.abs(vz - tz) < 0.01 &&
+              tileIdx === 7 &&
+              colAttr[v * 3] < 0
+            ) {
+              anchoredLeafVerts++;
+            }
+          }
+          assert(!woodBottomHasLeafTile, 'El bloque de madera (WOOD) a la altura de las hojas nunca debe tener una capa con textura de hojas (tile 7)');
+          assert(anchoredLeafVerts > 0, 'Los vértices de las hojas que tocan la madera deben estar anclados al tronco para no abrir huecos con el viento');
+          vc.setVoxelGlobal(tx, ty + 2, tz, vc.BLOCK.WOOD);
           vc.setVoxelGlobal(tx, ty + 3, tz, vc.BLOCK.LEAVES);
           const trisAllLeaves = chTree.solidMesh.geometry.index.count / 3;
           assert(

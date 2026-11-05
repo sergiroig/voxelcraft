@@ -281,6 +281,8 @@ solidMaterial.onBeforeCompile = (shader) => {
       `#include <begin_vertex>
       vec4 wp = modelMatrix * vec4(transformed, 1.0);
       vWorldPos = wp.xyz;
+      float leafWindMask = vColor.r < 0.0 ? 0.0 : 1.0;
+      vColor.r = abs(vColor.r);
       float tileIdx = floor(uv.x * ${ATLAS_COLS}.0 + 0.0001);
       vTileIdx = tileIdx;
 
@@ -291,8 +293,8 @@ solidMaterial.onBeforeCompile = (shader) => {
         transformed.x += sin(windPhase) * 0.12 * rootMask * uWindStrength;
         transformed.z += cos(windPhase * 0.85 + 1.3) * 0.09 * rootMask * uWindStrength;
       }
-      // Tree Leaves 3D Breeze (7: Leaves) — continuous in world-space so shared vertices never crack
-      else if (tileIdx >= 6.5 && tileIdx <= 7.5) {
+      // Tree Leaves 3D Breeze (7: Leaves) — continuous in world-space & anchored at trunk corners so shared vertices never crack
+      else if (tileIdx >= 6.5 && tileIdx <= 7.5 && leafWindMask > 0.5) {
         float leafPhase = uTime * 2.1 + wp.x * 0.8 + wp.y * 0.5 + wp.z * 0.8;
         transformed.x += sin(leafPhase) * 0.042 * uWindStrength;
         transformed.y += cos(uTime * 1.7 + wp.x * 0.6 - wp.z * 0.6) * 0.024 * uWindStrength;
