@@ -801,7 +801,7 @@
   </div>
 
   <div id="hud-controls-pill">
-    <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
+    <kbd>P</kbd> Menú &nbsp;|&nbsp; <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
   </div>
 
   <div id="status-bar">
@@ -862,15 +862,15 @@
 
       <div class="controls-grid">
         <div><b>WASD + Espacio</b> Moverse y Saltar</div>
-        <div><b>Mantener Click Izq.</b> Picar bloque</div>
-        <div><b>E</b> Abrir Inventario completo</div>
-        <div><b>Click Der.</b> Colocar bloque / Antorcha</div>
-        <div><b>1 - 9 / Rueda</b> Cambiar ranura</div>
-        <div><b>F / T</b> Volar / Cambiar Día-Noche</div>
+        <div><b>Mantener Click Izq.</b> Picar / Atacar</div>
+        <div><b>P / Enter</b> Mostrar / Ocultar Menú</div>
+        <div><b>Click Der.</b> Poner bloque / Usar</div>
+        <div><b>E / G</b> Inventario / Modo Juego</div>
+        <div><b>F / T / V</b> Volar / Hora / Clima</div>
       </div>
 
       <div class="btn-row" style="margin-bottom: 10px;">
-        <button class="btn btn-primary" id="btn-play">Jugar (Capturar Ratón)</button>
+        <button class="btn btn-primary" id="btn-play">Jugar / Continuar (P o Enter)</button>
       </div>
       <div class="btn-row" style="margin-bottom: 8px; gap: 6px; display: flex; flex-wrap: wrap;">
         <input id="seed-input" type="number" placeholder="Semilla (ej. 42069)" style="flex:1;min-width:120px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.45);color:#fff;font-family:monospace;" />
@@ -5457,7 +5457,29 @@
     });
 
     window.addEventListener('keydown', (e) => {
+      const isInputFocused = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+      if (isInputFocused) {
+        if (e.code === 'Enter' && menuOpen) {
+          e.preventDefault();
+          if (e.target === seedInputEl) {
+            applyWorldSeed(parseInt(seedInputEl.value, 10) || 0);
+          }
+          togglePauseMenu(false);
+        }
+        return;
+      }
+
       keys[e.code] = true;
+      if (e.code === 'KeyP') {
+        e.preventDefault();
+        togglePauseMenu();
+        return;
+      }
+      if (e.code === 'Enter' && menuOpen) {
+        e.preventDefault();
+        togglePauseMenu(false);
+        return;
+      }
       if (e.code === 'KeyE') {
         if (isGameActive() || invOpen) {
           toggleInventory();
@@ -5465,7 +5487,6 @@
         return;
       }
       if (e.code === 'Escape') {
-        e.preventDefault();
         if (invOpen) {
           toggleInventory(false);
           return;

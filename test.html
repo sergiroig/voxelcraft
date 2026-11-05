@@ -450,30 +450,31 @@
           assert(vc.getState().joyX === 0 && vc.getState().joyY === 0, 'El joystick virtual no se reseteó al soltar');
         });
 
-        it('Alterna entre mostrar y ocultar el menú principal (#overlay) al pulsar la tecla ESC', () => {
+        it('Alterna entre mostrar y ocultar el menú principal (#overlay) con la tecla P (y permite reanudar con Enter)', () => {
           const overlay = doc.getElementById('overlay');
-          // 1. Asegurar que el menú está visible inicialmente o al abrirlo
-          if (overlay.classList.contains('hidden')) {
-            win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Escape', bubbles: true }));
-          }
-          assert(!overlay.classList.contains('hidden'), 'El menú (#overlay) debe estar visible antes de pulsar ESC');
+          vc.togglePauseMenu(true);
+          assert(!overlay.classList.contains('hidden'), 'El menú (#overlay) debe estar visible inicialmente');
 
-          // 2. Pulsar ESC con el menú abierto -> debe ocultarlo y volver al juego sin obligar a clicar "Jugar"
-          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Escape', bubbles: true }));
+          // 1. Pulsar P con el menú abierto -> debe ocultarlo y activar el juego
+          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'KeyP', bubbles: true }));
           assert(
             overlay.classList.contains('hidden') && vc.isGameActive() === true,
-            'Pulsar ESC con el menú visible debe ocultar #overlay y reactivar el juego'
+            'Pulsar P con el menú visible debe ocultar #overlay y reactivar el juego'
           );
 
-          // 3. Pulsar ESC de nuevo desde el juego -> debe volver a mostrar el menú (#overlay)
-          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Escape', bubbles: true }));
+          // 2. Pulsar P desde el juego -> debe volver a mostrar el menú (#overlay)
+          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'KeyP', bubbles: true }));
           assert(
-            !overlay.classList.contains('hidden'),
-            'Pulsar ESC desde el juego debe volver a mostrar el menú (#overlay)'
+            !overlay.classList.contains('hidden') && vc.getState().menuOpen === true,
+            'Pulsar P desde el juego debe volver a mostrar el menú (#overlay)'
           );
 
-          // Dejar el juego activo para los siguientes tests
-          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Escape', bubbles: true }));
+          // 3. Pulsar Enter desde el menú -> también debe cerrar el menú y volver al juego
+          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Enter', bubbles: true }));
+          assert(
+            overlay.classList.contains('hidden') && vc.isGameActive() === true,
+            'Pulsar Enter con el menú visible también debe ocultar #overlay y reanudar el juego'
+          );
         });
       });
 
