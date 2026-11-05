@@ -656,6 +656,78 @@
           );
         });
 
+        it('Genera y aplica solidMesh en todos los chunks del radio de render sin dejar agujeros (Bug Regresión ch.meshVersion)', async () => {
+          // 1. Test a brand-new chunk never touched by rebuildChunkImmediate
+          const freshCx = 12, freshCz = 12;
+          vc.chunks.delete(`${freshCx},${freshCz}`);
+          const freshCh = vc.getChunkData(freshCx, freshCz);
+          assert(freshCh.solidMesh === null && freshCh.dirty === true, 'El chunk recién creado debe empezar sin malla y dirty=true');
+
+          await vc.requestChunkMeshWorker(freshCx, freshCz);
+          assert(
+            freshCh.solidMesh !== null && freshCh.dirty === false && freshCh.queued === false,
+            `Un chunk nuevo procesado por el Web Worker debe recibir su solidMesh en la escena (solidMesh=${!!freshCh.solidMesh}, dirty=${freshCh.dirty})`
+          );
+
+          // 2. Pump streaming & wait for any in-flight Worker jobs, then verify zero missing chunk meshes around player
+          for (let step = 0; step < 30; step++) {
+            vc.updateChunkStreaming();
+            if (vc.buildQueue.length === 0 && vc.getWorkerState().workerJobsInFlight === 0) break;
+            await new Promise(r => setTimeout(r, 15));
+          }
+          // Wait for any remaining worker jobs in flight
+          for (let w = 0; w < 40 && vc.getWorkerState().workerJobsInFlight > 0; w++) {
+            await new Promise(r => setTimeout(r, 15));
+          }
+
+          const pcx = Math.floor(vc.player.x / vc.CHUNK_SIZE);
+          const pcz = Math.floor(vc.player.z / vc.CHUNK_SIZE);
+          const rDist = vc.getState().renderDistance;
+          let missingChunks = 0;
+          let checkedChunks = 0;
+          for (let dz = -rDist; dz <= rDist; dz++) {
+            for (let dx = -rDist; dx <= rDist; dx++) {
+              if (dx * dx + dz * dz > (rDist + 0.5) * (rDist + 0.5)) continue;
+              checkedChunks++;
+              const ch = vc.chunks.get(`${pcx + dx},${pcz + dz}`);
+              if (!ch || !ch.solidMesh || ch.dirty) {
+                missingChunks++;
+              }
+            }
+          }
+          assert(
+            missingChunks === 0 && checkedChunks >= 49,
+            `Todos los ${checkedChunks} chunks dentro de renderDistance=${rDist} deben tener su malla 3D activa sin agujeros (faltan ${missingChunks} chunks)`
+          );
+
+          // 3. Simulate flying to (29, 24, 22) as in the reported screenshot and verify 0 missing chunk meshes there too
+          const savedX = vc.player.x, savedY = vc.player.y, savedZ = vc.player.z;
+          vc.player.x = 29; vc.player.y = 24; vc.player.z = 22;
+          for (let step = 0; step < 30; step++) {
+            vc.updateChunkStreaming();
+            if (vc.buildQueue.length === 0 && vc.getWorkerState().workerJobsInFlight === 0) break;
+            await new Promise(r => setTimeout(r, 15));
+          }
+          for (let w = 0; w < 40 && vc.getWorkerState().workerJobsInFlight > 0; w++) {
+            await new Promise(r => setTimeout(r, 15));
+          }
+          const pcx2 = Math.floor(vc.player.x / vc.CHUNK_SIZE);
+          const pcz2 = Math.floor(vc.player.z / vc.CHUNK_SIZE);
+          let missingAfterMove = 0;
+          for (let dz = -rDist; dz <= rDist; dz++) {
+            for (let dx = -rDist; dx <= rDist; dx++) {
+              if (dx * dx + dz * dz > (rDist + 0.5) * (rDist + 0.5)) continue;
+              const ch = vc.chunks.get(`${pcx2 + dx},${pcz2 + dz}`);
+              if (!ch || !ch.solidMesh || ch.dirty) missingAfterMove++;
+            }
+          }
+          assert(
+            missingAfterMove === 0,
+            `Al desplazarse a (29,24,22) todos los chunks del radio deben tener solidMesh sin agujeros (faltan ${missingAfterMove})`
+          );
+          vc.player.x = savedX; vc.player.y = savedY; vc.player.z = savedZ;
+        });
+
         it('Reduce el Pixel Ratio automáticamente si caen los FPS (< 45) y lo restaura a 60 FPS', () => {
           const ws0 = vc.getWorkerState();
           const maxPR = ws0.maxPixelRatio;

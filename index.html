@@ -2608,7 +2608,7 @@
       if (!ch) {
         const data = generator.generateChunkVoxels(cx, cz, worldDeltas[key]);
         const light = new Uint8Array(CHUNK_VOLUME);
-        ch = { cx, cz, data, light, lightReady: false, solidMesh: null, waterMesh: null, dirty: true, queued: false };
+        ch = { cx, cz, data, light, lightReady: false, solidMesh: null, waterMesh: null, dirty: true, queued: false, meshVersion: 0 };
         chunks.set(key, ch);
       }
       return ch;
@@ -4372,8 +4372,12 @@
         const meshData = { solid, water };
         const tApply0 = performance.now();
         const ch = chunks.get(chunkKey(cx, cz));
-        if (ch && (!job || ch.meshVersion === job.version)) {
-          applyArraysToMesh(ch, meshData);
+        if (ch) {
+          if (!job || ch.meshVersion === job.version) {
+            applyArraysToMesh(ch, meshData);
+          } else {
+            ch.queued = false;
+          }
         }
         const applyMs = performance.now() - tApply0;
         if (job) {
@@ -4392,7 +4396,8 @@
       }
       const tPack0 = performance.now();
       const ch = getChunkData(cx, cz);
-      const version = ch.meshVersion || 0;
+      ch.meshVersion = (ch.meshVersion || 0) + 1;
+      const version = ch.meshVersion;
       const { paddedVoxels, paddedLight } = packChunkPaddedBuffers(cx, cz);
       const packMs = performance.now() - tPack0;
 
@@ -4773,26 +4778,38 @@
         lastPlayerChunkX = pcx;
         lastPlayerChunkZ = pcz;
 
-        const candidates = [];
+        const maxDistSq = (renderDistance + 0.5) * (renderDistance + 0.5);
+        // Prune any queued chunks that are now outside renderDistance when player moves
+        for (let i = buildQueue.length - 1; i >= 0; i--) {
+          const qCh = buildQueue[i];
+          const qdx = qCh.cx - pcx;
+          const qdz = qCh.cz - pcz;
+          if (qdx * qdx + qdz * qdz > maxDistSq) {
+            qCh.queued = false;
+            buildQueue.splice(i, 1);
+          }
+        }
+
         for (let dz = -renderDistance; dz <= renderDistance; dz++) {
           for (let dx = -renderDistance; dx <= renderDistance; dx++) {
             const distSq = dx * dx + dz * dz;
-            if (distSq > (renderDistance + 0.5) * (renderDistance + 0.5)) continue;
+            if (distSq > maxDistSq) continue;
             const cx = pcx + dx;
             const cz = pcz + dz;
             const ch = getChunkData(cx, cz);
             if (ch.dirty && !ch.queued) {
               ch.queued = true;
-              candidates.push({ ch, distSq });
+              buildQueue.push(ch);
             }
           }
         }
 
-        if (candidates.length > 0) {
-          candidates.sort((a, b) => a.distSq - b.distSq);
-          for (let i = 0; i < candidates.length; i++) {
-            buildQueue.push(candidates[i].ch);
-          }
+        if (buildQueue.length > 1) {
+          buildQueue.sort((a, b) => {
+            const da = (a.cx - pcx) * (a.cx - pcx) + (a.cz - pcz) * (a.cz - pcz);
+            const db = (b.cx - pcx) * (b.cx - pcx) + (b.cz - pcz) * (b.cz - pcz);
+            return da - db;
+          });
         }
 
         const unloadDistSq = (renderDistance + 2) * (renderDistance + 2);
@@ -4809,16 +4826,22 @@
 
       const budgetStart = performance.now();
       while (buildQueue.length > 0 && (performance.now() - budgetStart) < 4.5) {
-        const ch = buildQueue.shift();
-        if (!chunks.has(chunkKey(ch.cx, ch.cz))) continue;
-        const dx = ch.cx - pcx;
-        const dz = ch.cz - pcz;
-        // Build inner spawn chunks immediately so player stands on solid ground on frame 1;
+        const nextCh = buildQueue[0];
+        if (!chunks.has(chunkKey(nextCh.cx, nextCh.cz))) {
+          buildQueue.shift();
+          continue;
+        }
+        const dx = nextCh.cx - pcx;
+        const dz = nextCh.cz - pcz;
+        // Build inner chunks immediately so player stands on solid ground on frame 1;
         // offload outer streaming chunks to the multithreaded Web Worker with Zero-Copy Transferables
-        if (meshWorker && (dx * dx + dz * dz) > 2 && workerJobsInFlight < 4) {
-          requestChunkMeshWorker(ch.cx, ch.cz);
+        if (meshWorker && (dx * dx + dz * dz) > 2) {
+          if (workerJobsInFlight >= 8) break;
+          buildQueue.shift();
+          requestChunkMeshWorker(nextCh.cx, nextCh.cz);
         } else {
-          rebuildChunkImmediate(ch.cx, ch.cz);
+          buildQueue.shift();
+          rebuildChunkImmediate(nextCh.cx, nextCh.cz);
         }
       }
     }
@@ -5219,6 +5242,7 @@
       for (const ch of chunks.values()) {
         ch.dirty = true;
         ch.queued = false;
+        ch.meshVersion = (ch.meshVersion || 0) + 1;
       }
       buildQueue.length = 0;
       lastPlayerChunkX = null;

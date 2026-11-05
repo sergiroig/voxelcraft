@@ -39,9 +39,10 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 - El juego debe ser **100% jugable tanto en PC (ratón con `Pointer Lock` + teclado) como en dispositivos móviles/tablets (pantallas multitáctiles)**.
 - Cualquier acción o mecánica nueva que añada un atajo de teclado o clic en PC **debe** tener su equivalente accesible desde la interfaz táctil (`#touch-controls`, botones en `#touch-action-col` o `#touch-top-bar`, o controles dentro del modal de inventario `#inventory-modal`).
 
-### Regla 4: Testing y Benchmark de FPS Obligatorios en Chrome (`test.html`)
+### Regla 4: Testing, Reproducción de Bugs (TDD) y Benchmark de FPS Obligatorios en Chrome (`test.html`)
 - El motor expone su API interna de pruebas en `window.__VOXELCRAFT__` (al final de [`index.html`](index.html)).
 - **Toda funcionalidad nueva debe ir acompañada de nuevos tests en [`test.html`](test.html)** y de su entrada en el profiler de rendimiento (`perFrameFeatures` / `onDemandFeatures`).
+- **Regla de Bugs (Primero Reproducir en Test, Luego Arreglar):** Siempre que se detecte o reporte un bug, **primero se debe escribir un test automatizado en [`test.html`](test.html) que reproduzca el fallo** (verificando en Chrome que el test falla con el bug presente) y **después implementar la corrección** hasta que toda la suite pase con `failed: 0`.
 - **Antes de dar por terminada una tarea o hacer `git push`**, es obligatorio ejecutar [`test.html`](test.html) en Chrome (usando las herramientas MCP de `chrome_devtools`), comprobar que `window.__TEST_RESULTS__` devuelve **`failed: 0`** y **anotar el coste en FPS / tiempo por frame en la Sección 6 de este archivo (`AGENTS.md`)** tomando este PC como referencia.
 
 ### Regla 5: Git y Cuenta Personal de GitHub
