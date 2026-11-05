@@ -22,11 +22,9 @@ function explodeAt(ex, ey, ez, radius = 3.6) {
   sfx.play('boom');
   spawnBlockParticles(ex, ey, ez, BLOCK.TNT, 48);
   spawnBlockParticles(ex, ey, ez, BLOCK.STONE, 36);
-
   const dirtySet = new Set();
   const rCeil = Math.ceil(radius);
   const bx0 = Math.floor(ex), by0 = Math.floor(ey), bz0 = Math.floor(ez);
-
   for (let dy = -rCeil; dy <= rCeil; dy++) {
     for (let dz = -rCeil; dz <= rCeil; dz++) {
       for (let dx = -rCeil; dx <= rCeil; dx++) {
@@ -41,35 +39,38 @@ function explodeAt(ex, ey, ez, radius = 3.6) {
     }
   }
   rebuildAffectedChunksSet(dirtySet);
-
   const pdx = player.x - ex, pdy = (player.y + 0.9) - ey, pdz = player.z - ez;
   const pDist = Math.hypot(pdx, pdy, pdz);
   if (pDist < radius * 2.1 && pDist > 0.01) {
     const force = (1 - pDist / (radius * 2.1)) * 14;
     player.vy = Math.max(player.vy, 6.5);
-    player.x += (pdx / pDist) * 0.4;
-    player.z += (pdz / pDist) * 0.4;
+    player.x += (pdx / pDist) * 0.4; player.z += (pdz / pDist) * 0.4;
     damagePlayer(Math.max(1, Math.round(force * 0.45)));
   }
-
   for (let i = mobs.length - 1; i >= 0; i--) {
-    const m = mobs[i];
-    const mdx = m.x - ex, mdy = m.y - ey, mdz = m.z - ez;
+    const m = mobs[i], mdx = m.x - ex, mdy = m.y - ey, mdz = m.z - ez;
     if (Math.hypot(mdx, mdy, mdz) < radius * 2.0) damageMob(m, 8, mdx, mdz);
   }
 }
 
 let simAccum = 0;
 const leafDecayQueue = [];
-const leafDecaySet = new Set();
+
+function isWoodTouchingLeaves(wx, wy, wz) {
+  for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+    const nb = getVoxelGlobal(wx + ox, wy + oy, wz + oz);
+    if (nb === BLOCK.LEAVES || nb === BLOCK.SNOW_LEAVES) return true;
+  }
+  return false;
+}
 
 function hasNearbyWood(lx, ly, lz) {
-  for (let dy = -4; dy <= 1; dy++) {
+  for (let dy = -2; dy <= 1; dy++) {
     const wy = ly + dy;
     if (wy <= 0 || wy >= CHUNK_HEIGHT) continue;
     for (let dz = -2; dz <= 2; dz++) {
       for (let dx = -2; dx <= 2; dx++) {
-        if (getVoxelGlobal(lx + dx, wy, lz + dz) === BLOCK.WOOD) return true;
+        if (getVoxelGlobal(lx + dx, wy, lz + dz) === BLOCK.WOOD && isWoodTouchingLeaves(lx + dx, wy, lz + dz)) return true;
       }
     }
   }
@@ -86,10 +87,7 @@ function enqueueLeafDecayAround(wx, wy, wz) {
         const b = getVoxelGlobal(lx, ly, lz);
         if (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) {
           const key = `${lx},${ly},${lz}`;
-          if (!leafDecaySet.has(key)) {
-            leafDecaySet.add(key);
-            leafDecayQueue.push(key);
-          }
+          if (!leafDecayQueue.includes(key)) leafDecayQueue.push(key);
         }
       }
     }
@@ -220,7 +218,6 @@ function updateVoxelSimulation(dt) {
       const lKey = leafDecayQueue[rIdx];
       leafDecayQueue[rIdx] = leafDecayQueue[leafDecayQueue.length - 1];
       leafDecayQueue.pop();
-      leafDecaySet.delete(lKey);
       const [lx, ly, lz] = lKey.split(',').map(Number);
       const lb = getVoxelGlobal(lx, ly, lz);
       if (lb !== BLOCK.LEAVES && lb !== BLOCK.SNOW_LEAVES) continue;

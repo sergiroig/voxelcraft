@@ -635,7 +635,7 @@ function applyWorldSeed(newSeed) {
   chunks.clear();
   buildQueue.length = 0;
   simQueue.clear();
-  if (typeof leafDecayQueue !== 'undefined') { leafDecayQueue.length = 0; leafDecaySet.clear(); }
+  if (typeof leafDecayQueue !== 'undefined') leafDecayQueue.length = 0;
   while (mobs.length > 0) removeMobAt(0);
   for (const t of activeTNTs) scene.remove(t.mesh);
   activeTNTs.length = 0;
