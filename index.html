@@ -150,6 +150,40 @@
       font-size: 11px;
     }
 
+    /* 2D Topographic Radar Minimap (Top-Right) */
+    #minimap-wrap {
+      position: fixed;
+      top: 52px;
+      right: 16px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border-panel);
+      border-radius: 10px;
+      padding: 6px;
+      z-index: 15;
+      pointer-events: none;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    #minimap-canvas {
+      width: 84px;
+      height: 84px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      image-rendering: pixelated;
+      background: #0b1320;
+    }
+    #minimap-label {
+      font-size: 10px;
+      font-family: monospace;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
     /* Hearts & Status Bar above Hotbar */
     #status-bar {
       position: fixed;
@@ -726,6 +760,7 @@
       <button class="t-pill-btn" id="tbtn-mode">⚒ Superv.</button>
       <button class="t-pill-btn" id="tbtn-fly">🕊 Volar</button>
       <button class="t-pill-btn" id="tbtn-time">☀/🌙</button>
+      <button class="t-pill-btn" id="tbtn-weather">🌧 Clima</button>
       <button class="t-pill-btn toggled" id="tbtn-music">🎵</button>
       <button class="t-pill-btn" id="tbtn-hud">📊 HUD</button>
       <button class="t-pill-btn" id="tbtn-menu">⏸</button>
@@ -760,8 +795,13 @@
     <div class="row"><span>Modo / Hora:</span> <span class="val" id="stat-mode">Caminar | Día</span></div>
   </div>
 
+  <div id="minimap-wrap">
+    <canvas id="minimap-canvas" width="68" height="68"></canvas>
+    <div id="minimap-label">RADAR 2D</div>
+  </div>
+
   <div id="hud-controls-pill">
-    <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
+    <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
   </div>
 
   <div id="status-bar">
@@ -832,6 +872,12 @@
       <div class="btn-row" style="margin-bottom: 10px;">
         <button class="btn btn-primary" id="btn-play">Jugar (Capturar Ratón)</button>
       </div>
+      <div class="btn-row" style="margin-bottom: 8px; gap: 6px; display: flex; flex-wrap: wrap;">
+        <input id="seed-input" type="number" placeholder="Semilla (ej. 42069)" style="flex:1;min-width:120px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.45);color:#fff;font-family:monospace;" />
+        <button class="btn btn-secondary" id="btn-apply-seed" style="flex:0 0 auto;">Cargar Semilla</button>
+        <button class="btn btn-secondary" id="btn-tp-desert" style="flex:0 0 auto;">🏜 Ir a Desierto</button>
+        <button class="btn btn-secondary" id="btn-tp-snow" style="flex:0 0 auto;">❄ Ir a Taiga</button>
+      </div>
       <div class="btn-row">
         <button class="btn btn-secondary" id="btn-reset-world">Nuevo Mundo (Semilla Aleatoria)</button>
         <button class="btn btn-secondary" id="btn-export">Exportar Mundo (.json)</button>
@@ -881,12 +927,21 @@
       FLOWER_YELLOW: 22,
       CACTUS: 23,
       TNT: 24,
-      // Special Tool ID (not placed as a block, boosts mining speed & combat damage)
-      TOOL_PICKAXE: 100
+      LAVA: 25,
+      OBSIDIAN: 26,
+      LEVER_OFF: 27,
+      LEVER_ON: 28,
+      REDSTONE_LAMP_OFF: 29,
+      REDSTONE_LAMP_ON: 30,
+      // Special Tool & Consumable IDs (not placed as blocks)
+      TOOL_PICKAXE: 100,
+      TOOL_SWORD: 101,
+      TOOL_BOW: 102,
+      ITEM_APPLE: 103
     };
 
-    // Atlas has 28 tiles (columns) of 16x16 pixels
-    const ATLAS_COLS = 28;
+    // Atlas has 34 tiles (columns) of 16x16 pixels
+    const ATLAS_COLS = 34;
     const TILE_PX = 16;
 
     // Block Definitions:
@@ -894,38 +949,54 @@
     // light: 0..15 emitted block light
     // hardness: seconds to break by hand (pickaxe mines stone/ores 3.2x faster)
     const BLOCK_DEFS = {
-      [BLOCK.AIR]:           { name: 'Aire',             solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xffffff, tiles: [0,0,0,0,0,0] },
-      [BLOCK.GRASS]:         { name: 'Césped',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x58a83a, tiles: [0, 2, 1, 1, 1, 1] },
-      [BLOCK.DIRT]:          { name: 'Tierra',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.38, stoneLike: false, color: 0x866043, tiles: [2, 2, 2, 2, 2, 2] },
-      [BLOCK.STONE]:         { name: 'Piedra',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.05, stoneLike: true,  color: 0x7d8084, tiles: [3, 3, 3, 3, 3, 3] },
-      [BLOCK.SAND]:          { name: 'Arena',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xe0ce94, tiles: [4, 4, 4, 4, 4, 4] },
-      [BLOCK.WOOD]:          { name: 'Tronco de Roble',  solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0x6b4e2e, tiles: [6, 6, 5, 5, 5, 5] },
-      [BLOCK.LEAVES]:        { name: 'Hojas',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.18, stoneLike: false, color: 0x34802a, tiles: [7, 7, 7, 7, 7, 7] },
-      [BLOCK.PLANKS]:        { name: 'Madera',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xb08852, tiles: [8, 8, 8, 8, 8, 8] },
-      [BLOCK.COBBLE]:        { name: 'Adoquín',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.10, stoneLike: true,  color: 0x73767a, tiles: [9, 9, 9, 9, 9, 9] },
-      [BLOCK.BRICK]:         { name: 'Ladrillos',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.15, stoneLike: true,  color: 0xa8483a, tiles: [10,10,10,10,10,10] },
-      [BLOCK.GLASS]:         { name: 'Cristal',          solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xdaf0ff, tiles: [11,11,11,11,11,11] },
-      [BLOCK.WATER]:         { name: 'Agua',             solid: false, opaque: false, shape: 'water', light: 0,  hardness: 0,    stoneLike: false, color: 0x1c76d8, tiles: [12,12,12,12,12,12] },
-      [BLOCK.SNOW]:          { name: 'Nieve',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xf0f8ff, tiles: [13, 2,14,14,14,14] },
-      [BLOCK.GLOWSTONE]:     { name: 'Piedra Luminosa',  solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.40, stoneLike: false, color: 0xffeba8, tiles: [15,15,15,15,15,15] },
-      [BLOCK.BEDROCK]:       { name: 'Roca Madre',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 999,  stoneLike: true,  color: 0x2d2d32, tiles: [16,16,16,16,16,16] },
-      [BLOCK.COAL_ORE]:      { name: 'Mena de Carbón',   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.25, stoneLike: true,  color: 0x3b3d40, tiles: [17,17,17,17,17,17] },
-      [BLOCK.IRON_ORE]:      { name: 'Mena de Hierro',   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.35, stoneLike: true,  color: 0xd8af93, tiles: [18,18,18,18,18,18] },
-      [BLOCK.GOLD_ORE]:      { name: 'Mena de Oro',      solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfcee4b, tiles: [19,19,19,19,19,19] },
-      [BLOCK.DIAMOND_ORE]:   { name: 'Mena de Diamante', solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.65, stoneLike: true,  color: 0x5decf5, tiles: [20,20,20,20,20,20] },
-      [BLOCK.TORCH]:         { name: 'Antorcha (Luz)',   solid: false, opaque: false, shape: 'cross', light: 15, hardness: 0.05, stoneLike: false, color: 0xffd066, tiles: [21,21,21,21,21,21] },
-      [BLOCK.TALL_GRASS]:    { name: 'Hierba Alta',      solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x52a238, tiles: [22,22,22,22,22,22] },
-      [BLOCK.FLOWER_RED]:    { name: 'Rosa Roja',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xe83b3b, tiles: [23,23,23,23,23,23] },
-      [BLOCK.FLOWER_YELLOW]: { name: 'Diente de León',   solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xfacc15, tiles: [24,24,24,24,24,24] },
-      [BLOCK.CACTUS]:        { name: 'Cactus',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [25,25,25,25,25,25] },
-      [BLOCK.TNT]:           { name: 'TNT (Explosivo)',  solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,27,26,26,26,26] },
-      [BLOCK.TOOL_PICKAXE]:  { name: 'Pico de Diamante', solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] }
+      [BLOCK.AIR]:               { name: 'Aire',                  solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xffffff, tiles: [0,0,0,0,0,0] },
+      [BLOCK.GRASS]:             { name: 'Césped',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x58a83a, tiles: [0, 2, 1, 1, 1, 1] },
+      [BLOCK.DIRT]:              { name: 'Tierra',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.38, stoneLike: false, color: 0x866043, tiles: [2, 2, 2, 2, 2, 2] },
+      [BLOCK.STONE]:             { name: 'Piedra',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.05, stoneLike: true,  color: 0x7d8084, tiles: [3, 3, 3, 3, 3, 3] },
+      [BLOCK.SAND]:              { name: 'Arena',                 solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xe0ce94, tiles: [4, 4, 4, 4, 4, 4] },
+      [BLOCK.WOOD]:              { name: 'Tronco de Roble',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0x6b4e2e, tiles: [6, 6, 5, 5, 5, 5] },
+      [BLOCK.LEAVES]:            { name: 'Hojas',                 solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.18, stoneLike: false, color: 0x34802a, tiles: [7, 7, 7, 7, 7, 7] },
+      [BLOCK.PLANKS]:            { name: 'Madera',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xb08852, tiles: [8, 8, 8, 8, 8, 8] },
+      [BLOCK.COBBLE]:            { name: 'Adoquín',               solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.10, stoneLike: true,  color: 0x73767a, tiles: [9, 9, 9, 9, 9, 9] },
+      [BLOCK.BRICK]:             { name: 'Ladrillos',             solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.15, stoneLike: true,  color: 0xa8483a, tiles: [10,10,10,10,10,10] },
+      [BLOCK.GLASS]:             { name: 'Cristal',               solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xdaf0ff, tiles: [11,11,11,11,11,11] },
+      [BLOCK.WATER]:             { name: 'Agua',                  solid: false, opaque: false, shape: 'water', light: 0,  hardness: 0,    stoneLike: false, color: 0x1c76d8, tiles: [12,12,12,12,12,12] },
+      [BLOCK.SNOW]:              { name: 'Nieve',                 solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0xf0f8ff, tiles: [13, 2,14,14,14,14] },
+      [BLOCK.GLOWSTONE]:         { name: 'Piedra Luminosa',       solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.40, stoneLike: false, color: 0xffeba8, tiles: [15,15,15,15,15,15] },
+      [BLOCK.BEDROCK]:           { name: 'Roca Madre',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 999,  stoneLike: true,  color: 0x2d2d32, tiles: [16,16,16,16,16,16] },
+      [BLOCK.COAL_ORE]:          { name: 'Mena de Carbón',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.25, stoneLike: true,  color: 0x3b3d40, tiles: [17,17,17,17,17,17] },
+      [BLOCK.IRON_ORE]:          { name: 'Mena de Hierro',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.35, stoneLike: true,  color: 0xd8af93, tiles: [18,18,18,18,18,18] },
+      [BLOCK.GOLD_ORE]:          { name: 'Mena de Oro',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfcee4b, tiles: [19,19,19,19,19,19] },
+      [BLOCK.DIAMOND_ORE]:       { name: 'Mena de Diamante',      solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.65, stoneLike: true,  color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+      [BLOCK.TORCH]:             { name: 'Antorcha (Luz)',        solid: false, opaque: false, shape: 'cross', light: 15, hardness: 0.05, stoneLike: false, color: 0xffd066, tiles: [21,21,21,21,21,21] },
+      [BLOCK.TALL_GRASS]:        { name: 'Hierba Alta',           solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x52a238, tiles: [22,22,22,22,22,22] },
+      [BLOCK.FLOWER_RED]:        { name: 'Rosa Roja',             solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xe83b3b, tiles: [23,23,23,23,23,23] },
+      [BLOCK.FLOWER_YELLOW]:     { name: 'Diente de León',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xfacc15, tiles: [24,24,24,24,24,24] },
+      [BLOCK.CACTUS]:            { name: 'Cactus',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [25,25,25,25,25,25] },
+      [BLOCK.TNT]:               { name: 'TNT (Explosivo)',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,27,26,26,26,26] },
+      [BLOCK.LAVA]:              { name: 'Lava Ardiente',         solid: false, opaque: true,  shape: 'cube',  light: 15, hardness: 0.25, stoneLike: false, color: 0xff5a1f, tiles: [28,28,28,28,28,28] },
+      [BLOCK.OBSIDIAN]:          { name: 'Obsidiana',             solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 2.20, stoneLike: true,  color: 0x2e1a47, tiles: [29,29,29,29,29,29] },
+      [BLOCK.LEVER_OFF]:         { name: 'Palanca Redstone',      solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.08, stoneLike: false, color: 0x94a3b8, tiles: [30,30,30,30,30,30] },
+      [BLOCK.LEVER_ON]:          { name: 'Palanca Redstone (ON)', solid: false, opaque: false, shape: 'cross', light: 7,  hardness: 0.08, stoneLike: false, color: 0xef4444, tiles: [31,31,31,31,31,31] },
+      [BLOCK.REDSTONE_LAMP_OFF]: { name: 'Lámpara Redstone',      solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x6b3e26, tiles: [32,32,32,32,32,32] },
+      [BLOCK.REDSTONE_LAMP_ON]:  { name: 'Lámpara Redstone (ON)', solid: true,  opaque: true,  shape: 'cube',  light: 15, hardness: 0.35, stoneLike: false, color: 0xffd166, tiles: [33,33,33,33,33,33] },
+      [BLOCK.TOOL_PICKAXE]:      { name: 'Pico de Diamante',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+      [BLOCK.TOOL_SWORD]:        { name: 'Espada de Diamante',    solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
+      [BLOCK.TOOL_BOW]:          { name: 'Arco y Flechas',        solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
+      [BLOCK.ITEM_APPLE]:        { name: 'Manzana Curativa (+4❤)',solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xef4444, tiles: [23,23,23,23,23,23] }
     };
 
     const ALL_INVENTORY_ITEMS = [
       BLOCK.TOOL_PICKAXE,
+      BLOCK.TOOL_SWORD,
+      BLOCK.TOOL_BOW,
+      BLOCK.ITEM_APPLE,
       BLOCK.TORCH,
       BLOCK.TNT,
+      BLOCK.LEVER_OFF,
+      BLOCK.REDSTONE_LAMP_OFF,
+      BLOCK.LAVA,
+      BLOCK.OBSIDIAN,
       BLOCK.GRASS,
       BLOCK.DIRT,
       BLOCK.STONE,
@@ -950,14 +1021,14 @@
 
     const hotbarSlots = [
       BLOCK.TOOL_PICKAXE,
+      BLOCK.TOOL_SWORD,
+      BLOCK.TOOL_BOW,
+      BLOCK.ITEM_APPLE,
       BLOCK.TORCH,
       BLOCK.TNT,
       BLOCK.COBBLE,
       BLOCK.PLANKS,
-      BLOCK.SAND,
-      BLOCK.BRICK,
-      BLOCK.GLASS,
-      BLOCK.GLOWSTONE
+      BLOCK.LEVER_OFF
     ];
 
     // Fast Crafting Recipes (1-click / 1-tap in Inventory Modal E)
@@ -1009,6 +1080,36 @@
         outId: BLOCK.TOOL_PICKAXE,
         outCount: 1,
         ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 2 }, { id: BLOCK.PLANKS, count: 1 }]
+      },
+      {
+        name: '1× Espada de Diamante',
+        outId: BLOCK.TOOL_SWORD,
+        outCount: 1,
+        ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
+      },
+      {
+        name: '1× Arco y Flechas',
+        outId: BLOCK.TOOL_BOW,
+        outCount: 1,
+        ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.TALL_GRASS, count: 1 }]
+      },
+      {
+        name: '2× Manzana Curativa (+4❤)',
+        outId: BLOCK.ITEM_APPLE,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.FLOWER_RED, count: 1 }, { id: BLOCK.GOLD_ORE, count: 1 }]
+      },
+      {
+        name: '2× Palanca Redstone',
+        outId: BLOCK.LEVER_OFF,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.COBBLE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
+      },
+      {
+        name: '2× Lámpara Redstone',
+        outId: BLOCK.REDSTONE_LAMP_OFF,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.GLOWSTONE, count: 1 }, { id: BLOCK.IRON_ORE, count: 1 }]
       }
     ];
 
@@ -1016,8 +1117,15 @@
       const counts = {};
       for (const bId of ALL_INVENTORY_ITEMS) counts[bId] = 8;
       counts[BLOCK.TOOL_PICKAXE] = 1;
+      counts[BLOCK.TOOL_SWORD] = 1;
+      counts[BLOCK.TOOL_BOW] = 1;
+      counts[BLOCK.ITEM_APPLE] = 6;
       counts[BLOCK.TORCH] = 24;
       counts[BLOCK.TNT] = 10;
+      counts[BLOCK.LEVER_OFF] = 8;
+      counts[BLOCK.REDSTONE_LAMP_OFF] = 8;
+      counts[BLOCK.LAVA] = 6;
+      counts[BLOCK.OBSIDIAN] = 12;
       counts[BLOCK.COBBLE] = 48;
       counts[BLOCK.PLANKS] = 48;
       counts[BLOCK.SAND] = 24;
@@ -1036,6 +1144,9 @@
 
     function getDropItemForBlock(blockId) {
       if (blockId === BLOCK.STONE) return BLOCK.COBBLE;
+      if (blockId === BLOCK.LEVER_ON) return BLOCK.LEVER_OFF;
+      if (blockId === BLOCK.REDSTONE_LAMP_ON) return BLOCK.REDSTONE_LAMP_OFF;
+      if (blockId === BLOCK.LEAVES && Math.random() < 0.35) return BLOCK.ITEM_APPLE;
       return blockId;
     }
 
@@ -1218,6 +1329,53 @@
         if (x >= 7 && x <= 8 && y >= 7 && y <= 8) return '#f8fafc';
         if (x >= 6 && x <= 9 && y >= 6 && y <= 9) return '#334155';
         return shade(200, 35, 35, 0.85 + r * 0.2);
+      });
+
+      // 28: Lava (Glowing molten magma)
+      drawTile(28, (x, y, r) => {
+        const swirl = Math.sin(x * 0.55 + y * 0.45) + Math.cos(x * 0.35 - y * 0.6);
+        if (swirl > 0.85) return shade(255, 238, 95, 0.95 + r * 0.1);
+        if (swirl > -0.2) return shade(255, 115, 24, 0.9 + r * 0.15);
+        return shade(198, 42, 12, 0.88 + r * 0.15);
+      });
+
+      // 29: Obsidian (Dark volcanic purple-black glass)
+      drawTile(29, (x, y, r) => {
+        const crystal = ((x * 5 + y * 3) % 11 === 0);
+        if (crystal) return shade(98, 58, 152, 0.9 + r * 0.2);
+        return shade(32, 20, 52, 0.78 + r * 0.35);
+      });
+
+      // 30: Redstone Lever OFF (Cross sprite)
+      drawTile(30, (x, y, r) => {
+        if (y >= 12 && x >= 5 && x <= 10) return shade(110, 114, 120, 0.9 + r * 0.15);
+        if (y >= 6 && y < 12 && x >= 7 && x <= 8) return shade(142, 102, 58, 0.9 + r * 0.15);
+        if (y >= 4 && y <= 6 && x >= 6 && x <= 9) return shade(120, 36, 36, 0.9);
+        return null;
+      });
+
+      // 31: Redstone Lever ON (Cross sprite, glowing red tip)
+      drawTile(31, (x, y, r) => {
+        if (y >= 12 && x >= 5 && x <= 10) return shade(160, 50, 50, 0.95);
+        if (y >= 6 && y < 12 && x >= 7 && x <= 8) return shade(168, 122, 68, 0.95);
+        if (y >= 4 && y <= 6 && x >= 6 && x <= 9) return shade(255, 58, 58, 1.0);
+        return null;
+      });
+
+      // 32: Redstone Lamp OFF
+      drawTile(32, (x, y, r) => {
+        const frame = x === 0 || x === 15 || y === 0 || y === 15 || x === y || (x + y === 15);
+        if (frame) return shade(62, 38, 24, 0.9);
+        return shade(118, 72, 42, 0.85 + r * 0.2);
+      });
+
+      // 33: Redstone Lamp ON (Warm golden lantern)
+      drawTile(33, (x, y, r) => {
+        const frame = x === 0 || x === 15 || y === 0 || y === 15;
+        if (frame) return shade(92, 54, 30, 0.95);
+        const core = Math.hypot(x - 7.5, y - 7.5) < 5.2;
+        if (core) return shade(255, 248, 185, 0.96 + r * 0.08);
+        return shade(248, 192, 72, 0.92 + r * 0.12);
       });
 
       const texture = new THREE.CanvasTexture(canvas);
@@ -1465,7 +1623,7 @@
                     const caveVal = c0 + fz * (c1 - c0);
 
                     if (caveVal < 0.165) {
-                      data[colOffset + y] = BLOCK.AIR;
+                      data[colOffset + y] = (y <= 4) ? BLOCK.LAVA : BLOCK.AIR;
                     } else if (data[colOffset + y] === BLOCK.STONE) {
                       // Underground Ore Distribution
                       const r = hash3D(wx0 + lx, y, wz0 + lz);
@@ -1542,6 +1700,16 @@
           }
         }
 
+        // Step 4B: Procedural Structures (Desert Pyramids & Explorer Cabins)
+        const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
+        if ((cx !== 0 || cz !== 0) && (structHash % 9 === 0)) {
+          const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8);
+          const centerY = surfaceMap[8 * CHUNK_SIZE + 8];
+          if (centerY > SEA_LEVEL + 2 && centerY < CHUNK_HEIGHT - 12) {
+            placeStructureInChunk(data, surfaceMap, cx, cz, centerBiome === 'Desierto' ? 'pyramid' : 'cabin');
+          }
+        }
+
         // Step 5: Apply user delta modifications
         if (deltaList && deltaList.length > 0) {
           for (let i = 0; i < deltaList.length; i += 2) {
@@ -1552,7 +1720,80 @@
         return data;
       }
 
-      return { generateChunkVoxels, getBiomeAt };
+      function placeStructureInChunk(data, surfaceMap, cx, cz, type = 'pyramid') {
+        const baseY = surfaceMap ? surfaceMap[8 * CHUNK_SIZE + 8] : 28;
+        const setLocal = (lx, y, lz, bId) => {
+          if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || y <= 1 || y >= CHUNK_HEIGHT) return;
+          data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId;
+        };
+
+        if (type === 'pyramid') {
+          // Stepped 9x5x9 Desert Pyramid + Underground Treasure Chamber (Gold, Diamond, Glowstone & TNT trap)
+          for (let layer = 0; layer <= 4; layer++) {
+            const r = 4 - layer;
+            for (let dz = -r; dz <= r; dz++) {
+              for (let dx = -r; dx <= r; dx++) {
+                const blockId = (layer === 1 && (Math.abs(dx) === r || Math.abs(dz) === r)) ? BLOCK.BRICK : BLOCK.SAND;
+                setLocal(8 + dx, baseY + 1 + layer, 8 + dz, blockId);
+              }
+            }
+          }
+          // Hollow interior & entrance on South (+Z)
+          for (let dz = -2; dz <= 2; dz++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              setLocal(8 + dx, baseY + 1, 8 + dz, BLOCK.AIR);
+              setLocal(8 + dx, baseY + 2, 8 + dz, BLOCK.AIR);
+            }
+          }
+          setLocal(8, baseY + 1, 12, BLOCK.AIR);
+          setLocal(8, baseY + 2, 12, BLOCK.AIR);
+          setLocal(8, baseY + 3, 8, BLOCK.GLOWSTONE);
+
+          // Hidden Treasure Chamber 3 blocks below floor
+          const chamberY = Math.max(4, baseY - 3);
+          for (let dz = -1; dz <= 1; dz++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              setLocal(8 + dx, chamberY, 8 + dz, BLOCK.BRICK);
+              setLocal(8 + dx, chamberY + 1, 8 + dz, BLOCK.AIR);
+              setLocal(8 + dx, chamberY + 2, 8 + dz, BLOCK.AIR);
+            }
+          }
+          setLocal(7, chamberY + 1, 8, BLOCK.GOLD_ORE);
+          setLocal(9, chamberY + 1, 8, BLOCK.DIAMOND_ORE);
+          setLocal(8, chamberY + 1, 8, BLOCK.TNT);
+          setLocal(8, chamberY + 2, 8, BLOCK.GLOWSTONE);
+          return { type: 'pyramid', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8, chamberY };
+        } else {
+          // 5x4x5 Explorer Cabin (Oak corner pillars, Plank walls, Glass windows, Torch inside)
+          for (let dz = -2; dz <= 2; dz++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              setLocal(8 + dx, baseY, 8 + dz, BLOCK.COBBLE);
+              for (let dy = 1; dy <= 3; dy++) {
+                const isCorner = Math.abs(dx) === 2 && Math.abs(dz) === 2;
+                const isWall = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+                if (isCorner) {
+                  setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.WOOD);
+                } else if (isWall) {
+                  if (dx === 0 && dz === 2 && dy <= 2) {
+                    setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR); // Doorway
+                  } else if (dy === 2 && (dx === 0 || dz === 0)) {
+                    setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.GLASS); // Window
+                  } else {
+                    setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.PLANKS);
+                  }
+                } else {
+                  setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+                }
+              }
+              setLocal(8 + dx, baseY + 4, 8 + dz, BLOCK.WOOD);
+            }
+          }
+          setLocal(8, baseY + 1, 8, BLOCK.TORCH);
+          return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+        }
+      }
+
+      return { generateChunkVoxels, getBiomeAt, placeStructureInChunk };
     }
 
     // ============================================================================
@@ -1568,15 +1809,27 @@
 
       let qHead = 0, qTail = 0;
 
-      // 1. Cast vertical sunlight rays from top (y = 63 -> 0) + seed block light emitters
+      // 1. Cast vertical sunlight rays from top (y = 63 -> 0) + seed block light emitters + cache 2D minimap surface colors
+      if (!ch.mapColors) ch.mapColors = new Uint32Array(CHUNK_SIZE * CHUNK_SIZE);
+      const mapColors = ch.mapColors;
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         for (let lx = 0; lx < CHUNK_SIZE; lx++) {
           const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
           let sun = 15;
+          let topFound = false;
           for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
             const idx = colOffset + y;
             const b = data[idx];
             const def = BLOCK_DEFS[b];
+            if (!topFound && b !== BLOCK.AIR) {
+              topFound = true;
+              const hex = def.color || 0x58a83a;
+              const hShade = Math.min(1.28, Math.max(0.62, 0.72 + (y - SEA_LEVEL) * 0.018));
+              const r = Math.min(255, ((hex >> 16) & 255) * hShade) | 0;
+              const g = Math.min(255, ((hex >> 8) & 255) * hShade) | 0;
+              const bl = Math.min(255, (hex & 255) * hShade) | 0;
+              mapColors[lz * CHUNK_SIZE + lx] = (255 << 24) | (bl << 16) | (g << 8) | r;
+            }
             if (def.opaque) {
               sun = 0;
             } else if (b === BLOCK.WATER || b === BLOCK.LEAVES) {
@@ -2207,6 +2460,42 @@
           gain.gain.setValueAtTime(0.16, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
           osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'hiss') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(680, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.18);
+          gain.gain.setValueAtTime(0.13, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+          osc.start(now); osc.stop(now + 0.18);
+        } else if (type === 'thunder') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(82, now);
+          osc.frequency.exponentialRampToValueAtTime(22, now + 0.75);
+          gain.gain.setValueAtTime(0.28, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          if (this.reverbNode) gain.connect(this.reverbNode);
+          osc.start(now); osc.stop(now + 0.75);
+        } else if (type === 'bow') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(280, now);
+          osc.frequency.exponentialRampToValueAtTime(590, now + 0.085);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+          osc.start(now); osc.stop(now + 0.085);
+        } else if (type === 'eat') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(390, now);
+          osc.frequency.exponentialRampToValueAtTime(780, now + 0.14);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.start(now); osc.stop(now + 0.14);
+        } else if (type === 'lever') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(420, now);
+          osc.frequency.exponentialRampToValueAtTime(560, now + 0.05);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.start(now); osc.stop(now + 0.05);
         }
       }
     }
@@ -2556,7 +2845,7 @@
           `#include <begin_vertex>
           vec4 wp = modelMatrix * vec4(transformed, 1.0);
           vWorldPos = wp.xyz;
-          float tileIdx = floor(uv.x * 28.0 + 0.0001);
+          float tileIdx = floor(uv.x * ${ATLAS_COLS}.0 + 0.0001);
           vTileIdx = tileIdx;
 
           // Cross-Quad Flora Wind Sway (22: Tall Grass, 23: Red Rose, 24: Yellow Dandelion)
@@ -2592,9 +2881,12 @@
         )
         .replace(
           '#include <fog_fragment>',
-          `if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5)) {
+          `if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5)) {
             float flicker = 1.0 + 0.09 * sin(uTime * 9.5 + vWorldPos.x * 2.3 + vWorldPos.z * 2.3);
             gl_FragColor.rgb *= vec3(flicker * 1.04, flicker, flicker * 0.92);
+          } else if (vTileIdx >= 27.5 && vTileIdx <= 28.5) {
+            float magma = 0.92 + 0.14 * sin(uTime * 4.2 + vWorldPos.x * 1.8 + vWorldPos.z * 1.8);
+            gl_FragColor.rgb *= vec3(magma * 1.08, magma * 0.96, magma * 0.82);
           } else if (vTileIdx >= 18.5 && vTileIdx <= 20.5) {
             float glint = max(0.0, sin(uTime * 3.2 + vWorldPos.x * 4.0 + vWorldPos.y * 4.0 + vWorldPos.z * 4.0));
             gl_FragColor.rgb += vec3(0.08, 0.11, 0.14) * pow(glint, 6.0);
@@ -2733,9 +3025,15 @@
       const bId = hotbarSlots[selectedSlot];
       const def = BLOCK_DEFS[bId];
       handMat.color.setHex(def.color || 0xffffff);
-      if (bId === BLOCK.TOOL_PICKAXE) {
-        handMesh.scale.set(0.35, 1.25, 0.35);
+      if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) {
+        handMesh.scale.set(0.28, 1.35, 0.28);
         handMesh.rotation.set(0.4, 0.3, -0.3);
+      } else if (bId === BLOCK.TOOL_BOW) {
+        handMesh.scale.set(0.24, 1.15, 0.45);
+        handMesh.rotation.set(0.2, 0.15, -0.1);
+      } else if (bId === BLOCK.ITEM_APPLE) {
+        handMesh.scale.set(0.65, 0.65, 0.65);
+        handMesh.rotation.set(0.15, 0.4, 0);
       } else if (def.shape === 'cross') {
         handMesh.scale.set(0.32, 1.1, 0.32);
         handMesh.rotation.set(0.1, 0.4, 0);
@@ -3196,12 +3494,22 @@
           }
         } else if (b === BLOCK.WATER) {
           const below = getVoxelGlobal(wx, wy - 1, wz);
-          if (below === BLOCK.AIR && wy - 1 > 1) {
+          if (below === BLOCK.LAVA) {
+            // Water + Lava reaction -> Solidifies Lava into Obsidian!
+            setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.OBSIDIAN, dirtySet);
+            sfx.play('hiss');
+            spawnBlockParticles(wx, wy - 1, wz, BLOCK.OBSIDIAN, 10);
+          } else if (below === BLOCK.AIR && wy - 1 > 1) {
             setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet);
             movedThisTick.add(`${wx},${wy - 1},${wz}`);
-          } else if (wy <= SEA_LEVEL) {
+          } else {
             for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-              if (getVoxelGlobal(wx + dx, wy, wz + dz) === BLOCK.AIR) {
+              const sideB = getVoxelGlobal(wx + dx, wy, wz + dz);
+              if (sideB === BLOCK.LAVA) {
+                setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet);
+                sfx.play('hiss');
+                spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
+              } else if (wy <= SEA_LEVEL && sideB === BLOCK.AIR) {
                 const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
                 if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER) {
                   setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet);
@@ -3210,10 +3518,318 @@
               }
             }
           }
+        } else if (b === BLOCK.LAVA) {
+          // Check if adjacent to water -> turns into Obsidian
+          let turnedToObsidian = false;
+          for (const [dx, dy, dz] of [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]]) {
+            if (getVoxelGlobal(wx + dx, wy + dy, wz + dz) === BLOCK.WATER) {
+              setVoxelRawNoRebuild(wx, wy, wz, BLOCK.OBSIDIAN, dirtySet);
+              sfx.play('hiss');
+              spawnBlockParticles(wx, wy, wz, BLOCK.OBSIDIAN, 10);
+              turnedToObsidian = true;
+              break;
+            }
+          }
+          if (!turnedToObsidian) {
+            const below = getVoxelGlobal(wx, wy - 1, wz);
+            if (below === BLOCK.AIR && wy - 1 > 1) {
+              setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.LAVA, dirtySet);
+              movedThisTick.add(`${wx},${wy - 1},${wz}`);
+            }
+          }
         }
       }
 
       rebuildAffectedChunksSet(dirtySet);
+    }
+
+    // ============================================================================
+    // 8C-2. DYNAMIC WEATHER (RAIN, BIOME SNOW, STORMS & LIGHTNING) IN 1 DRAW CALL
+    // ============================================================================
+    const MAX_WEATHER_DROPS = 180;
+    const weatherGeo = new THREE.BoxGeometry(0.05, 0.55, 0.05);
+    const weatherMat = new THREE.MeshBasicMaterial({
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false
+    });
+    const weatherInstanced = new THREE.InstancedMesh(weatherGeo, weatherMat, MAX_WEATHER_DROPS);
+    weatherInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    weatherInstanced.visible = false;
+    scene.add(weatherInstanced);
+
+    const weatherDrops = [];
+    for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
+      weatherDrops.push({
+        ox: (Math.random() - 0.5) * 22,
+        oy: Math.random() * 16,
+        oz: (Math.random() - 0.5) * 22,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    let weatherMode = 'clear'; // 'clear' | 'rain' | 'storm'
+    let isSnowing = false;
+    let lightningFlash = 0.0;
+    let stormThunderAccum = 0.0;
+    let lightningCount = 0;
+    const weatherScaleVec = new THREE.Vector3(1, 1, 1);
+    const weatherPosVec = new THREE.Vector3();
+    const weatherQuat = new THREE.Quaternion();
+
+    function toggleWeather(forceMode) {
+      const modes = ['clear', 'rain', 'storm'];
+      if (modes.includes(forceMode)) {
+        weatherMode = forceMode;
+      } else {
+        const nextIdx = (modes.indexOf(weatherMode) + 1) % modes.length;
+        weatherMode = modes[nextIdx];
+      }
+      weatherInstanced.visible = weatherMode !== 'clear';
+      gpuShaderUniforms.uWindStrength.value = weatherMode === 'storm' ? 2.2 : (weatherMode === 'rain' ? 1.45 : 1.0);
+      const btn = document.getElementById('tbtn-weather');
+      if (btn) {
+        btn.classList.toggle('toggled', weatherMode !== 'clear');
+        btn.textContent = weatherMode === 'storm' ? '⛈ Tormenta' : (weatherMode === 'rain' ? '🌧 Lluvia' : '☀ Clima');
+      }
+      return weatherMode;
+    }
+
+    function triggerLightningFlash() {
+      lightningFlash = 1.0;
+      lightningCount++;
+      sfx.play('thunder');
+      return true;
+    }
+
+    function updateWeather(dt) {
+      if (lightningFlash > 0) {
+        lightningFlash = Math.max(0, lightningFlash - dt * 3.2);
+        if (!isCameraUnderwater) {
+          scene.background.lerp(new THREE.Color(0xf8fafc), lightningFlash * 0.75);
+        }
+      }
+
+      if (weatherMode === 'clear') return;
+
+      const curBiome = generator.getBiomeAt(player.x, player.z);
+      isSnowing = (curBiome === 'Taiga Nevada' || player.y >= 42);
+      weatherMat.color.setHex(isSnowing ? 0xf8fafc : 0x7dd3fc);
+      weatherScaleVec.set(isSnowing ? 2.4 : 0.9, isSnowing ? 0.25 : 1.0, isSnowing ? 2.4 : 0.9);
+
+      if (weatherMode === 'storm') {
+        stormThunderAccum += dt;
+        if (stormThunderAccum > 9.5) {
+          stormThunderAccum = 0;
+          triggerLightningFlash();
+        }
+      }
+
+      const fallSpeed = isSnowing ? 3.2 : (weatherMode === 'storm' ? 21.0 : 16.0);
+      const px = player.x;
+      const py = player.y;
+      const pz = player.z;
+      const timeVal = gpuShaderUniforms.uTime.value;
+
+      for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
+        const d = weatherDrops[i];
+        d.oy -= fallSpeed * dt;
+        if (d.oy < -4) d.oy += 16;
+
+        const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (weatherMode === 'storm' ? 0.6 : 0.15);
+        const wx = px + d.ox + swayX;
+        const wy = py + d.oy;
+        const wz = pz + d.oz;
+
+        // Hide precipitation inside caves or under solid roofs (where sunlight == 0)
+        const sunL = getLightGlobal(Math.floor(wx), Math.floor(wy), Math.floor(wz)) >> 4;
+        if (sunL === 0) {
+          dummyMatrix.makeTranslation(0, -999, 0);
+        } else {
+          weatherPosVec.set(wx, wy, wz);
+          dummyMatrix.compose(weatherPosVec, weatherQuat, weatherScaleVec);
+        }
+        weatherInstanced.setMatrixAt(i, dummyMatrix);
+      }
+      weatherInstanced.instanceMatrix.needsUpdate = true;
+    }
+
+    // ============================================================================
+    // 8C-3. 3D BALLISTIC ARROWS (INSTANCEDMESH) & CONSUMABLE FOOD (APPLE)
+    // ============================================================================
+    const MAX_ARROWS = 24;
+    const arrowGeo = new THREE.BoxGeometry(0.08, 0.08, 0.62);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const arrowInstanced = new THREE.InstancedMesh(arrowGeo, arrowMat, MAX_ARROWS);
+    arrowInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(arrowInstanced);
+
+    const arrows = [];
+    const arrowPosVec = new THREE.Vector3();
+    const arrowTargetVec = new THREE.Vector3();
+    const arrowLookMat = new THREE.Matrix4();
+    const arrowQuat = new THREE.Quaternion();
+    const arrowScaleVec = new THREE.Vector3(1, 1, 1);
+
+    for (let i = 0; i < MAX_ARROWS; i++) {
+      arrows.push({
+        active: false,
+        stuck: false,
+        x: 0, y: -999, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        age: 0
+      });
+      dummyMatrix.makeTranslation(0, -999, 0);
+      arrowInstanced.setMatrixAt(i, dummyMatrix);
+    }
+    let arrowCursor = 0;
+
+    function shootArrow(ox, oy, oz, dx, dy, dz) {
+      const a = arrows[arrowCursor];
+      const idx = arrowCursor;
+      arrowCursor = (arrowCursor + 1) % MAX_ARROWS;
+
+      const len = Math.hypot(dx, dy, dz) || 1;
+      const nx = dx / len, ny = dy / len, nz = dz / len;
+      const speed = 24.0;
+
+      a.active = true;
+      a.stuck = false;
+      a.x = ox + nx * 0.45;
+      a.y = oy + ny * 0.45;
+      a.z = oz + nz * 0.45;
+      a.vx = nx * speed;
+      a.vy = ny * speed;
+      a.vz = nz * speed;
+      a.age = 0;
+
+      arrowPosVec.set(a.x, a.y, a.z);
+      arrowTargetVec.set(a.x + a.vx, a.y + a.vy, a.z + a.vz);
+      arrowLookMat.lookAt(arrowPosVec, arrowTargetVec, camera.up);
+      arrowQuat.setFromRotationMatrix(arrowLookMat);
+      dummyMatrix.compose(arrowPosVec, arrowQuat, arrowScaleVec);
+      arrowInstanced.setMatrixAt(idx, dummyMatrix);
+      arrowInstanced.instanceMatrix.needsUpdate = true;
+
+      sfx.play('bow');
+      return a;
+    }
+
+    function updateArrows(dt) {
+      let anyUpdated = false;
+      for (let i = 0; i < MAX_ARROWS; i++) {
+        const a = arrows[i];
+        if (!a.active) continue;
+        anyUpdated = true;
+        a.age += dt;
+
+        if (a.age > 12.0) {
+          a.active = false;
+          dummyMatrix.makeTranslation(0, -999, 0);
+          arrowInstanced.setMatrixAt(i, dummyMatrix);
+          continue;
+        }
+        if (a.stuck) continue;
+
+        const stepDist = Math.hypot(a.vx * dt, a.vy * dt, a.vz * dt);
+        const speed = Math.hypot(a.vx, a.vy, a.vz) || 1;
+        const hitM = raycastMob(a.x, a.y, a.z, a.vx / speed, a.vy / speed, a.vz / speed, stepDist + 0.55);
+        if (hitM) {
+          damageMob(hitM, 4, a.vx, a.vz);
+          a.active = false;
+          dummyMatrix.makeTranslation(0, -999, 0);
+          arrowInstanced.setMatrixAt(i, dummyMatrix);
+          continue;
+        }
+
+        a.vy -= 14.0 * dt;
+        const nx = a.x + a.vx * dt;
+        const ny = a.y + a.vy * dt;
+        const nz = a.z + a.vz * dt;
+        const b = getVoxelGlobal(Math.floor(nx), Math.floor(ny), Math.floor(nz));
+
+        if (b === BLOCK.TNT) {
+          igniteTNT(Math.floor(nx), Math.floor(ny), Math.floor(nz), 1.4);
+          a.active = false;
+          dummyMatrix.makeTranslation(0, -999, 0);
+          arrowInstanced.setMatrixAt(i, dummyMatrix);
+          continue;
+        } else if (BLOCK_DEFS[b].solid) {
+          a.stuck = true;
+          sfx.play('hit');
+        } else {
+          a.x = nx;
+          a.y = ny;
+          a.z = nz;
+        }
+
+        arrowPosVec.set(a.x, a.y, a.z);
+        arrowTargetVec.set(a.x + a.vx, a.y + a.vy, a.z + a.vz);
+        arrowLookMat.lookAt(arrowPosVec, arrowTargetVec, camera.up);
+        arrowQuat.setFromRotationMatrix(arrowLookMat);
+        dummyMatrix.compose(arrowPosVec, arrowQuat, arrowScaleVec);
+        arrowInstanced.setMatrixAt(i, dummyMatrix);
+      }
+      if (anyUpdated) arrowInstanced.instanceMatrix.needsUpdate = true;
+    }
+
+    function eatHeldApple() {
+      if (gameMode === 'survival' && (inventoryCounts[BLOCK.ITEM_APPLE] || 0) <= 0) return false;
+      if (player.health >= player.maxHealth && gameMode === 'survival') return false;
+      if (gameMode === 'survival') {
+        inventoryCounts[BLOCK.ITEM_APPLE] = Math.max(0, (inventoryCounts[BLOCK.ITEM_APPLE] || 1) - 1);
+      }
+      player.health = Math.min(player.maxHealth, player.health + 4);
+      renderHeartsUI();
+      refreshInventoryCountsUI();
+      player.swingTime = 1.0;
+      sfx.play('eat');
+      return true;
+    }
+
+    // ============================================================================
+    // 8C-4. REDSTONE VOXEL CIRCUITS (LEVERS, REDSTONE LAMPS & REMOTE TNT)
+    // ============================================================================
+    function propagateRedstoneSignal(wx, wy, wz, isPowered) {
+      const dirtySet = new Set();
+      let affectedCount = 0;
+
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dz = -3; dz <= 3; dz++) {
+          for (let dx = -3; dx <= 3; dx++) {
+            if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 4) continue;
+            const nx = wx + dx;
+            const ny = wy + dy;
+            const nz = wz + dz;
+            const nb = getVoxelGlobal(nx, ny, nz);
+
+            if (isPowered && nb === BLOCK.REDSTONE_LAMP_OFF) {
+              setVoxelRawNoRebuild(nx, ny, nz, BLOCK.REDSTONE_LAMP_ON, dirtySet);
+              affectedCount++;
+            } else if (!isPowered && nb === BLOCK.REDSTONE_LAMP_ON) {
+              setVoxelRawNoRebuild(nx, ny, nz, BLOCK.REDSTONE_LAMP_OFF, dirtySet);
+              affectedCount++;
+            } else if (isPowered && nb === BLOCK.TNT) {
+              igniteTNT(nx, ny, nz, 1.5);
+              affectedCount++;
+            }
+          }
+        }
+      }
+      rebuildAffectedChunksSet(dirtySet);
+      return affectedCount;
+    }
+
+    function toggleVoxelLever(wx, wy, wz) {
+      const cur = getVoxelGlobal(wx, wy, wz);
+      if (cur !== BLOCK.LEVER_OFF && cur !== BLOCK.LEVER_ON) return false;
+      const nextState = cur === BLOCK.LEVER_OFF ? BLOCK.LEVER_ON : BLOCK.LEVER_OFF;
+      const isPowered = nextState === BLOCK.LEVER_ON;
+      setVoxelGlobal(wx, wy, wz, nextState);
+      sfx.play('lever');
+      propagateRedstoneSignal(wx, wy, wz, isPowered);
+      return isPowered;
     }
 
     // ============================================================================
@@ -4229,6 +4845,33 @@
         ctx.fillRect(8, 2, 6, 2);
         ctx.fillRect(12, 4, 2, 4);
         ctx.fillRect(7, 3, 2, 2);
+      } else if (itemId === BLOCK.TOOL_SWORD) {
+        // Draw pixel-art Diamond Sword icon
+        ctx.fillStyle = '#7a542e';
+        ctx.fillRect(2, 12, 3, 3);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(4, 9, 4, 2);
+        ctx.fillStyle = '#38bdf8';
+        for (let i = 5; i <= 13; i++) ctx.fillRect(i, 15 - i, 2, 2);
+      } else if (itemId === BLOCK.TOOL_BOW) {
+        // Draw pixel-art Bow & Arrow icon
+        ctx.fillStyle = '#cbd5e1';
+        for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(5, 2, 4, 2);
+        ctx.fillRect(9, 4, 2, 8);
+        ctx.fillRect(5, 12, 4, 2);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(3, 7, 10, 2);
+      } else if (itemId === BLOCK.ITEM_APPLE) {
+        // Draw pixel-art Healing Apple icon
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(8, 2, 3, 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(4, 4, 8, 9);
+        ctx.fillRect(3, 5, 10, 7);
+        ctx.fillStyle = '#fca5a5';
+        ctx.fillRect(5, 5, 2, 2);
       } else {
         const def = BLOCK_DEFS[itemId];
         const tileIndex = def.tiles[2];
@@ -4237,7 +4880,14 @@
     }
 
     function formatItemCountBadge(itemId) {
-      if (itemId === BLOCK.TOOL_PICKAXE || gameMode === 'creative') return '∞';
+      if (
+        itemId === BLOCK.TOOL_PICKAXE ||
+        itemId === BLOCK.TOOL_SWORD ||
+        itemId === BLOCK.TOOL_BOW ||
+        gameMode === 'creative'
+      ) {
+        return '∞';
+      }
       return `${inventoryCounts[itemId] || 0}`;
     }
 
@@ -4446,9 +5096,29 @@
     }
 
     function placeBlockAtCurrentTarget() {
-      if (!currentHit) return false;
       const bId = hotbarSlots[selectedSlot];
-      if (bId === BLOCK.TOOL_PICKAXE) return false;
+
+      // Consumable Apple or Bow can be used even without pointing at a nearby block
+      if (bId === BLOCK.ITEM_APPLE) {
+        return eatHeldApple();
+      }
+      if (bId === BLOCK.TOOL_BOW) {
+        const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+        shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
+        player.swingTime = 1.0;
+        return true;
+      }
+
+      if (!currentHit) return false;
+
+      // Interacting with a placed Redstone Lever flips its state!
+      if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) {
+        toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z);
+        player.swingTime = 1.0;
+        return true;
+      }
+
+      if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) return false;
       if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
 
       const isReplaceable = currentHit.block === BLOCK.TALL_GRASS;
@@ -4471,7 +5141,19 @@
       );
 
       if (!overlapsPlayer) {
-        if (setVoxelGlobal(px, py, pz, bId)) {
+        let actualPlaceId = bId;
+        if (bId === BLOCK.REDSTONE_LAMP_OFF) {
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dz = -3; dz <= 3; dz++) {
+              for (let dx = -3; dx <= 3; dx++) {
+                if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 4 && getVoxelGlobal(px + dx, py + dy, pz + dz) === BLOCK.LEVER_ON) {
+                  actualPlaceId = BLOCK.REDSTONE_LAMP_ON;
+                }
+              }
+            }
+          }
+        }
+        if (setVoxelGlobal(px, py, pz, actualPlaceId)) {
           if (gameMode === 'survival') {
             inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
             refreshInventoryCountsUI();
@@ -4542,8 +5224,9 @@
       lastPlayerChunkX = null;
     }
 
-    btnReset.addEventListener('click', () => {
-      worldSeed = Math.floor(Math.random() * 999999);
+    function applyWorldSeed(newSeed) {
+      const parsed = Number(newSeed);
+      worldSeed = (!Number.isNaN(parsed) && parsed > 0) ? Math.floor(parsed) : Math.floor(Math.random() * 999999);
       worldDeltas = {};
       saveWorldData();
       generator = createWorldGenerator(worldSeed);
@@ -4565,8 +5248,135 @@
       player.y = findSpawnHeight(player.x, player.z);
       player.health = player.maxHealth;
       renderHeartsUI();
+      const seedInputEl = document.getElementById('seed-input');
+      if (seedInputEl) seedInputEl.value = `${worldSeed}`;
+      return worldSeed;
+    }
+
+    function teleportToBiome(targetBiome) {
+      // Spiral search outward in steps of 16 blocks until matching biome is found
+      for (let radius = 0; radius <= 180; radius++) {
+        for (let step = 0; step < Math.max(1, radius * 8); step++) {
+          const angle = (step / Math.max(1, radius * 8)) * Math.PI * 2;
+          const wx = Math.floor(8 + Math.cos(angle) * radius * 16);
+          const wz = Math.floor(8 + Math.sin(angle) * radius * 16);
+          if (generator.getBiomeAt(wx, wz) === targetBiome) {
+            const cx = Math.floor(wx / CHUNK_SIZE);
+            const cz = Math.floor(wz / CHUNK_SIZE);
+            getChunkData(cx, cz);
+            rebuildChunkImmediate(cx, cz);
+            player.x = wx + 0.5;
+            player.z = wz + 0.5;
+            player.y = findSpawnHeight(player.x, player.z);
+            player.vx = 0; player.vy = 0; player.vz = 0;
+            lastPlayerChunkX = null;
+            updateMinimap(0, true);
+            return { x: player.x, y: player.y, z: player.z, biome: targetBiome };
+          }
+        }
+      }
+      return null;
+    }
+
+    // ============================================================================
+    // 12A-2. REAL-TIME 2D TOPOGRAPHIC RADAR MINIMAP (10 Hz, ZERO GC)
+    // ============================================================================
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    const minimapCtx = minimapCanvas.getContext('2d', { willReadFrequently: true });
+    const MAP_SIZE = 68;
+    const minimapImgData = minimapCtx.createImageData(MAP_SIZE, MAP_SIZE);
+    const minimapPixels32 = new Uint32Array(minimapImgData.data.buffer);
+    const EMPTY_MAP_PIXEL = (255 << 24) | (42 << 16) | (23 << 8) | 15;
+    let minimapAccum = 0;
+    let minimapUpdatesCount = 0;
+
+    function updateMinimap(dt, forceRender = false) {
+      minimapAccum += dt;
+      if (!forceRender && minimapAccum < 0.10) return false;
+      minimapAccum = 0;
+      minimapUpdatesCount++;
+
+      const px = Math.floor(player.x);
+      const pz = Math.floor(player.z);
+      const half = MAP_SIZE >> 1;
+
+      for (let mz = 0; mz < MAP_SIZE; mz++) {
+        const wz = pz + (mz - half);
+        const cz = Math.floor(wz / CHUNK_SIZE);
+        const lz = wz - cz * CHUNK_SIZE;
+        const rowOff = mz * MAP_SIZE;
+        let cachedCx = 999999;
+        let cachedColors = null;
+
+        for (let mx = 0; mx < MAP_SIZE; mx++) {
+          const wx = px + (mx - half);
+          const cx = Math.floor(wx / CHUNK_SIZE);
+          if (cx !== cachedCx) {
+            cachedCx = cx;
+            const ch = chunks.get(`${cx},${cz}`);
+            if (ch && !ch.mapColors) computeChunkLighting(ch, getChunkIfLoaded);
+            cachedColors = ch ? ch.mapColors : null;
+          }
+          const lx = wx - cx * CHUNK_SIZE;
+          minimapPixels32[rowOff + mx] = cachedColors ? cachedColors[lz * CHUNK_SIZE + lx] : EMPTY_MAP_PIXEL;
+        }
+      }
+
+      minimapCtx.putImageData(minimapImgData, 0, 0);
+
+      // Draw nearby Mobs on Radar (Red = Zombie, White = Sheep/Pig)
+      for (let i = 0; i < mobs.length; i++) {
+        const m = mobs[i];
+        const rx = Math.round(half + (m.x - player.x));
+        const rz = Math.round(half + (m.z - player.z));
+        if (rx >= 1 && rx < MAP_SIZE - 1 && rz >= 1 && rz < MAP_SIZE - 1) {
+          minimapCtx.fillStyle = m.type === 'zombie' ? '#ef4444' : '#f8fafc';
+          minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
+        }
+      }
+
+      // Draw Player center marker & look direction line
+      minimapCtx.strokeStyle = '#38bdf8';
+      minimapCtx.lineWidth = 1.5;
+      minimapCtx.beginPath();
+      minimapCtx.moveTo(half, half);
+      minimapCtx.lineTo(half - Math.sin(player.yaw) * 8, half - Math.cos(player.yaw) * 8);
+      minimapCtx.stroke();
+
+      minimapCtx.fillStyle = '#facc15';
+      minimapCtx.fillRect(half - 1, half - 1, 3, 3);
+      return true;
+    }
+
+    btnReset.addEventListener('click', () => {
+      applyWorldSeed(Math.floor(Math.random() * 999999));
       startGameplay();
     });
+
+    const btnApplySeed = document.getElementById('btn-apply-seed');
+    const seedInputEl = document.getElementById('seed-input');
+    if (seedInputEl) seedInputEl.value = `${worldSeed}`;
+    if (btnApplySeed) {
+      btnApplySeed.addEventListener('click', () => {
+        const val = seedInputEl ? parseInt(seedInputEl.value, 10) : 0;
+        applyWorldSeed(val);
+        startGameplay();
+      });
+    }
+    const btnTpDesert = document.getElementById('btn-tp-desert');
+    if (btnTpDesert) {
+      btnTpDesert.addEventListener('click', () => {
+        teleportToBiome('Desierto');
+        startGameplay();
+      });
+    }
+    const btnTpSnow = document.getElementById('btn-tp-snow');
+    if (btnTpSnow) {
+      btnTpSnow.addEventListener('click', () => {
+        teleportToBiome('Taiga Nevada');
+        startGameplay();
+      });
+    }
 
     btnExport.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify({ seed: worldSeed, deltas: worldDeltas }, null, 2)], {
@@ -4613,6 +5423,8 @@
         toggleGameMode();
       } else if (e.code === 'KeyT') {
         toggleDayNight();
+      } else if (e.code === 'KeyV') {
+        toggleWeather();
       } else if (e.code === 'KeyM') {
         toggleMusic();
       } else if (e.code === 'KeyH') {
@@ -4636,10 +5448,18 @@
 
     function triggerPrimaryAttackOrMine() {
       player.swingTime = 1.0;
+      const heldId = hotbarSlots[selectedSlot];
       const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+
+      if (heldId === BLOCK.TOOL_BOW) {
+        shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
+        isMiningHeld = false;
+        return;
+      }
+
       const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 4.3);
       if (hitMob) {
-        const dmg = hotbarSlots[selectedSlot] === BLOCK.TOOL_PICKAXE ? 3 : 1;
+        const dmg = heldId === BLOCK.TOOL_SWORD ? 5 : (heldId === BLOCK.TOOL_PICKAXE ? 3 : 1);
         damageMob(hitMob, dmg, dir.x, dir.z);
         isMiningHeld = false;
         return;
@@ -4652,7 +5472,7 @@
 
       if (e.button === 0) {
         triggerPrimaryAttackOrMine();
-      } else if (e.button === 2 && currentHit) {
+      } else if (e.button === 2) {
         placeBlockAtCurrentTarget();
       } else if (e.button === 1 && currentHit) {
         let idx = hotbarSlots.indexOf(currentHit.block);
@@ -4842,11 +5662,12 @@
       el.addEventListener('click', fn);
     };
 
-    bindTap('tbtn-inv',  () => toggleInventory());
-    bindTap('tbtn-mode', () => toggleGameMode());
-    bindTap('tbtn-fly',  () => toggleFlyingMode());
-    bindTap('tbtn-time',  () => toggleDayNight());
-    bindTap('tbtn-music', () => toggleMusic());
+    bindTap('tbtn-inv',     () => toggleInventory());
+    bindTap('tbtn-mode',    () => toggleGameMode());
+    bindTap('tbtn-fly',     () => toggleFlyingMode());
+    bindTap('tbtn-time',    () => toggleDayNight());
+    bindTap('tbtn-weather', () => toggleWeather());
+    bindTap('tbtn-music',   () => toggleMusic());
     bindTap('tbtn-hud',   () => {
       hudVisible = !hudVisible;
       document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none';
@@ -4922,6 +5743,9 @@
       updateMining(dt, currentHit);
       updateParticles(dt);
       updateItemDrops(dt);
+      updateArrows(dt);
+      updateWeather(dt);
+      updateMinimap(dt);
 
       renderer.render(scene, camera);
 
@@ -4982,6 +5806,29 @@
       particleInstanced,
       itemDrops,
       dropInstanced,
+      arrows,
+      arrowInstanced,
+      shootArrow,
+      updateArrows,
+      eatHeldApple,
+      weatherInstanced,
+      toggleWeather,
+      triggerLightningFlash,
+      updateWeather,
+      getWeatherState: () => ({
+        weatherMode,
+        isSnowing,
+        lightningFlash,
+        lightningCount
+      }),
+      toggleVoxelLever,
+      propagateRedstoneSignal,
+      minimapCanvas,
+      minimapImgData,
+      updateMinimap,
+      getMinimapUpdatesCount: () => minimapUpdatesCount,
+      applyWorldSeed,
+      teleportToBiome,
       skyGroup,
       sunMesh,
       moonMesh,

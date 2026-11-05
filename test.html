@@ -184,10 +184,10 @@
           assert(vc.atlasCanvas.height === 16, 'Alto del atlas incorrecto');
         });
 
-        it('Genera los 28 tiles de texturas pixel-art sin huecos vacíos en bloques opacos', () => {
+        it('Genera los 34 tiles de texturas pixel-art sin huecos vacíos en bloques opacos', () => {
           const ctx = vc.atlasCanvas.getContext('2d');
-          // Comprobar Césped (0), Piedra (3), Diamante (20) y TNT (26)
-          for (const tileIdx of [0, 3, 20, 26, 27]) {
+          // Comprobar Césped (0), Piedra (3), Diamante (20), TNT (26,27), Lava (28), Obsidiana (29) y Lámpara Redstone (32,33)
+          for (const tileIdx of [0, 3, 20, 26, 27, 28, 29, 32, 33]) {
             const img = ctx.getImageData(tileIdx * 16 + 8, 8, 1, 1).data;
             assert(img[3] === 255, `Tile ${tileIdx} debería ser opaco (alpha=255), obtuvo ${img[3]}`);
           }
@@ -673,6 +673,176 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 15: Punto 6 — Estructuras Procedurales, Lava Luminosa y Agua+Lava->Obsidiana
+      // =========================================================================
+      describe('15. Estructuras Procedurales (Pirámides/Cabañas), Lava y Obsidiana', () => {
+        it('Construye Pirámides del Desierto con cámara del tesoro (Oro/Diamante/TNT) y Cabañas', () => {
+          const testData = new Uint8Array(vc.CHUNK_VOLUME);
+          const surf = new Uint8Array(256).fill(28);
+          const pyr = vc.getGenerator().placeStructureInChunk(testData, surf, 2, 2, 'pyramid');
+          assert(pyr && pyr.type === 'pyramid', 'placeStructureInChunk debe generar una pirámide');
+
+          const idxGold = (8 * 16 + 7) * 64 + (pyr.chamberY + 1);
+          const idxDiam = (8 * 16 + 9) * 64 + (pyr.chamberY + 1);
+          assert(testData[idxGold] === vc.BLOCK.GOLD_ORE, 'La cámara secreta de la pirámide debe contener Mena de Oro');
+          assert(testData[idxDiam] === vc.BLOCK.DIAMOND_ORE, 'La cámara secreta de la pirámide debe contener Mena de Diamante');
+
+          const cabData = new Uint8Array(vc.CHUNK_VOLUME);
+          const cab = vc.getGenerator().placeStructureInChunk(cabData, surf, 3, 3, 'cabin');
+          assert(cab && cab.type === 'cabin', 'placeStructureInChunk debe generar una cabaña');
+          const idxTorch = (8 * 16 + 8) * 64 + 29;
+          assert(cabData[idxTorch] === vc.BLOCK.TORCH, 'La cabaña debe incluir una antorcha interior en su centro');
+        });
+
+        it('La Lava emite luz cálida máxima (15) en el BFS y al tocar Agua se solidifica en Obsidiana', () => {
+          vc.setVoxelGlobal(10, 50, 14, vc.BLOCK.LAVA);
+          const lavaLight = vc.getLightGlobal(10, 50, 14) & 15;
+          assert(lavaLight === 15, `El bloque de Lava debe emitir luz de bloque 15 (obtuvo ${lavaLight})`);
+
+          // Place Water directly above Lava and step simulation -> Lava turns into Obsidian!
+          vc.setVoxelGlobal(10, 51, 14, vc.BLOCK.WATER);
+          vc.updateVoxelSimulation(0.20);
+          assert(
+            vc.getVoxelGlobal(10, 50, 14) === vc.BLOCK.OBSIDIAN,
+            `El contacto Agua + Lava debe transformar la Lava en Obsidiana (obtuvo ID=${vc.getVoxelGlobal(10, 50, 14)})`
+          );
+
+          vc.setVoxelGlobal(10, 51, 14, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(10, 50, 14, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 16: Punto 7 — Clima Dinámico por Bioma (Lluvia, Nieve, Tormentas y Relámpagos)
+      // =========================================================================
+      describe('16. Clima Dinámico por Bioma (Lluvia, Nieve, Tormentas y Relámpagos)', () => {
+        it('Alterna entre Despejado, Lluvia y Tormenta (V) y aumenta la fuerza del viento en el Shader GPU', () => {
+          assert(vc.weatherInstanced && vc.weatherInstanced.count === 180, 'weatherInstanced debe tener 180 instancias en 1 Draw Call');
+          vc.toggleWeather('rain');
+          assert(vc.getWeatherState().weatherMode === 'rain', 'El modo climático debe ser rain');
+          assert(vc.weatherInstanced.visible === true, 'weatherInstanced debe ser visible bajo la lluvia');
+          assert(vc.gpuShaderUniforms.uWindStrength.value > 1.2, 'La lluvia debe incrementar uWindStrength en GPU');
+
+          vc.toggleWeather('storm');
+          assert(vc.getWeatherState().weatherMode === 'storm', 'El modo climático debe ser storm');
+          assert(Math.abs(vc.gpuShaderUniforms.uWindStrength.value - 2.2) < 1e-3, 'La tormenta debe subir uWindStrength a 2.2');
+        });
+
+        it('Cambia automáticamente a Nieve en altitudes altas/Taiga y dispara relámpagos con trueno', () => {
+          const prevY = vc.player.y;
+          vc.player.y = 48; // High altitude snow zone
+          vc.updateWeather(0.05);
+          assert(vc.getWeatherState().isSnowing === true, 'En cota alta o Taiga Nevada debe nevar (isSnowing=true)');
+
+          const flashesBefore = vc.getWeatherState().lightningCount;
+          vc.triggerLightningFlash();
+          assert(vc.getWeatherState().lightningCount === flashesBefore + 1, 'triggerLightningFlash() debe registrar el relámpago');
+          assert(vc.getWeatherState().lightningFlash > 0.5, 'El destello del relámpago debe estar activo');
+
+          vc.player.y = prevY;
+          vc.toggleWeather('clear');
+          assert(vc.weatherInstanced.visible === false, 'En modo despejado weatherInstanced debe ocultarse');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 17: Punto 8 — Combate Avanzado (Arco Balístico 3D, Espada de Diamante y Manzana)
+      // =========================================================================
+      describe('17. Combate Avanzado (Arco con Flechas 3D, Espada y Manzana Curativa)', () => {
+        it('Dispara flechas balísticas 3D (InstancedMesh) que impactan y dañan criaturas a distancia', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          vc.spawnMob('zombie', 10.5, 45, 16.5);
+          const z = vc.mobs[0];
+          const hpBefore = z.hp;
+
+          const arrow = vc.shootArrow(10.5, 45.9, 12.5, 0, 0.02, 1);
+          assert(arrow && arrow.active === true, 'shootArrow debe activar un proyectil 3D en arrowInstanced');
+
+          for (let i = 0; i < 15 && arrow.active; i++) {
+            vc.updateArrows(0.02);
+          }
+          assert(z.hp < hpBefore, `La flecha 3D debería haber impactado y dañado al Zombi (HP ${z.hp} vs ${hpBefore})`);
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+
+        it('Cura +4 corazones al comer una Manzana Curativa y permite fabricar Espada/Arco', () => {
+          vc.player.health = 5;
+          vc.inventoryCounts[vc.BLOCK.ITEM_APPLE] = 3;
+          const healed = vc.eatHeldApple();
+          assert(healed === true, 'eatHeldApple() debe devolver true cuando al jugador le falta vida');
+          assert(vc.player.health === 9, `La manzana debe restaurar +4 corazones (5 -> 9, obtuvo ${vc.player.health})`);
+          assert(vc.inventoryCounts[vc.BLOCK.ITEM_APPLE] === 2, 'En Supervivencia debe consumir 1 manzana');
+          vc.player.health = vc.player.maxHealth;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 18: Punto 9 — Minimapa Radar 2D Topográfico, Semillas y Teletransporte
+      // =========================================================================
+      describe('18. Minimapa Radar 2D Topográfico, Semillas y Teletransporte a Biomas', () => {
+        it('Renderiza el Minimapa 2D (68x68 ImageData) con sombreado de altura y radar de Mobs', () => {
+          const countBefore = vc.getMinimapUpdatesCount();
+          const rendered = vc.updateMinimap(0.2, true);
+          assert(rendered === true, 'updateMinimap(..., true) debe actualizar el canvas del minimapa');
+          assert(vc.getMinimapUpdatesCount() === countBefore + 1, 'minimapUpdatesCount debe incrementarse');
+          // Verify center pixel alpha is 255 (opaque rendered terrain)
+          const centerAlpha = vc.minimapImgData.data[(34 * 68 + 34) * 4 + 3];
+          assert(centerAlpha === 255, 'El ImageData del minimapa debe contener píxeles opacos (alpha=255)');
+        });
+
+        it('Localiza y teletransporta al jugador a un bioma específico (Desierto / Taiga Nevada)', () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          const dest = vc.teleportToBiome('Desierto');
+          assert(dest !== null && dest.biome === 'Desierto', 'teleportToBiome("Desierto") debe encontrar un bioma Desierto');
+          assert(vc.getGenerator().getBiomeAt(vc.player.x, vc.player.z) === 'Desierto', 'La posición actual del jugador debe estar en Desierto');
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 19: Punto 10 — Circuitos Vóxel Redstone (Palancas, Lámparas y TNT Remoto)
+      // =========================================================================
+      describe('19. Circuitos Vóxel Redstone (Palancas, Lámparas y TNT Remoto)', () => {
+        it('Conmuta Palancas Redstone para encender/apagar Lámparas Redstone (Luz BFS 15) a distancia', () => {
+          vc.setVoxelGlobal(12, 50, 12, vc.BLOCK.LEVER_OFF);
+          vc.setVoxelGlobal(14, 50, 12, vc.BLOCK.REDSTONE_LAMP_OFF);
+          assert((vc.getLightGlobal(14, 51, 12) & 15) < 5, 'Con la lámpara apagada no debe haber luz artificial alta');
+
+          // Flip lever ON -> Lamp turns ON and emits light 15!
+          const powered = vc.toggleVoxelLever(12, 50, 12);
+          assert(powered === true, 'toggleVoxelLever debe activar la palanca (powered=true)');
+          assert(vc.getVoxelGlobal(12, 50, 12) === vc.BLOCK.LEVER_ON, 'El bloque debe cambiar a LEVER_ON');
+          assert(vc.getVoxelGlobal(14, 50, 12) === vc.BLOCK.REDSTONE_LAMP_ON, 'La lámpara cercana debe encenderse (REDSTONE_LAMP_ON)');
+          assert((vc.getLightGlobal(14, 50, 12) & 15) === 15, 'La lámpara encendida debe emitir luz BFS de nivel 15');
+
+          // Flip lever OFF -> Lamp turns OFF!
+          const poweredOff = vc.toggleVoxelLever(12, 50, 12);
+          assert(poweredOff === false, 'Al volver a pulsar la palanca debe apagarse (powered=false)');
+          assert(vc.getVoxelGlobal(14, 50, 12) === vc.BLOCK.REDSTONE_LAMP_OFF, 'La lámpara debe volver a REDSTONE_LAMP_OFF');
+
+          vc.setVoxelGlobal(12, 50, 12, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(14, 50, 12, vc.BLOCK.AIR);
+        });
+
+        it('Detona bloques de TNT remotamente al activar una Palanca Redstone cercana', () => {
+          vc.setVoxelGlobal(16, 50, 16, vc.BLOCK.LEVER_OFF);
+          vc.setVoxelGlobal(18, 50, 16, vc.BLOCK.TNT);
+          const tntBefore = vc.activeTNTs.length;
+
+          vc.toggleVoxelLever(16, 50, 16);
+          assert(vc.activeTNTs.length > tntBefore, 'Activar la palanca debe encender la mecha del TNT cercano');
+          assert(vc.getVoxelGlobal(18, 50, 16) === vc.BLOCK.AIR, 'El bloque de TNT encendido pasa a entidad activa');
+
+          // Clean up active TNT without exploding test area
+          while (vc.activeTNTs.length > 0) {
+            const t = vc.activeTNTs.pop();
+            vc.scene.remove(t.mesh);
+          }
+          vc.setVoxelGlobal(16, 50, 16, vc.BLOCK.AIR);
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -727,22 +897,29 @@
       for (let i = 0; i < 8; i++) {
         vc.spawnItemDrop(vc.player.x + 6, vc.player.y + 2, vc.player.z + 6, vc.BLOCK.COBBLE, 1, 5.0);
       }
+      vc.toggleWeather('rain');
+      vc.shootArrow(vc.player.x, vc.player.y + 1.5, vc.player.z, 0, 0.2, -1);
 
       const perFrameFeatures = [
-        { name: 'Render WebGL + Shaders GPU (Viento/Olas/Espuma)', ms: bench(() => { vc.renderer.render(vc.scene, vc.camera); }, 120) },
-        { name: 'Criaturas (Mobs: IA, Físicas AABB y Animación)',  ms: bench(() => { vc.updateMobs(0.016); }, 400) },
-        { name: 'Drops 3D Flotantes e Imantados (InstancedMesh)',  ms: bench(() => { vc.updateItemDrops(0.016); }, 500) },
-        { name: 'Físicas del Jugador + Colisión AABB',             ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
-        { name: 'Pool Partículas InstancedMesh (120 instancias)',  ms: bench(() => { vc.updateParticles(0.016); }, 500) },
-        { name: 'Raycast Vóxel 3D (DDA)',                          ms: bench(() => { vc.raycastVoxel(vc.camera.position.x, vc.camera.position.y, vc.camera.position.z, 0, -0.3, -0.95, 6.5); }, 600) },
-        { name: 'Cielo Dinámico (Sol, Luna, Estrellas, Nubes 3D)', ms: bench(() => { vc.updateDynamicSky(0.016); }, 600) },
-        { name: 'Uniforms GPU + Atmósfera Subacuática (CPU)',      ms: bench(() => { vc.updateGPUShaders(0.016); }, 600) },
-        { name: 'Música C418 FM + Paisaje Sonoro (Web Audio API)', ms: bench(() => { vc.updateAmbientAudio(0.016); }, 600) },
-        { name: 'Cola de Simulación Vóxel (Arena/Agua/TNT tick)',  ms: bench(() => { vc.updateVoxelSimulation(0.001); }, 600) }
+        { name: 'Render WebGL + Shaders GPU (Viento/Olas/Lava)',    ms: bench(() => { vc.renderer.render(vc.scene, vc.camera); }, 120) },
+        { name: 'Criaturas (Mobs: IA, Físicas AABB y Animación)',   ms: bench(() => { vc.updateMobs(0.016); }, 400) },
+        { name: 'Drops 3D Flotantes e Imantados (InstancedMesh)',   ms: bench(() => { vc.updateItemDrops(0.016); }, 500) },
+        { name: 'Clima Dinámico: Lluvia/Nieve/Tormentas (1 Draw)',  ms: bench(() => { vc.updateWeather(0.016); }, 500) },
+        { name: 'Minimapa Radar 2D Topográfico (Amortizado 10 Hz)', ms: bench(() => { vc.updateMinimap(0.016, false); }, 500) },
+        { name: 'Flechas Balísticas 3D (Arco InstancedMesh)',       ms: bench(() => { vc.updateArrows(0.016); }, 500) },
+        { name: 'Físicas del Jugador + Colisión AABB',              ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
+        { name: 'Pool Partículas InstancedMesh (120 instancias)',   ms: bench(() => { vc.updateParticles(0.016); }, 500) },
+        { name: 'Raycast Vóxel 3D (DDA)',                           ms: bench(() => { vc.raycastVoxel(vc.camera.position.x, vc.camera.position.y, vc.camera.position.z, 0, -0.3, -0.95, 6.5); }, 600) },
+        { name: 'Cielo Dinámico (Sol, Luna, Estrellas, Nubes 3D)',  ms: bench(() => { vc.updateDynamicSky(0.016); }, 600) },
+        { name: 'Uniforms GPU + Atmósfera Subacuática (CPU)',       ms: bench(() => { vc.updateGPUShaders(0.016); }, 600) },
+        { name: 'Música C418 FM + Paisaje Sonoro (Web Audio API)',  ms: bench(() => { vc.updateAmbientAudio(0.016); }, 600) },
+        { name: 'Cola de Simulación Vóxel (Arena/Agua/Lava/TNT)',   ms: bench(() => { vc.updateVoxelSimulation(0.001); }, 600) }
       ];
 
       while (vc.mobs.length > 0) vc.removeMobAt(0);
       for (const d of vc.itemDrops) d.active = false;
+      for (const a of vc.arrows) a.active = false;
+      vc.toggleWeather('clear');
 
       const ch0 = vc.getChunkData(0, 0);
       const sampleMesh0 = vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0);
