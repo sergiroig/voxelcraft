@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=8"></iframe>
+    <iframe id="game-frame" src="./index.html?v=9"></iframe>
   </div>
 
   <script>
@@ -474,6 +474,17 @@
           assert(
             overlay.classList.contains('hidden') && vc.isGameActive() === true,
             'Pulsar Enter con el menú visible también debe ocultar #overlay y reanudar el juego'
+          );
+
+          // 3b. Hacer clic fuera de .menu-card (sobre el fondo #overlay) debe cerrar el menú P y reanudar el juego
+          vc.togglePauseMenu(true);
+          assert(!overlay.classList.contains('hidden'), 'El menú P debe abrirse antes de probar clic exterior');
+          doc.querySelector('#overlay .menu-card').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+          assert(!overlay.classList.contains('hidden'), 'Hacer clic dentro de .menu-card no debe cerrar el menú');
+          overlay.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+          assert(
+            overlay.classList.contains('hidden') && vc.isGameActive() === true,
+            'Hacer clic fuera del menú P (sobre #overlay) debe cerrar el menú y reanudar el juego'
           );
 
           // 4. Pulsar Escape o salir de Pointer Lock NUNCA debe abrir el menú (#overlay)

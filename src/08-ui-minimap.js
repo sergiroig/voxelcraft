@@ -587,6 +587,7 @@ const lblFov = document.getElementById('lbl-fov');
 
 if (isTouchMode) btnPlay.textContent = 'Jugar (Controles Táctiles)';
 btnPlay.addEventListener('click', startGameplay);
+overlayEl.addEventListener('click', (e) => { if (e.target === overlayEl) startGameplay(); });
 
 document.addEventListener('pointerlockchange', () => {
   const wasLocked = isLocked;
