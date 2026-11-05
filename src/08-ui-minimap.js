@@ -593,7 +593,8 @@ document.addEventListener('pointerlockchange', () => {
   isLocked = document.pointerLockElement === canvasEl;
   if (!isLocked) {
     isMiningHeld = false;
-    if (wasLocked && !invOpen && !chestOpen && !touchPlaying) {
+    if (typeof isShieldBlocking !== 'undefined' && isShieldBlocking) toggleShieldBlock(false);
+    if (false && wasLocked && !invOpen && !chestOpen && !touchPlaying) {
       menuOpen = true;
       lastPointerLockExitTime = performance.now();
       overlayEl.classList.remove('hidden');

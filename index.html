@@ -8,16 +8,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=7" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=7" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=7" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=7" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=7" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=7" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=7" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=7" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=7" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=7" />
+  <link rel="stylesheet" href="src/styles.css?v=8" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=8" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=8" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=8" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=8" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=8" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=8" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=8" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=8" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=8" />
+</head>
 <body>
 
   <div id="water-overlay"></div>
@@ -77,10 +78,6 @@
     <div id="minimap-label">RADAR 2D</div>
   </div>
 
-  <div id="hud-controls-pill">
-    <kbd>P</kbd> Menú &nbsp;|&nbsp; <kbd>E</kbd> Inv/Craft &nbsp;|&nbsp; <kbd>R</kbd> Tren/Barca &nbsp;|&nbsp; <kbd>B</kbd> Baliza &nbsp;|&nbsp; <kbd>F2</kbd> Foto &nbsp;|&nbsp; <kbd>C</kbd> 3ª Pers. &nbsp;|&nbsp; <kbd>Z</kbd> Zoom &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
-  </div>
-
   <div id="status-bar">
     <div id="hearts-row"></div>
     <div id="block-label">1. Pico de Diamante</div>
@@ -114,7 +111,7 @@
         <h2 id="chest-modal-title">🎁 Cofre del Tesoro</h2>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="mode-switch-btn" id="btn-chest-take-all">📥 Recoger Todo</button>
-          <button class="mode-switch-btn" id="btn-chest-close">✕ Cerrar Cofre (E / Esc)</button>
+          <button class="mode-switch-btn" id="btn-chest-close">✕ Cerrar Cofre (E)</button>
         </div>
       </div>
       <div class="inv-section-title" id="chest-status-banner">✨ Contenido del Cofre (Haz clic en un objeto para retirarlo a tu mochila)</div>
@@ -161,11 +158,14 @@
 
       <div class="controls-grid">
         <div><b>WASD + Espacio</b> Moverse y Saltar</div>
-        <div><b>Mantener Click Izq.</b> Picar / Atacar</div>
-        <div><b>P / Enter</b> Mostrar / Ocultar Menú</div>
+        <div><b>Mantener Click Izq.</b> Picar / Atacar / Disparar</div>
         <div><b>Click Der.</b> Poner / Usar / Escudo</div>
-        <div><b>E / G / F2</b> Inventario / Modo / Foto</div>
-        <div><b>F / T / V / R</b> Volar / Hora / Clima / Vehíc.</div>
+        <div><b>P / Enter</b> Mostrar / Ocultar este Menú</div>
+        <div><b>E / G</b> Inventario y Crafteo / Modo</div>
+        <div><b>R / B</b> Tren o Barca / Marcar Baliza GPS</div>
+        <div><b>C / Z</b> Cámara 3ª Pers. / Zoom Catalejo</div>
+        <div><b>F / T / V</b> Volar / Sol-Noche / Clima</div>
+        <div><b>M / H / F2</b> Música / HUD / Captura Foto</div>
       </div>
 
       <div class="btn-row" style="margin-bottom: 10px;">
@@ -188,14 +188,14 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <script src="src/01-config-atlas.js?v=7"></script>
-  <script src="src/02-worldgen-lighting.js?v=7"></script>
-  <script src="src/03-mesher-audio.js?v=7"></script>
-  <script src="src/04-world-renderer.js?v=7"></script>
-  <script src="src/05-simulation-entities.js?v=7"></script>
-  <script src="src/06-mobs-worker.js?v=7"></script>
-  <script src="src/07-physics-camera.js?v=7"></script>
-  <script src="src/08-ui-minimap.js?v=7"></script>
-  <script src="src/09-controls-loop.js?v=7"></script>
+  <script src="src/01-config-atlas.js?v=8"></script>
+  <script src="src/02-worldgen-lighting.js?v=8"></script>
+  <script src="src/03-mesher-audio.js?v=8"></script>
+  <script src="src/04-world-renderer.js?v=8"></script>
+  <script src="src/05-simulation-entities.js?v=8"></script>
+  <script src="src/06-mobs-worker.js?v=8"></script>
+  <script src="src/07-physics-camera.js?v=8"></script>
+  <script src="src/08-ui-minimap.js?v=8"></script>
+  <script src="src/09-controls-loop.js?v=8"></script>
 </body>
 </html>

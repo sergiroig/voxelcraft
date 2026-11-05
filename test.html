@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=7"></iframe>
+    <iframe id="game-frame" src="./index.html?v=8"></iframe>
   </div>
 
   <script>
@@ -474,6 +474,32 @@
           assert(
             overlay.classList.contains('hidden') && vc.isGameActive() === true,
             'Pulsar Enter con el menú visible también debe ocultar #overlay y reanudar el juego'
+          );
+
+          // 4. Pulsar Escape o salir de Pointer Lock NUNCA debe abrir el menú (#overlay)
+          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Escape', bubbles: true }));
+          doc.dispatchEvent(new win.Event('pointerlockchange'));
+          assert(
+            overlay.classList.contains('hidden') && vc.getState().menuOpen === false,
+            'La tecla Escape (ni salir de Pointer Lock) no debe abrir el menú de pausa (#overlay)'
+          );
+
+          // 5. #chest-modal.hidden debe tener display:none y #game-canvas no debe tener margen superior
+          const chestModal = doc.getElementById('chest-modal');
+          assert(
+            chestModal.classList.contains('hidden') && win.getComputedStyle(chestModal).display === 'none',
+            '#chest-modal.hidden debe tener display:none para no verse arriba a la izquierda ni desplazar el canvas'
+          );
+          const canvasRect = doc.getElementById('game-canvas').getBoundingClientRect();
+          assert(Math.abs(canvasRect.top) < 1, `#game-canvas no debe tener margen superior (top=${canvasRect.top}px)`);
+
+          // 6. La información de controles debe estar dentro del menú P (#overlay .controls-grid) y no fija en el HUD
+          assert(!doc.getElementById('hud-controls-pill'), 'La píldora de controles no debe estar fija en el HUD superior');
+          const controlsText = doc.querySelector('#overlay .controls-grid').textContent;
+          for (const key of ['WASD', 'P', 'E', 'R', 'B', 'F2', 'C', 'Z', 'G', 'F', 'T', 'V', 'M', 'H']) {
+            assert(controlsText.includes(key), `El menú P (.controls-grid) debe incluir la información de la tecla ${key}`);
+          }
+          void (0
           );
         });
       });

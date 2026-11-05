@@ -30,7 +30,8 @@ window.addEventListener('keydown', (e) => {
     if (isGameActive() || invOpen) toggleInventory();
     return;
   }
-  if (e.code === 'Escape') {
+  if (e.code === 'Escape') { return; }
+  if (false && e.code === 'Escape') {
     if (chestOpen) { closeChestModal(); return; }
     if (invOpen) { toggleInventory(false); return; }
     if (menuOpen && (performance.now() - lastPointerLockExitTime) < 120) return;
@@ -101,7 +102,7 @@ function triggerPrimaryAttackOrMine() {
 
 window.addEventListener('mousedown', (e) => {
   if (!isLocked) {
-    if (!menuOpen && !invOpen && !isTouchMode && e.target === canvasEl && canvasEl.requestPointerLock) {
+    if (!menuOpen && !invOpen && !chestOpen && !isTouchMode && e.target === canvasEl && canvasEl.requestPointerLock) {
       try {
         const p = canvasEl.requestPointerLock();
         if (p && typeof p.catch === 'function') p.catch(() => {});
