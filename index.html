@@ -4521,6 +4521,8 @@
     let isLocked = false;
     let isTouchMode = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     let touchPlaying = false;
+    let menuOpen = true;
+    let lastPointerLockExitTime = 0;
     let invOpen = false;
     let selectedSlot = 0;
     let renderDistance = 5;
@@ -4534,7 +4536,7 @@
     let touchJump = false;
     let touchDown = false;
 
-    const isGameActive = () => (isLocked || touchPlaying) && !invOpen;
+    const isGameActive = () => (!menuOpen || isLocked || touchPlaying) && !invOpen;
 
     // Progressive Mining state
     let isMiningHeld = false;
@@ -5075,10 +5077,11 @@
     function startGameplay() {
       sfx.init();
       invOpen = false;
+      menuOpen = false;
       invModalEl.classList.add('hidden');
+      overlayEl.classList.add('hidden');
       if (isTouchMode || !canvasEl.requestPointerLock) {
         touchPlaying = true;
-        overlayEl.classList.add('hidden');
         touchControlsEl.classList.add('active');
         if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
           document.documentElement.requestFullscreen().catch(() => {});
@@ -5089,6 +5092,27 @@
           if (lockPromise && typeof lockPromise.catch === 'function') lockPromise.catch(() => {});
         } catch (_) {}
       }
+    }
+
+    function togglePauseMenu(forceOpen) {
+      const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !menuOpen;
+      if (nextOpen) {
+        menuOpen = true;
+        isMiningHeld = false;
+        invOpen = false;
+        invModalEl.classList.add('hidden');
+        overlayEl.classList.remove('hidden');
+        if (touchPlaying) {
+          touchPlaying = false;
+          resetJoystick();
+        }
+        if (document.pointerLockElement) {
+          try { document.exitPointerLock(); } catch (_) {}
+        }
+      } else {
+        startGameplay();
+      }
+      return menuOpen;
     }
 
     function toggleInventory(force) {
@@ -5218,10 +5242,18 @@
     btnPlay.addEventListener('click', startGameplay);
 
     document.addEventListener('pointerlockchange', () => {
+      const wasLocked = isLocked;
       isLocked = document.pointerLockElement === canvasEl;
-      if (!isLocked) isMiningHeld = false;
-      if (!invOpen && !touchPlaying) {
-        overlayEl.classList.toggle('hidden', isLocked);
+      if (!isLocked) {
+        isMiningHeld = false;
+        if (wasLocked && !invOpen && !touchPlaying) {
+          menuOpen = true;
+          lastPointerLockExitTime = performance.now();
+          overlayEl.classList.remove('hidden');
+        }
+      } else {
+        menuOpen = false;
+        overlayEl.classList.add('hidden');
       }
     });
 
@@ -5432,8 +5464,16 @@
         }
         return;
       }
-      if (e.code === 'Escape' && invOpen) {
-        toggleInventory(false);
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        if (invOpen) {
+          toggleInventory(false);
+          return;
+        }
+        if (menuOpen && (performance.now() - lastPointerLockExitTime) < 120) {
+          return;
+        }
+        togglePauseMenu();
         return;
       }
       if (e.code.startsWith('Digit')) {
@@ -5492,7 +5532,15 @@
     }
 
     window.addEventListener('mousedown', (e) => {
-      if (!isLocked) return;
+      if (!isLocked) {
+        if (!menuOpen && !invOpen && !isTouchMode && e.target === canvasEl && canvasEl.requestPointerLock) {
+          try {
+            const p = canvasEl.requestPointerLock();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+          } catch (_) {}
+        }
+        return;
+      }
 
       if (e.button === 0) {
         triggerPrimaryAttackOrMine();
@@ -5697,10 +5745,7 @@
       document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none';
     });
     bindTap('tbtn-menu', () => {
-      touchPlaying = false;
-      isMiningHeld = false;
-      resetJoystick();
-      overlayEl.classList.remove('hidden');
+      togglePauseMenu(true);
     });
 
     window.addEventListener('resize', () => {
@@ -5920,6 +5965,7 @@
       toggleDayNight,
       toggleFlyingMode,
       toggleInventory,
+      togglePauseMenu,
       updateHotbarSelection,
       placeBlockAtCurrentTarget,
       triggerPrimaryAttackOrMine,
@@ -5933,6 +5979,7 @@
         isNight,
         sunFactor,
         invOpen,
+        menuOpen,
         isLocked,
         touchPlaying,
         isMiningHeld,
@@ -5947,6 +5994,8 @@
       setCurrentHit: (h) => { currentHit = h; },
       setTouchPlaying: (v) => {
         touchPlaying = v;
+        menuOpen = !v;
+        overlayEl.classList.toggle('hidden', !!v);
         touchControlsEl.classList.toggle('active', !!v);
       }
     };
