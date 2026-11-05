@@ -63,9 +63,11 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 | **Iluminación Vóxel (1 Byte)** | `computeChunkLighting`, `getSunLight`, `getBlockLight`, `getEffectiveLight` | `chunkLights` empaqueta 4 bits altos (`>> 4`) para luz solar y 4 bits bajos (`& 15`) para luz cálida de bloques (antorchas, *Glowstone*, Lava y Lámparas Redstone) propagada por *Flood-Fill BFS* entre chunks, además de precalcular la caché topográfica `ch.mapColors` (`Uint32Array(256)`). |
 | **Mesher + AO + X-Mesh** | `buildChunkMesh`, `vertexAO`, `FACE_DEFS` | Genera caras visibles con *Ambient Occlusion* en los 4 vértices (con giro de diagonal anti-artefactos) y geometría cruzada (`X-Mesh`) para flores, hierba alta, antorchas y palancas. |
 | **Raycasting y Minado** | `raycastVoxel`, `updateMiningAndPlacement`, `spawnBlockParticles` | Algoritmo DDA 3D rápido, rotura progresiva en 8 fases según `hardness` (con multiplicador $\times 3.5$ usando el Pico de Diamante `ID 20`) y partículas con `InstancedMesh`. |
-| **Simulación Vóxel, Lava, Obsidiana y TNT** | `simQueue`, `enqueueSimNeighbors`, `updateVoxelSimulation`, `igniteTNT`, `explodeAt` | Cola de simulación a 10 Hz: gravedad de arena, expansión de agua, flujo viscoso de lava, reacción química **Agua + Lava $\rightarrow$ Obsidiana** (`BLOCK.OBSIDIAN`) y encendido de bloques `BLOCK.TNT` con mecha parpadeante, reacciones en cadena y onda expansiva. |
-| **Circuitos Vóxel / Redstone Ligero** | `toggleVoxelLever`, `propagateRedstoneSignal` | Palancas interactivas (`BLOCK.LEVER_OFF` / `BLOCK.LEVER_ON`) con coste 0 en reposo que conmutan Lámparas de Redstone (`BLOCK.REDSTONE_LAMP_OFF` / `ON`, luz BFS 15) y detonan TNT adyacente a distancia. |
-| **Criaturas (Mobs), Combate y Proyectiles 3D** | `mobs`, `spawnMob`, `updateMobs`, `raycastMob`, `damageMob`, `arrowInstanced`, `shootArrow`, `updateArrows`, `eatHeldApple` | *Ovejas, Cerdos y Zombis* construidos con geometrías compartidas (`mobGeos`). Combate cuerpo a cuerpo con **Espada de Diamante** (`5 dmg` + *knockback*), disparo balístico parabólico con **Arco y Flechas 3D** (`InstancedMesh` de 24 instancias) y curación (`+4` corazones) con **Manzana Roja**. |
+| **Simulación Vóxel, Agricultura, Lava, Obsidiana y TNT** | `simQueue`, `enqueueSimNeighbors`, `updateVoxelSimulation`, `growTreeAt`, `igniteTNT`, `explodeAt` | Cola de simulación a 10 Hz: gravedad de arena, expansión de agua, flujo viscoso de lava, reacción **Agua + Lava $\rightarrow$ Obsidiana**, crecimiento orgánico de **Brotes de Roble $\rightarrow$ Árbol 3D completo** y cultivo de **Trigo por etapas (`WHEAT_1..3`) $\rightarrow$ Pan Horneado (`+5` ❤)**, más encendido de bloques `BLOCK.TNT`. |
+| **Circuitos Vóxel / Redstone y Puertas Mecánicas** | `toggleVoxelLever`, `toggleVoxelDoor`, `propagateRedstoneSignal` | Palancas interactivas (`BLOCK.LEVER_OFF` / `BLOCK.LEVER_ON`) con coste 0 en reposo que conmutan Lámparas de Redstone (`BLOCK.REDSTONE_LAMP_OFF` / `ON`, luz BFS 15), abren/cierran **Puertas Mecánicas (`BLOCK.DOOR_CLOSED` / `DOOR_OPEN`)** y detonan TNT adyacente a distancia. |
+| **Físicas Elásticas (Slime) y Cuevas Bioluminiscentes** | `BLOCK.SLIME`, `BLOCK.AMETHYST`, `BLOCK.GLOW_MUSHROOM`, `updatePlayerPhysics` | **Bloques de Slime** que anulan el daño por caída e impulsan elásticamente al jugador (`vy > 9.2`), y cavernas profundas (`y <= 22`) con **Drusas de Amatista** (luz BFS 5, sonido cristalino `'chime'`) y **Hongos Luminosos** (luz BFS 12, pulso cian en GPU). |
+| **Smart Frustum Culling 3D + Cámara 3ª Persona y Zoom** | `updateFrustumCulling`, `ch.worldBox`, `playerAvatar`, `toggleCameraMode`, `toggleZoom` | Descarte automático por `THREE.Frustum` vs `THREE.Box3` (`ch.worldBox`) de los chunks y criaturas fuera del campo de visión (~50% menos draw calls), **Cámara en 3ª Persona (`C` / `🎥`)** con avatar vóxel articulado de 6 piezas y raycast anticolisión, y **Zoom Óptico Catalejo (`Z` / `🔭`, FOV `24°`)**. |
+| **Criaturas (Mobs), Combate y Proyectiles 3D** | `mobs`, `spawnMob`, `updateMobs`, `raycastMob`, `damageMob`, `arrowInstanced`, `shootArrow`, `updateArrows`, `eatHeldApple` | *Ovejas, Cerdos y Zombis* construidos con geometrías compartidas (`mobGeos`). Combate cuerpo a cuerpo con **Espada de Diamante** (`5 dmg` + *knockback*), disparo balístico parabólico con **Arco y Flechas 3D** (`InstancedMesh` de 24 instancias) y curación con **Manzana Roja (`+4` ❤)** o **Pan Horneado (`+5` ❤)**. |
 | **Cielo Dinámico y Clima por Bioma** | `sunMesh`, `moonMesh`, `starsPoints`, `cloudMesh`, `updateDynamicSky`, `weatherInstanced`, `setWeatherMode`, `updateWeather` | Ciclo día/noche (`T`), Sol/Luna cúbicos, estrellas y nubes 3D fusionadas. Clima dinámico (`V` / `🌧`: `clear`, `rain`, `storm`) con 180 trazas en 1 solo `InstancedMesh` que alterna automáticamente entre **Lluvia** y **Nieve** según el bioma/altitud, oculta precipitación bajo techo (`sunLight === 0`), incrementa el viento GPU y genera relámpagos con truenos. |
 | **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en flores/hierba alta (con raíz anclada `uv.y`) y hojas 3D sin grietas, baile de llama en antorchas, pulso incandescente de magma en `BLOCK.LAVA`, destello en menas de oro/diamante, olas 3D con espuma/cáusticas en el agua y atmósfera subacuática o de lava. |
 | **Drops 3D, Supervivencia y Crafteo** | `dropInstanced`, `itemDrops`, `spawnItemDrop`, `updateItemDrops`, `CRAFTING_RECIPES`, `craftRecipe`, `toggleGameMode` | Pool `InstancedMesh` de 64 mini-bloques 3D flotantes e imantados en 1 *draw call*, inventario con cantidades en Supervivencia (`G` para alternar con Creativo `∞`) y 12 recetas de crafteo rápido en el modal `E`. |
@@ -137,6 +139,20 @@ Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
    - **Selector de Semilla Personalizada y Teletransporte a Biomas** integrado en el modal `E`.
 10. ✅ **Punto 10 — Circuitos Vóxel / Redstone Ligero (`Coste 0 en Reposo`, Completado):**
     - **Palanca (`BLOCK.LEVER_OFF` / `BLOCK.LEVER_ON`) y Lámpara de Redstone (`BLOCK.REDSTONE_LAMP_OFF` / `BLOCK.REDSTONE_LAMP_ON`):** Conmutación instantánea por eventos (`toggleVoxelLever` + `propagateRedstoneSignal`) que enciende lámparas (luz BFS 15) y activa bloques de TNT a distancia sin ningún bucle por frame.
+11. ✅ **Punto 11 — Smart Frustum Culling 3D (`Box3` vs `THREE.Frustum`, Completado):**
+    - Precalcula un `THREE.Box3` (`ch.worldBox`) por cada chunk mallado y descarta en `12.2 µs/frame` todos los chunks y criaturas situados a espaldas de la cámara (`visibleChunksCount` / `culledChunksCount`), ahorrando ~45–55% de *draw calls* y triángulos en GPU.
+12. ✅ **Punto 12 — Agricultura Vóxel, Crecimiento Orgánico de Árboles y Pan Horneado (Completado):**
+    - **Brotes de Roble (`BLOCK.SAPLING`):** Al plantarse sobre Césped/Tierra con luz solar $\ge 9$, germinan en la cola de simulación hasta convertirse en un árbol 3D completo (`BLOCK.WOOD` + `BLOCK.LEAVES`) en una sola pasada por lotes (`growTreeAt`).
+    - **Cultivo de Trigo (`BLOCK.WHEAT_1` $\rightarrow$ `WHEAT_2` $\rightarrow$ `WHEAT_3`) y Pan Horneado (`BLOCK.ITEM_BREAD`):** Las semillas crecen por etapas hasta espigas doradas maduras que permiten hornear **Pan (`+5` corazones)**.
+13. ✅ **Punto 13 — Cuevas Bioluminiscentes: Drusas de Amatista y Hongos Luminosos (Completado):**
+    - **Drusa de Amatista (`BLOCK.AMETHYST`):** Cristales subterráneos (`y <= 22`) con emisión de luz BFS `5`, destello cristalino púrpura en el *Fragment Shader* y nota armónica FM (`'chime'`) al pisarlos o picarlos.
+    - **Hongo Luminoso (`BLOCK.GLOW_MUSHROOM`):** Flora subterránea (`X-Mesh`) con emisión de luz BFS `12` y pulso bioluminiscente cian/esmeralda en GPU.
+14. ✅ **Punto 14 — Bloques de Slime Elásticos y Puertas Mecánicas Redstone (Completado):**
+    - **Bloque de Slime (`BLOCK.SLIME`):** Cancela el 100% del daño por caída, rebota elásticamente al jugador según su velocidad de impacto (`vy > 9.2`) con sonido `'boing'` y potencia el salto (`vy = 12.8`).
+    - **Puerta Mecánica (`BLOCK.DOOR_CLOSED` / `BLOCK.DOOR_OPEN`):** Se abre y cierra con clic derecho (`toggleVoxelDoor`) o automáticamente al accionar una Palanca Redstone cercana (`propagateRedstoneSignal`), conmutando su colisión AABB (`solid: true` $\leftrightarrow$ `false`).
+15. ✅ **Punto 15 — Cámara en 3ª Persona con Avatar Vóxel Articulado (`C`) y Zoom Óptico Catalejo (`Z`) (Completado):**
+    - **Vista en 3ª Persona (`C` / `🎥 3ªP`):** Renderiza el **Avatar Vóxel Articulado** del jugador (cabeza, torso, brazos y piernas animados con el paso, picado y cabeceo) y sitúa la cámara detrás con raycast DDA anticolisión contra muros.
+    - **Zoom Óptico Catalejo (`Z` / `🔭`):** Alterna el FOV de la cámara a `24°` para explorar biomas y estructuras lejanas.
 
 ---
 
@@ -150,26 +166,27 @@ Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` p
 ### Hardware del PC de Referencia
 - **CPU:** 22 hilos lógicos (`navigator.hardwareConcurrency = 22`, Intel Core Ultra / Meteor Lake)
 - **GPU (WebGL):** `ANGLE (Intel, Mesa Intel(R) Graphics (MTL), OpenGL ES 3.2)`
-- **Escena estándar:** Distancia de render 5 (`~81-145 chunks`, `~77,700 triángulos`, `~41 draw calls`)
+- **Escena estándar:** Distancia de render 5 (`~81-145 chunks`, `~50% descartados por Frustum Culling`, `~22-41 draw calls`)
 
 ### A. Coste por Frame (Subsistemas que se ejecutan cada frame a 60 Hz)
 
 | Funcionalidad / Subsistema | Etapa | Tiempo / Frame | Coste sobre 60 FPS | % de 16.67 ms | Impacto en FPS Reales (VSync) |
 | :--- | :--- | ---: | ---: | ---: | :--- |
-| **Render WebGL + Shaders GPU** *(Viento en vegetación, olas 3D, espuma, lava, menas)* | Base + Puntos 2 y 6 | `201.7 µs` (`0.202 ms`) | **`-0.726 FPS`** (de 60) | `1.21 %` | **0 FPS** (60 FPS clavados) |
-| **Criaturas (Mobs)** *(IA, colisión AABB, iluminación y animación de 6-10 mobs)* | Punto 1 | `41.0 µs` (`0.041 ms`) | **`-0.148 FPS`** (de 60) | `0.25 %` | **0 FPS** (60 FPS clavados) |
-| **Clima Dinámico (`InstancedMesh` 180 trazas)** *(Lluvia/Nieve por bioma + chequeo techo `sunLight`)* | Punto 7 | `33.6 µs` (`0.034 ms`) | **`-0.121 FPS`** (de 60) | `0.20 %` | **0 FPS** (60 FPS clavados) |
-| **Drops 3D Flotantes e Imantados (`InstancedMesh`)** *(Gravedad, giro, bobbing e imán de 8-64 drops)* | Punto 3 | `18.8 µs` (`0.019 ms`) | **`-0.068 FPS`** (de 60) | `0.11 %` | **0 FPS** (60 FPS clavados) |
-| **Minimapa Radar 2D Topográfico (Amortizado a 10 Hz)** *(Copia `Uint32Array` $O(1)$ `ch.mapColors` + radar mobs)* | Punto 9 | `14.8 µs` (`0.015 ms`) | **`-0.053 FPS`** (de 60) | `0.09 %` | **0 FPS** (60 FPS clavados) |
-| **Físicas del Jugador + Colisión AABB** | Base | `2.2 µs` (`0.002 ms`) | **`-0.008 FPS`** (de 60) | `0.01 %` | **0 FPS** (60 FPS clavados) |
-| **Música Generativa C418 FM + Paisaje Sonoro (`Web Audio API`)** *(DSP en hilo nativo de audio)* | Punto 4 | `1.7 µs` (`0.002 ms`) | **`-0.006 FPS`** (de 60) | `0.01 %` | **0 FPS** (60 FPS clavados) |
-| **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `1.6 µs` (`0.002 ms`) | **`-0.006 FPS`** (de 60) | `0.01 %` | **0 FPS** (60 FPS clavados) |
-| **Flechas Balísticas 3D (`arrowInstanced`)** *(Física parabólica, colisión con mobs/TNT)* | Punto 8 | `1.0 µs` (`0.001 ms`) | **`-0.004 FPS`** (de 60) | `0.006 %` | **0 FPS** (60 FPS clavados) |
+| **Render WebGL + Shaders GPU** *(Viento en vegetación/cultivos, olas 3D, lava, amatista, hongos bio)* | Base + Puntos 2, 6 y 13 | `210.0 µs` (`0.210 ms`) | **`-0.756 FPS`** (de 60) | `1.26 %` | **0 FPS** (60 FPS clavados) |
+| **Criaturas (Mobs)** *(IA, colisión AABB, iluminación y animación de 6-10 mobs)* | Punto 1 | `45.2 µs` (`0.045 ms`) | **`-0.163 FPS`** (de 60) | `0.27 %` | **0 FPS** (60 FPS clavados) |
+| **Clima Dinámico (`InstancedMesh` 180 trazas)** *(Lluvia/Nieve por bioma + chequeo techo `sunLight`)* | Punto 7 | `38.4 µs` (`0.038 ms`) | **`-0.138 FPS`** (de 60) | `0.23 %` | **0 FPS** (60 FPS clavados) |
+| **Minimapa Radar 2D Topográfico (Amortizado a 10 Hz)** *(Copia `Uint32Array` $O(1)$ `ch.mapColors` + radar mobs)* | Punto 9 | `23.8 µs` (`0.024 ms`) | **`-0.086 FPS`** (de 60) | `0.14 %` | **0 FPS** (60 FPS clavados) |
+| **Smart Frustum Culling 3D (`Box3` vs `Frustum`)** *(Oculta ~50% de chunks y mobs traseros)* | Punto 11 | `12.2 µs` (`0.012 ms`) | **`-0.044 FPS`** (de 60) | `0.07 %` | **0 FPS** (ahorra ~50% draw calls GPU) |
+| **Drops 3D Flotantes e Imantados (`InstancedMesh`)** *(Gravedad, giro, bobbing e imán de 8-64 drops)* | Punto 3 | `10.2 µs` (`0.010 ms`) | **`-0.037 FPS`** (de 60) | `0.06 %` | **0 FPS** (60 FPS clavados) |
+| **Físicas del Jugador + Avatar 3ª Persona + Slime Bounce** | Base + Puntos 14 y 15 | `5.2 µs` (`0.005 ms`) | **`-0.019 FPS`** (de 60) | `0.03 %` | **0 FPS** (60 FPS clavados) |
+| **Música Generativa C418 FM + Paisaje Sonoro (`Web Audio API`)** *(DSP en hilo nativo de audio)* | Punto 4 | `3.3 µs` (`0.003 ms`) | **`-0.012 FPS`** (de 60) | `0.02 %` | **0 FPS** (60 FPS clavados) |
+| **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `1.4 µs` (`0.0014 ms`) | **`-0.005 FPS`** (de 60) | `0.008 %` | **0 FPS** (60 FPS clavados) |
+| **Flechas Balísticas 3D (`arrowInstanced`)** *(Física parabólica, colisión con mobs/TNT)* | Punto 8 | `1.4 µs` (`0.0014 ms`) | **`-0.005 FPS`** (de 60) | `0.008 %` | **0 FPS** (60 FPS clavados) |
 | **Raycast Vóxel 3D (DDA)** *(Selección de bloque a 6.5m)* | Base | `0.8 µs` (`0.0008 ms`) | **`-0.003 FPS`** (de 60) | `0.005 %` | **0 FPS** (60 FPS clavados) |
-| **Cielo Dinámico** *(Sol/Luna cúbicos, 220 estrellas y nubes 3D en 1 malla)* | Punto 1 | `0.3 µs` (`0.0003 ms`) | **`-0.001 FPS`** (de 60) | `0.002 %` | **0 FPS** (60 FPS clavados) |
-| **Actualización CPU de Shaders GPU + Detección Subacuática/Lava** | Puntos 2 y 6 | `0.2 µs` (`0.0002 ms`) | **`-0.001 FPS`** (de 60) | `0.001 %` | **0 FPS** (60 FPS clavados) |
-| **Cola de Simulación Vóxel (`Tick Queue`) + Redstone** *(Arena, Agua, Lava, Obsidiana, TNT y Palancas)* | Puntos 1, 6 y 10 | `0.2 µs` (`0.0002 ms`) | **`-0.001 FPS`** (de 60) | `0.001 %` | **0 FPS** (60 FPS clavados) |
-| **TOTAL ACUMULADO POR FRAME (13 subsistemas)** | **Puntos 1–10** | **`0.318 ms`** | **`-1.14 FPS` (de 60)** | **`1.91 %`** | **60 FPS fijos (sobra >98% del frame · ~3,146 FPS sin VSync)** |
+| **Cielo Dinámico** *(Sol/Luna cúbicos, 220 estrellas y nubes 3D en 1 malla)* | Punto 1 | `0.7 µs` (`0.0007 ms`) | **`-0.002 FPS`** (de 60) | `0.004 %` | **0 FPS** (60 FPS clavados) |
+| **Actualización CPU de Shaders GPU + Detección Subacuática/Lava** | Puntos 2 y 6 | `0.5 µs` (`0.0005 ms`) | **`-0.002 FPS`** (de 60) | `0.003 %` | **0 FPS** (60 FPS clavados) |
+| **Cola de Simulación Vóxel (`Tick Queue`) + Cultivos + Redstone** *(Árboles, Trigo, Arena, Agua, Lava, TNT, Puertas)* | Puntos 1, 6, 10, 12 y 14 | `0.2 µs` (`0.0002 ms`) | **`-0.001 FPS`** (de 60) | `0.001 %` | **0 FPS** (60 FPS clavados) |
+| **TOTAL ACUMULADO POR FRAME (14 subsistemas)** | **Puntos 1–15** | **`0.353 ms`** | **`-1.27 FPS` (de 60)** | **`2.12 %`** | **60 FPS fijos (sobra >97.8% del frame · ~2,830 FPS sin VSync)** |
 
 ### B. Coste de Operaciones Puntuales (Bajo Demanda / Al Cargar o Modificar un Chunk)
 

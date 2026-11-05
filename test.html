@@ -942,6 +942,195 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 20: Punto 11 — Smart Frustum Culling (3D Box3 vs Camera Frustum)
+      // =========================================================================
+      describe('20. Smart Frustum Culling 3D (Ocultación Automática de Chunks Traseros)', () => {
+        it('Descarta automáticamente los chunks situados detrás de la cámara (culledChunksCount > 0)', () => {
+          // Ensure outer chunks around (0,0) exist and have meshes
+          vc.rebuildChunkImmediate(0, -3);
+          vc.rebuildChunkImmediate(0, 3);
+          const chFront = vc.chunks.get('0,-3');
+          const chBack  = vc.chunks.get('0,3');
+          assert(chFront && chFront.worldBox, 'Cada chunk mallado debe tener su THREE.Box3 precalculado (worldBox)');
+
+          // Point camera strictly North (-Z) from chunk (0,0)
+          vc.player.x = 8.5; vc.player.z = 8.5;
+          vc.player.yaw = 0; vc.player.pitch = 0;
+          vc.updatePlayerPhysics(0.001);
+          vc.updateFrustumCulling();
+
+          const stats = vc.getCullingStats();
+          assert(stats.visibleChunksCount > 0, 'Debe haber chunks visibles frente a la cámara');
+          assert(stats.culledChunksCount > 0, `Debe descartar chunks traseros fuera del frustum (culled=${stats.culledChunksCount})`);
+          if (chFront.solidMesh) assert(chFront.solidMesh.visible === true, 'El chunk frontal (0,-3) debe estar visible');
+          if (chBack.solidMesh)  assert(chBack.solidMesh.visible === false, 'El chunk trasero (0,3) debe estar oculto por Frustum Culling');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 21: Punto 12 — Agricultura Vóxel, Crecimiento de Árboles y Pan
+      // =========================================================================
+      describe('21. Agricultura Vóxel, Crecimiento Orgánico de Árboles y Pan Horneado', () => {
+        it('Hace crecer un Brote de Roble (SAPLING) hasta convertirse en un Árbol 3D completo (WOOD + LEAVES)', () => {
+          const tx = 6, ty = 52, tz = 6;
+          // Clear space for tree
+          for (let dy = 0; dy <= 7; dy++) {
+            for (let dz = -2; dz <= 2; dz++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                vc.setVoxelGlobal(tx + dx, ty + dy, tz + dz, vc.BLOCK.AIR);
+              }
+            }
+          }
+          vc.setVoxelGlobal(tx, ty - 1, tz, vc.BLOCK.GRASS);
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.SAPLING);
+
+          // Step voxel simulation (0.18s tick) -> Sapling grows into 3D Oak tree
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.WOOD, 'La base del brote debe convertirse en Tronco de Roble (WOOD)');
+          assert(vc.getVoxelGlobal(tx, ty + 2, tz) === vc.BLOCK.WOOD, 'El tronco debe crecer verticalmente');
+          assert(vc.getVoxelGlobal(tx, ty + 4, tz) === vc.BLOCK.LEAVES, 'La copa del árbol debe generar Hojas (LEAVES)');
+
+          // Clean up tree
+          for (let dy = -1; dy <= 7; dy++) {
+            for (let dz = -2; dz <= 2; dz++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                vc.setVoxelGlobal(tx + dx, ty + dy, tz + dz, vc.BLOCK.AIR);
+              }
+            }
+          }
+        });
+
+        it('Cultiva Trigo por etapas (WHEAT_1 -> WHEAT_2 -> WHEAT_3) y hornea Pan (+5 corazones)', () => {
+          const wx = 10, wy = 52, wz = 6;
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.DIRT);
+          vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WHEAT_1);
+
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(wx, wy, wz) === vc.BLOCK.WHEAT_2, 'WHEAT_1 debe crecer a WHEAT_2');
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(wx, wy, wz) === vc.BLOCK.WHEAT_3, 'WHEAT_2 debe madurar a WHEAT_3');
+
+          // Craft Bread from 3x WHEAT_3 and eat it to heal +5 hearts
+          const breadRecIdx = vc.CRAFTING_RECIPES.findIndex(r => r.outId === vc.BLOCK.ITEM_BREAD);
+          assert(breadRecIdx !== -1, 'Debe existir la receta de Pan Horneado');
+          vc.inventoryCounts[vc.BLOCK.WHEAT_3] = (vc.inventoryCounts[vc.BLOCK.WHEAT_3] || 0) + 3;
+          assert(vc.craftRecipe(breadRecIdx) === true, 'Debe permitir craftear Pan Horneado con 3× Trigo Maduro');
+
+          vc.player.health = 4;
+          const ate = vc.eatHeldApple(vc.BLOCK.ITEM_BREAD);
+          assert(ate === true && vc.player.health === 9, `Comer Pan debe restaurar +5 corazones (salud=${vc.player.health})`);
+          vc.player.health = vc.player.maxHealth;
+
+          vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 22: Punto 13 — Cuevas Bioluminiscentes (Amatista y Hongos Luminosos)
+      // =========================================================================
+      describe('22. Cuevas Bioluminiscentes (Drusas de Amatista y Hongos Luminosos)', () => {
+        it('Emite iluminación BFS subterránea en Amatista (Luz 5) y Hongo Luminoso (Luz 12) + Pulso GPU', () => {
+          assert(vc.BLOCK_DEFS[vc.BLOCK.AMETHYST].light === 5, 'La Amatista debe tener nivel de luz 5');
+          assert(vc.BLOCK_DEFS[vc.BLOCK.GLOW_MUSHROOM].light === 12, 'El Hongo Luminoso debe tener nivel de luz 12');
+
+          vc.setVoxelGlobal(8, 52, 8, vc.BLOCK.GLOW_MUSHROOM);
+          const mushLight = vc.getLightGlobal(8, 52, 8) & 15;
+          assert(mushLight === 12, `El Hongo Luminoso debe propagar luz BFS 12 (actual=${mushLight})`);
+          vc.setVoxelGlobal(8, 52, 8, vc.BLOCK.AIR);
+
+          const shaders = vc.getShaders();
+          assert(
+            shaders.solidShaderRef && shaders.solidShaderRef.fragmentShader.includes('vTileIdx >= 38.5'),
+            'El Fragment Shader debe incluir el pulso bioluminiscente para Amatista y Hongo Luminoso'
+          );
+        });
+      });
+
+      // =========================================================================
+      // SUITE 23: Punto 14 — Bloques de Slime Elásticos y Puertas Mecánicas Redstone
+      // =========================================================================
+      describe('23. Bloques de Slime Elásticos y Puertas Mecánicas Redstone', () => {
+        it('Rebota elásticamente sobre Bloques de Slime (vy > 8) anulando el daño por caída', () => {
+          const sx = Math.floor(vc.player.x);
+          const sy = 48;
+          const sz = Math.floor(vc.player.z);
+          vc.setVoxelGlobal(sx, sy, sz, vc.BLOCK.SLIME);
+          vc.setVoxelGlobal(sx, sy + 1, sz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(sx, sy + 2, sz, vc.BLOCK.AIR);
+
+          const origY = vc.player.y;
+          const origFly = vc.player.flying;
+          vc.player.flying = false;
+          vc.player.health = 10;
+          vc.player.y = sy + 1.05;
+          vc.player.vy = -22.0; // Lethal fall velocity on normal blocks!
+          vc.player.maxFallVel = -22.0;
+
+          vc.updatePlayerPhysics(0.016);
+          assert(vc.player.health === 10, 'Caer sobre un Bloque de Slime no debe causar daño por caída');
+          assert(vc.player.vy > 8.5, `El Bloque de Slime debe impulsar al jugador hacia arriba (vy=${vc.player.vy.toFixed(2)})`);
+
+          vc.player.vy = 0;
+          vc.player.y = origY;
+          vc.player.flying = origFly;
+          vc.setVoxelGlobal(sx, sy, sz, vc.BLOCK.AIR);
+        });
+
+        it('Abre y cierra Puertas Mecánicas con clic derecho o mediante Palancas Redstone', () => {
+          const dx = 14, dy = 52, dz = 14;
+          vc.setVoxelGlobal(dx, dy, dz, vc.BLOCK.DOOR_CLOSED);
+          assert(vc.BLOCK_DEFS[vc.BLOCK.DOOR_CLOSED].solid === true, 'La puerta cerrada debe ser sólida');
+          assert(vc.checkAABBCollision(dx + 0.5, dy, dz + 0.5) === true, 'La puerta cerrada debe bloquear el paso AABB');
+
+          // Toggle directly
+          const isOpen = vc.toggleVoxelDoor(dx, dy, dz);
+          assert(isOpen === true && vc.getVoxelGlobal(dx, dy, dz) === vc.BLOCK.DOOR_OPEN, 'toggleVoxelDoor debe abrir la puerta');
+          assert(vc.checkAABBCollision(dx + 0.5, dy, dz + 0.5) === false, 'La puerta abierta debe permitir el paso libre');
+
+          // Toggle via Redstone Lever
+          vc.setVoxelGlobal(dx - 2, dy, dz, vc.BLOCK.LEVER_ON);
+          vc.toggleVoxelLever(dx - 2, dy, dz); // Lever OFF -> Door closes
+          assert(vc.getVoxelGlobal(dx, dy, dz) === vc.BLOCK.DOOR_CLOSED, 'Apagar la palanca Redstone cercana debe cerrar la puerta');
+          vc.toggleVoxelLever(dx - 2, dy, dz); // Lever ON -> Door opens
+          assert(vc.getVoxelGlobal(dx, dy, dz) === vc.BLOCK.DOOR_OPEN, 'Encender la palanca Redstone cercana debe abrir la puerta');
+
+          vc.setVoxelGlobal(dx, dy, dz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(dx - 2, dy, dz, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 24: Punto 15 — Cámara en 3ª Persona con Avatar Articulado y Zoom Óptico
+      // =========================================================================
+      describe('24. Cámara en 3ª Persona con Avatar Articulado (C) y Zoom Catalejo (Z)', () => {
+        it('Alterna entre 1ª y 3ª Persona mostrando el Avatar Vóxel Articulado y desplazando la cámara', () => {
+          vc.toggleCameraMode(true);
+          vc.updatePlayerPhysics(0.016);
+          const camState = vc.getCameraState();
+          assert(camState.thirdPersonMode === true, 'thirdPersonMode debe activarse');
+          assert(vc.playerAvatar.visible === true, 'El avatar articulado del jugador debe ser visible en 3ª persona');
+          const distFromEye = Math.hypot(
+            vc.camera.position.x - vc.player.x,
+            vc.camera.position.y - (vc.player.y + vc.player.eyeHeight),
+            vc.camera.position.z - vc.player.z
+          );
+          assert(distFromEye > 0.4, `La cámara en 3ª persona debe situarse detrás del jugador (dist=${distFromEye.toFixed(2)}m)`);
+
+          vc.toggleCameraMode(false);
+          vc.updatePlayerPhysics(0.016);
+          assert(vc.playerAvatar.visible === false, 'El avatar debe ocultarse al volver a 1ª persona');
+        });
+
+        it('Activa y desactiva el Zoom Óptico (FOV 24° vs FOV base 75°)', () => {
+          vc.toggleZoom(true);
+          assert(vc.camera.fov === 24, `Con el zoom activo el FOV debe ser 24° (actual=${vc.camera.fov}°)`);
+          vc.toggleZoom(false);
+          assert(vc.camera.fov === vc.getCameraState().baseFov, 'Al desactivar el zoom debe restaurar el FOV base');
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -1004,15 +1193,16 @@
         { name: 'Criaturas (Mobs: IA, Físicas AABB y Animación)',   ms: bench(() => { vc.updateMobs(0.016); }, 400) },
         { name: 'Drops 3D Flotantes e Imantados (InstancedMesh)',   ms: bench(() => { vc.updateItemDrops(0.016); }, 500) },
         { name: 'Clima Dinámico: Lluvia/Nieve/Tormentas (1 Draw)',  ms: bench(() => { vc.updateWeather(0.016); }, 500) },
+        { name: 'Smart Frustum Culling 3D (Box3 vs Camera)',        ms: bench(() => { vc.updateFrustumCulling(); }, 500) },
         { name: 'Minimapa Radar 2D Topográfico (Amortizado 10 Hz)', ms: bench(() => { vc.updateMinimap(0.016, false); }, 500) },
         { name: 'Flechas Balísticas 3D (Arco InstancedMesh)',       ms: bench(() => { vc.updateArrows(0.016); }, 500) },
-        { name: 'Físicas del Jugador + Colisión AABB',              ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
+        { name: 'Físicas del Jugador + Avatar 3ªP + Slime Bounce',  ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
         { name: 'Pool Partículas InstancedMesh (120 instancias)',   ms: bench(() => { vc.updateParticles(0.016); }, 500) },
         { name: 'Raycast Vóxel 3D (DDA)',                           ms: bench(() => { vc.raycastVoxel(vc.camera.position.x, vc.camera.position.y, vc.camera.position.z, 0, -0.3, -0.95, 6.5); }, 600) },
         { name: 'Cielo Dinámico (Sol, Luna, Estrellas, Nubes 3D)',  ms: bench(() => { vc.updateDynamicSky(0.016); }, 600) },
         { name: 'Uniforms GPU + Atmósfera Subacuática (CPU)',       ms: bench(() => { vc.updateGPUShaders(0.016); }, 600) },
         { name: 'Música C418 FM + Paisaje Sonoro (Web Audio API)',  ms: bench(() => { vc.updateAmbientAudio(0.016); }, 600) },
-        { name: 'Cola de Simulación Vóxel (Arena/Agua/Lava/TNT)',   ms: bench(() => { vc.updateVoxelSimulation(0.001); }, 600) }
+        { name: 'Cola de Simulación Vóxel (Cultivos/Agua/Lava/TNT)',ms: bench(() => { vc.updateVoxelSimulation(0.001); }, 600) }
       ];
 
       while (vc.mobs.length > 0) vc.removeMobAt(0);
