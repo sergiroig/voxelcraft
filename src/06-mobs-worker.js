@@ -10,12 +10,16 @@ let mobSpawnTimer = 0;
 
 // Shared geometries across all mobs (zero per-mob geometry allocation!)
 const mobGeos = {
-  head:      new THREE.BoxGeometry(0.46, 0.46, 0.46),
-  bodyQuad:  new THREE.BoxGeometry(0.62, 0.52, 0.92),
-  legQuad:   new THREE.BoxGeometry(0.20, 0.42, 0.20),
-  bodyBiped: new THREE.BoxGeometry(0.50, 0.72, 0.28),
-  limbBiped: new THREE.BoxGeometry(0.22, 0.68, 0.22),
-  armZombie: new THREE.BoxGeometry(0.20, 0.20, 0.64)
+  head:        new THREE.BoxGeometry(0.46, 0.46, 0.46),
+  bodyQuad:    new THREE.BoxGeometry(0.62, 0.52, 0.92),
+  legQuad:     new THREE.BoxGeometry(0.20, 0.42, 0.20),
+  bodyBiped:   new THREE.BoxGeometry(0.50, 0.72, 0.28),
+  limbBiped:   new THREE.BoxGeometry(0.22, 0.68, 0.22),
+  armZombie:   new THREE.BoxGeometry(0.20, 0.20, 0.64),
+  bodyCreeper: new THREE.BoxGeometry(0.46, 0.82, 0.28),
+  legCreeper:  new THREE.BoxGeometry(0.22, 0.36, 0.22),
+  bodyGolem:   new THREE.BoxGeometry(0.82, 0.94, 0.46),
+  armGolem:    new THREE.BoxGeometry(0.24, 1.12, 0.24)
 };
 
 function createMobMesh(type) {
@@ -57,6 +61,61 @@ function createMobMesh(type) {
     root.add(legR);
 
     return { root, head, legs: [legL, legR], mats, height: 1.8, radius: 0.35 };
+  } else if (type === 'creeper') {
+    const skinMat = mkMat(0x22c55e);
+    const footMat = mkMat(0x15803d);
+
+    const body = new THREE.Mesh(mobGeos.bodyCreeper, skinMat);
+    body.position.set(0, 0.77, 0);
+    root.add(body);
+
+    const head = new THREE.Mesh(mobGeos.head, skinMat);
+    head.position.set(0, 1.41, 0);
+    root.add(head);
+
+    const legOffsets = [
+      [-0.15, 0.18,  0.22],
+      [ 0.15, 0.18,  0.22],
+      [-0.15, 0.18, -0.22],
+      [ 0.15, 0.18, -0.22]
+    ];
+    const legs = legOffsets.map(([lx, ly, lz]) => {
+      const l = new THREE.Mesh(mobGeos.legCreeper, footMat);
+      l.position.set(lx, ly, lz);
+      root.add(l);
+      return l;
+    });
+
+    return { root, head, legs, mats, height: 1.7, radius: 0.35 };
+  } else if (type === 'golem') {
+    const ironMat = mkMat(0xe2e8f0);
+    const vineMat = mkMat(0x65a30d);
+
+    const body = new THREE.Mesh(mobGeos.bodyGolem, ironMat);
+    body.position.set(0, 1.15, 0);
+    root.add(body);
+
+    const head = new THREE.Mesh(mobGeos.head, vineMat);
+    head.position.set(0, 1.86, 0.08);
+    root.add(head);
+
+    const armL = new THREE.Mesh(mobGeos.armGolem, ironMat);
+    armL.position.set(-0.55, 1.10, 0);
+    root.add(armL);
+
+    const armR = new THREE.Mesh(mobGeos.armGolem, ironMat);
+    armR.position.set(0.55, 1.10, 0);
+    root.add(armR);
+
+    const legL = new THREE.Mesh(mobGeos.limbBiped, ironMat);
+    legL.position.set(-0.22, 0.34, 0);
+    root.add(legL);
+
+    const legR = new THREE.Mesh(mobGeos.limbBiped, ironMat);
+    legR.position.set(0.22, 0.34, 0);
+    root.add(legR);
+
+    return { root, head, legs: [legL, legR, armL, armR], mats, height: 2.2, radius: 0.45 };
   } else {
     const isSheep = type === 'sheep';
     const coatMat = mkMat(isSheep ? 0xf1f5f9 : 0xf49cbb);
@@ -91,7 +150,7 @@ function spawnMob(type, x, y, z) {
   const built = createMobMesh(type);
   built.root.position.set(x, y, z);
   scene.add(built.root);
-  mobs.push({
+  const mobObj = {
     type,
     x, y, z,
     vx: 0, vy: 0, vz: 0,
@@ -99,12 +158,32 @@ function spawnMob(type, x, y, z) {
     targetYaw: Math.random() * Math.PI * 2,
     aiTimer: 1 + Math.random() * 2,
     moving: true,
-    hp: type === 'zombie' ? 7 : 4,
+    hp: type === 'golem' ? 24 : (type === 'zombie' ? 7 : (type === 'creeper' ? 6 : 4)),
+    allied: type === 'golem',
+    fuseTimer: 0,
     hurtTimer: 0,
     attackCooldown: 0,
     animTime: Math.random() * 10,
     ...built
-  });
+  };
+  mobs.push(mobObj);
+  return mobObj;
+}
+
+function trySummonIronGolem(wx, wy, wz) {
+  if (getVoxelGlobal(wx, wy, wz) !== BLOCK.GLOWSTONE) return null;
+  if (getVoxelGlobal(wx, wy - 1, wz) !== BLOCK.IRON_ORE) return null;
+  if (getVoxelGlobal(wx, wy - 2, wz) !== BLOCK.IRON_ORE) return null;
+
+  setVoxelGlobal(wx, wy, wz, BLOCK.AIR);
+  setVoxelGlobal(wx, wy - 1, wz, BLOCK.AIR);
+  setVoxelGlobal(wx, wy - 2, wz, BLOCK.AIR);
+  spawnBlockParticles(wx, wy - 1, wz, BLOCK.IRON_ORE, 24);
+  sfx.play('golem');
+  const golem = spawnMob('golem', wx + 0.5, wy - 2, wz + 0.5);
+  const lbl = document.getElementById('block-label');
+  if (lbl) lbl.textContent = '🛡 ¡Gólem de Hierro Aliado Invocado!';
+  return golem;
 }
 
 function removeMobAt(idx) {
@@ -126,8 +205,8 @@ function damageMob(mob, dmg, kdx, kdz) {
   mob.vy = 5.2;
 
   if (mob.hp <= 0) {
-    const pBlock = mob.type === 'zombie' ? BLOCK.LEAVES : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK);
-    const lootId = mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.DIRT);
+    const pBlock = (mob.type === 'zombie' || mob.type === 'creeper') ? BLOCK.LEAVES : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK));
+    const lootId = mob.type === 'creeper' ? BLOCK.TNT : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.DIRT)));
     spawnBlockParticles(mob.x - 0.5, mob.y + 0.4, mob.z - 0.5, pBlock, 22);
     spawnItemDrop(mob.x - 0.5, mob.y + 0.2, mob.z - 0.5, lootId, 2);
     const idx = mobs.indexOf(mob);
@@ -187,7 +266,8 @@ function trySpawnMobsAroundPlayer() {
         const blkL = packed & 15;
         const effLight = Math.max(effSun, blkL);
         if (effLight < 7) {
-          spawnMob('zombie', wx + 0.5, y, wz + 0.5);
+          const hType = Math.random() < 0.35 ? 'creeper' : 'zombie';
+          spawnMob(hType, wx + 0.5, y, wz + 0.5);
           return;
         }
       }
@@ -215,13 +295,14 @@ function updateMobs(dt) {
 
   for (let i = mobs.length - 1; i >= 0; i--) {
     const m = mobs[i];
+    if (!m) continue;
     const dxP = player.x - m.x;
     const dyP = player.y - m.y;
     const dzP = player.z - m.z;
     const distP = Math.hypot(dxP, dyP, dzP);
 
-    // Despawn distant mobs to save CPU/GPU
-    if (distP > 54) {
+    // Despawn distant mobs to save CPU/GPU (except allied Golems within 80m)
+    if (distP > (m.type === 'golem' ? 80 : 54)) {
       removeMobAt(i);
       continue;
     }
@@ -234,6 +315,10 @@ function updateMobs(dt) {
 
     if (m.hurtTimer > 0) {
       m.hurtTimer -= dt;
+    } else if (m.type === 'creeper' && m.fuseTimer > 0 && Math.floor(m.fuseTimer * 12) % 2 === 0) {
+      for (const entry of m.mats) {
+        entry.mat.color.setHex(0xffffff);
+      }
     } else {
       for (const entry of m.mats) {
         entry.mat.color.setHex(entry.baseHex).multiplyScalar(shade);
@@ -263,6 +348,63 @@ function updateMobs(dt) {
           damagePlayer(2);
         }
       }
+    } else if (m.type === 'creeper' && distP < 16) {
+      m.targetYaw = Math.atan2(dxP, dzP);
+      if (distP < 2.5 && Math.abs(dyP) < 2.0) {
+        m.moving = false;
+        if (m.fuseTimer === 0) sfx.play('hiss');
+        m.fuseTimer += dt;
+        const swell = 1.0 + m.fuseTimer * 0.28;
+        m.root.scale.set(swell, swell, swell);
+        if (m.fuseTimer >= 1.3) {
+          const ex = m.x, ey = m.y + 0.6, ez = m.z;
+          removeMobAt(i);
+          explodeAt(ex, ey, ez, 3.1);
+          continue;
+        }
+      } else {
+        m.moving = true;
+        if (distP > 3.6 && m.fuseTimer > 0) {
+          m.fuseTimer = Math.max(0, m.fuseTimer - dt * 1.6);
+          const swell = 1.0 + m.fuseTimer * 0.28;
+          m.root.scale.set(swell, swell, swell);
+        }
+      }
+    } else if (m.type === 'golem') {
+      // Allied Iron Golem hunts nearest hostile mob (zombie or creeper)
+      let nearestHostile = null;
+      let bestHDist = 20.0;
+      for (let j = 0; j < mobs.length; j++) {
+        const other = mobs[j];
+        if (!other || (other.type !== 'zombie' && other.type !== 'creeper')) continue;
+        const hd = Math.hypot(other.x - m.x, other.y - m.y, other.z - m.z);
+        if (hd < bestHDist) {
+          bestHDist = hd;
+          nearestHostile = other;
+        }
+      }
+      if (nearestHostile) {
+        const hdx = nearestHostile.x - m.x;
+        const hdz = nearestHostile.z - m.z;
+        m.targetYaw = Math.atan2(hdx, hdz);
+        m.moving = bestHDist > 1.4;
+        if (m.attackCooldown > 0) m.attackCooldown -= dt;
+        if (bestHDist < 2.2 && m.attackCooldown <= 0) {
+          m.attackCooldown = 0.75;
+          sfx.play('golem');
+          damageMob(nearestHostile, 6, hdx, hdz);
+          if (mobs.includes(nearestHostile)) {
+            nearestHostile.vy = 9.2;
+          }
+        }
+      } else {
+        m.aiTimer -= dt;
+        if (m.aiTimer <= 0) {
+          m.aiTimer = 2.0 + Math.random() * 2.5;
+          m.moving = Math.random() < 0.55;
+          if (m.moving) m.targetYaw += (Math.random() - 0.5) * 1.8;
+        }
+      }
     } else {
       m.aiTimer -= dt;
       if (m.aiTimer <= 0) {
@@ -277,7 +419,7 @@ function updateMobs(dt) {
     m.yaw += diffYaw * Math.min(1, dt * 6);
     m.root.rotation.y = m.yaw;
 
-    const moveSpeed = m.type === 'zombie' ? 2.65 : (m.hurtTimer > 0 ? 4.2 : 1.55);
+    const moveSpeed = m.type === 'golem' ? 3.1 : ((m.type === 'zombie' || m.type === 'creeper') ? 2.65 : (m.hurtTimer > 0 ? 4.2 : 1.55));
     if (m.hurtTimer <= 0) {
       m.vx = m.moving ? Math.sin(m.yaw) * moveSpeed : 0;
       m.vz = m.moving ? Math.cos(m.yaw) * moveSpeed : 0;

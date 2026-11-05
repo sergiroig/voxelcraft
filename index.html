@@ -35,6 +35,8 @@
       <button class="t-pill-btn" id="tbtn-weather">🌧 Clima</button>
       <button class="t-pill-btn" id="tbtn-cam">🎥 3ªP</button>
       <button class="t-pill-btn" id="tbtn-zoom">🔭</button>
+      <button class="t-pill-btn" id="tbtn-cart">🛤 Tren</button>
+      <button class="t-pill-btn" id="tbtn-wp">📍 Baliza</button>
       <button class="t-pill-btn toggled" id="tbtn-music">🎵</button>
       <button class="t-pill-btn" id="tbtn-hud">📊 HUD</button>
       <button class="t-pill-btn" id="tbtn-menu">⏸</button>
@@ -75,7 +77,7 @@
   </div>
 
   <div id="hud-controls-pill">
-    <kbd>P</kbd> Menú &nbsp;|&nbsp; <kbd>E</kbd> Inv/Craft &nbsp;|&nbsp; <kbd>C</kbd> 3ª Pers. &nbsp;|&nbsp; <kbd>Z</kbd> Zoom &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
+    <kbd>P</kbd> Menú &nbsp;|&nbsp; <kbd>E</kbd> Inv/Craft &nbsp;|&nbsp; <kbd>R</kbd> Tren &nbsp;|&nbsp; <kbd>B</kbd> Baliza &nbsp;|&nbsp; <kbd>C</kbd> 3ª Pers. &nbsp;|&nbsp; <kbd>Z</kbd> Zoom &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>V</kbd> Clima &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
   </div>
 
   <div id="status-bar">
@@ -89,9 +91,14 @@
   <div id="inventory-modal" class="hidden">
     <div class="inv-card">
       <div class="inv-header">
-        <h2>Inventario y Mesa de Crafteo</h2>
-        <button class="mode-switch-btn" id="btn-mode-toggle">Modo: Supervivencia (G)</button>
+        <h2>Inventario, Crafteo y Balizas</h2>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="mode-switch-btn" id="btn-add-waypoint">📍 Marcar Baliza Aquí (B)</button>
+          <button class="mode-switch-btn" id="btn-mode-toggle">Modo: Supervivencia (G)</button>
+        </div>
       </div>
+      <div class="inv-section-title">📍 Balizas GPS y Teletransporte Rápido (Aparecen en el Radar 2D)</div>
+      <div class="craft-grid" id="waypoint-grid" style="margin-bottom:10px;"></div>
       <div class="inv-section-title">⚒ Mesa de Crafteo Rápido (Haz clic para fabricar)</div>
       <div class="craft-grid" id="craft-grid"></div>
       <div class="inv-section-title">🎒 Mochila de Bloques y Herramientas (Haz clic para equipar en la ranura activa)</div>

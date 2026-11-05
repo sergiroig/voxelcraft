@@ -58,6 +58,15 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillRect(3, 5, 10, 6);
     ctx.fillStyle = '#fbbf24';
     ctx.fillRect(4, 6, 8, 3);
+  } else if (itemId === BLOCK.ITEM_MINECART) {
+    // Draw pixel-art Steel Minecart icon
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(2, 5, 12, 6);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(4, 6, 8, 3);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(3, 11, 3, 3);
+    ctx.fillRect(10, 11, 3, 3);
   } else {
     const def = BLOCK_DEFS[itemId];
     const tileIndex = def.tiles[2];
@@ -162,6 +171,92 @@ function buildHotbarUI() {
   updateHotbarSelection(selectedSlot);
 }
 
+const WAYPOINT_COLORS = ['#f43f5e', '#a855f7', '#10b981', '#f59e0b', '#38bdf8', '#ec4899'];
+const waypointGridEl = document.getElementById('waypoint-grid');
+const btnAddWaypointEl = document.getElementById('btn-add-waypoint');
+
+function addWaypoint(customName) {
+  const biome = generator.getBiomeAt(player.x, player.z);
+  const wp = {
+    name: customName || `Baliza #${waypoints.length + 1} (${biome})`,
+    x: Math.round(player.x),
+    y: Math.round(player.y),
+    z: Math.round(player.z),
+    color: WAYPOINT_COLORS[waypoints.length % WAYPOINT_COLORS.length]
+  };
+  waypoints.push(wp);
+  sfx.play('waypoint');
+  saveWorldData();
+  buildWaypointsUI();
+  updateMinimap(0, true);
+  if (blockLabelEl) {
+    blockLabelEl.textContent = `📍 ${wp.name} guardada en (${wp.x}, ${wp.y}, ${wp.z})`;
+  }
+  return wp;
+}
+
+function removeWaypoint(idx) {
+  if (idx < 0 || idx >= waypoints.length) return false;
+  waypoints.splice(idx, 1);
+  saveWorldData();
+  buildWaypointsUI();
+  updateMinimap(0, true);
+  return true;
+}
+
+function teleportToWaypoint(idx) {
+  const wp = waypoints[idx];
+  if (!wp) return null;
+  if (ridingCart) toggleRideMinecart();
+  const cx = Math.floor(wp.x / CHUNK_SIZE);
+  const cz = Math.floor(wp.z / CHUNK_SIZE);
+  getChunkData(cx, cz);
+  rebuildChunkImmediate(cx, cz);
+  player.x = wp.x + 0.5;
+  player.z = wp.z + 0.5;
+  player.y = Math.max(wp.y, findSpawnHeight(player.x, player.z));
+  player.vx = 0; player.vy = 0; player.vz = 0;
+  player.maxFallVel = 0;
+  lastPlayerChunkX = null;
+  sfx.play('waypoint');
+  updateMinimap(0, true);
+  if (invOpen) toggleInventory(false);
+  return wp;
+}
+
+function buildWaypointsUI() {
+  if (!waypointGridEl) return;
+  waypointGridEl.innerHTML = '';
+  waypoints.forEach((wp, idx) => {
+    const dist = Math.round(Math.hypot(wp.x - player.x, wp.z - player.z));
+    const card = document.createElement('div');
+    card.className = 'craft-item craftable';
+    card.innerHTML = `
+      <div style="width:18px;height:18px;border-radius:50%;background:${wp.color};border:2px solid #fff;flex-shrink:0;"></div>
+      <div class="craft-info" style="flex:1;">
+        <div class="craft-title">${wp.name}</div>
+        <div class="craft-cost">Coords: (${wp.x}, ${wp.y}, ${wp.z}) • Distancia: ${dist}m — Clic para Teletransportar</div>
+      </div>
+    `;
+    const onTp = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      teleportToWaypoint(idx);
+    };
+    card.addEventListener('click', onTp);
+    card.addEventListener('touchend', onTp, { passive: false });
+    waypointGridEl.appendChild(card);
+  });
+}
+
+if (btnAddWaypointEl) {
+  btnAddWaypointEl.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addWaypoint();
+  });
+}
+
 function buildInventoryModal() {
   invGridEl.innerHTML = '';
   ALL_INVENTORY_ITEMS.forEach((bId) => {
@@ -192,6 +287,7 @@ function buildInventoryModal() {
     card.addEventListener('touchend', selectItem, { passive: false });
     invGridEl.appendChild(card);
   });
+  buildWaypointsUI();
   buildCraftingUI();
 }
 
@@ -333,6 +429,44 @@ function placeBlockAtCurrentTarget() {
     return true;
   }
 
+  // Interacting with a Mechanical Trapdoor opens or closes it!
+  if (currentHit.block === BLOCK.TRAPDOOR_CLOSED || currentHit.block === BLOCK.TRAPDOOR_OPEN) {
+    toggleVoxelTrapdoor(currentHit.x, currentHit.y, currentHit.z);
+    player.swingTime = 1.0;
+    return true;
+  }
+
+  // Interacting with a Treasure Chest opens it (loots or stores items)!
+  if (currentHit.block === BLOCK.CHEST) {
+    openVoxelChest(currentHit.x, currentHit.y, currentHit.z);
+    player.swingTime = 1.0;
+    return true;
+  }
+
+  // Placing or mounting a Minecart
+  if (bId === BLOCK.ITEM_MINECART) {
+    if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
+    const ry = currentHit.block === BLOCK.RAIL ? currentHit.y : currentHit.y + currentHit.ny;
+    const rx = currentHit.block === BLOCK.RAIL ? currentHit.x : currentHit.x + currentHit.nx;
+    const rz = currentHit.block === BLOCK.RAIL ? currentHit.z : currentHit.z + currentHit.nz;
+    const cart = spawnMinecart(rx, ry, rz);
+    if (gameMode === 'survival') {
+      inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
+      refreshInventoryCountsUI();
+    }
+    toggleRideMinecart(cart);
+    player.swingTime = 1.0;
+    return true;
+  }
+
+  // Right-clicking a Rail when not holding another Rail mounts a Minecart on that track!
+  if (currentHit.block === BLOCK.RAIL && bId !== BLOCK.RAIL) {
+    const cart = spawnMinecart(currentHit.x, currentHit.y, currentHit.z);
+    toggleRideMinecart(cart);
+    player.swingTime = 1.0;
+    return true;
+  }
+
   if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) return false;
   if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
 
@@ -357,12 +491,14 @@ function placeBlockAtCurrentTarget() {
 
   if (!overlapsPlayer) {
     let actualPlaceId = bId;
-    if (bId === BLOCK.REDSTONE_LAMP_OFF || bId === BLOCK.DOOR_CLOSED) {
+    if (bId === BLOCK.REDSTONE_LAMP_OFF || bId === BLOCK.DOOR_CLOSED || bId === BLOCK.TRAPDOOR_CLOSED) {
       for (let dy = -2; dy <= 2; dy++) {
         for (let dz = -3; dz <= 3; dz++) {
           for (let dx = -3; dx <= 3; dx++) {
             if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 4 && getVoxelGlobal(px + dx, py + dy, pz + dz) === BLOCK.LEVER_ON) {
-              actualPlaceId = (bId === BLOCK.REDSTONE_LAMP_OFF) ? BLOCK.REDSTONE_LAMP_ON : BLOCK.DOOR_OPEN;
+              actualPlaceId = (bId === BLOCK.REDSTONE_LAMP_OFF)
+                ? BLOCK.REDSTONE_LAMP_ON
+                : (bId === BLOCK.DOOR_CLOSED ? BLOCK.DOOR_OPEN : BLOCK.TRAPDOOR_OPEN);
             }
           }
         }
@@ -372,6 +508,9 @@ function placeBlockAtCurrentTarget() {
       if (gameMode === 'survival') {
         inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
         refreshInventoryCountsUI();
+      }
+      if (actualPlaceId === BLOCK.GLOWSTONE) {
+        trySummonIronGolem(px, py, pz);
       }
       player.swingTime = 1.0;
       sfx.play('place');
@@ -551,15 +690,30 @@ function updateMinimap(dt, forceRender = false) {
 
   minimapCtx.putImageData(minimapImgData, 0, 0);
 
-  // Draw nearby Mobs on Radar (Red = Zombie, White = Sheep/Pig)
+  // Draw nearby Mobs on Radar (Red = Zombie, Green = Creeper, Cyan = Golem, White = Sheep/Pig)
   for (let i = 0; i < mobs.length; i++) {
     const m = mobs[i];
     const rx = Math.round(half + (m.x - player.x));
     const rz = Math.round(half + (m.z - player.z));
     if (rx >= 1 && rx < MAP_SIZE - 1 && rz >= 1 && rz < MAP_SIZE - 1) {
-      minimapCtx.fillStyle = m.type === 'zombie' ? '#ef4444' : '#f8fafc';
+      minimapCtx.fillStyle = m.type === 'zombie'
+        ? '#ef4444'
+        : (m.type === 'creeper' ? '#22c55e' : (m.type === 'golem' ? '#38bdf8' : '#f8fafc'));
       minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
     }
+  }
+
+  // Draw GPS Waypoint Beacons (clamped to radar edge ring when distant for 360° compass navigation)
+  for (let i = 0; i < waypoints.length; i++) {
+    const wp = waypoints[i];
+    const dx = wp.x - player.x;
+    const dz = wp.z - player.z;
+    const rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + dx)));
+    const rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + dz)));
+    minimapCtx.fillStyle = '#0f172a';
+    minimapCtx.fillRect(rx - 2, rz - 2, 5, 5);
+    minimapCtx.fillStyle = wp.color || '#f43f5e';
+    minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
   }
 
   // Draw Player center marker & look direction line

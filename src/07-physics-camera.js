@@ -310,8 +310,24 @@ function updatePlayerPhysics(dt) {
     Math.floor(player.y - 0.15),
     Math.floor(player.z)
   );
+  const onLadder =
+    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LADDER ||
+    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 1.05), Math.floor(player.z)) === BLOCK.LADDER;
 
-  if (player.flying) {
+  if (ridingCart) {
+    if (wantDown) {
+      toggleRideMinecart();
+    } else {
+      player.x = ridingCart.x;
+      player.y = ridingCart.y + 0.35;
+      player.z = ridingCart.z;
+      player.vx = 0;
+      player.vy = 0;
+      player.vz = 0;
+      player.maxFallVel = 0;
+      player.onGround = true;
+    }
+  } else if (player.flying) {
     player.vy = 0;
     player.maxFallVel = 0;
     if (wantJump) player.vy = speed * 0.75;
@@ -321,7 +337,21 @@ function updatePlayerPhysics(dt) {
     player.y += player.vy * dt;
     player.z += player.vz * dt;
   } else {
-    if (inWater) {
+    if (onLadder) {
+      player.maxFallVel = 0;
+      if (wantJump || inputFwd > 0.15) {
+        player.vy = 4.6;
+        player.stepAccum += dt * 5.0;
+        if (player.stepAccum > 1.4) {
+          player.stepAccum = 0;
+          sfx.play('climb');
+        }
+      } else if (wantDown) {
+        player.vy = 0;
+      } else {
+        player.vy = -2.2;
+      }
+    } else if (inWater) {
       player.vy -= 9.0 * dt;
       player.vy *= 0.88;
       player.maxFallVel = 0;

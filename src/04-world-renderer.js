@@ -7,24 +7,27 @@
 const STORAGE_KEY = 'voxelcraft_opt_save_v2';
 let worldSeed = 42069;
 let worldDeltas = {};
+let chestLootMap = {};
+let waypoints = [{ name: 'Base Inicial', x: 8, y: 28, z: 8, color: '#38bdf8' }];
 let sunFactor = 1.0;
 
 function loadSaveData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.seed === 'number') {
-        worldSeed = parsed.seed;
-        worldDeltas = parsed.deltas || {};
-      }
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.seed === 'number') {
+      worldSeed = parsed.seed;
+      worldDeltas = parsed.deltas || {};
+      if (parsed.chests && typeof parsed.chests === 'object') chestLootMap = parsed.chests;
+      if (Array.isArray(parsed.waypoints) && parsed.waypoints.length > 0) waypoints = parsed.waypoints;
     }
   } catch (_) {}
 }
 
 function saveWorldData() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ seed: worldSeed, deltas: worldDeltas }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ seed: worldSeed, deltas: worldDeltas, chests: chestLootMap, waypoints }));
   } catch (_) {}
 }
 

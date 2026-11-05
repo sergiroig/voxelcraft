@@ -15,14 +15,7 @@ function igniteTNT(wx, wy, wz, fuse = 2.6) {
   const mesh = new THREE.Mesh(tntGeo, tntMatRed);
   mesh.position.set(wx + 0.5, wy + 0.3, wz + 0.5);
   scene.add(mesh);
-  activeTNTs.push({
-    x: wx + 0.5,
-    y: wy + 0.5,
-    z: wz + 0.5,
-    vy: 3.5,
-    fuse,
-    mesh
-  });
+  activeTNTs.push({ x: wx + 0.5, y: wy + 0.5, z: wz + 0.5, vy: 3.5, fuse, mesh });
 }
 
 function explodeAt(ex, ey, ez, radius = 3.6) {
@@ -494,36 +487,38 @@ function toggleVoxelDoor(wx, wy, wz) {
   return nextId === BLOCK.DOOR_OPEN;
 }
 
+function toggleVoxelTrapdoor(wx, wy, wz) {
+  const cur = getVoxelGlobal(wx, wy, wz);
+  if (cur !== BLOCK.TRAPDOOR_CLOSED && cur !== BLOCK.TRAPDOOR_OPEN) return false;
+  const nextId = cur === BLOCK.TRAPDOOR_CLOSED ? BLOCK.TRAPDOOR_OPEN : BLOCK.TRAPDOOR_CLOSED;
+  setVoxelGlobal(wx, wy, wz, nextId);
+  sfx.play('door');
+  return nextId === BLOCK.TRAPDOOR_OPEN;
+}
+
 function propagateRedstoneSignal(wx, wy, wz, isPowered) {
   const dirtySet = new Set();
   let affectedCount = 0;
-
   for (let dy = -2; dy <= 2; dy++) {
     for (let dz = -3; dz <= 3; dz++) {
       for (let dx = -3; dx <= 3; dx++) {
         if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 4) continue;
-        const nx = wx + dx;
-        const ny = wy + dy;
-        const nz = wz + dz;
+        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
         const nb = getVoxelGlobal(nx, ny, nz);
-
         if (isPowered && nb === BLOCK.REDSTONE_LAMP_OFF) {
-          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.REDSTONE_LAMP_ON, dirtySet);
-          affectedCount++;
+          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.REDSTONE_LAMP_ON, dirtySet); affectedCount++;
         } else if (!isPowered && nb === BLOCK.REDSTONE_LAMP_ON) {
-          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.REDSTONE_LAMP_OFF, dirtySet);
-          affectedCount++;
+          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.REDSTONE_LAMP_OFF, dirtySet); affectedCount++;
         } else if (isPowered && nb === BLOCK.DOOR_CLOSED) {
-          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.DOOR_OPEN, dirtySet);
-          sfx.play('door');
-          affectedCount++;
+          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.DOOR_OPEN, dirtySet); sfx.play('door'); affectedCount++;
         } else if (!isPowered && nb === BLOCK.DOOR_OPEN) {
-          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.DOOR_CLOSED, dirtySet);
-          sfx.play('door');
-          affectedCount++;
+          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.DOOR_CLOSED, dirtySet); sfx.play('door'); affectedCount++;
+        } else if (isPowered && nb === BLOCK.TRAPDOOR_CLOSED) {
+          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.TRAPDOOR_OPEN, dirtySet); sfx.play('door'); affectedCount++;
+        } else if (!isPowered && nb === BLOCK.TRAPDOOR_OPEN) {
+          setVoxelRawNoRebuild(nx, ny, nz, BLOCK.TRAPDOOR_CLOSED, dirtySet); sfx.play('door'); affectedCount++;
         } else if (isPowered && nb === BLOCK.TNT) {
-          igniteTNT(nx, ny, nz, 1.5);
-          affectedCount++;
+          igniteTNT(nx, ny, nz, 1.5); affectedCount++;
         }
       }
     }
@@ -541,5 +536,271 @@ function toggleVoxelLever(wx, wy, wz) {
   sfx.play('lever');
   propagateRedstoneSignal(wx, wy, wz, isPowered);
   return isPowered;
+}
+
+// ============================================================================
+// 8C-5. TREASURE CHESTS & PERSISTENT ITEM STORAGE (BLOCK.CHEST)
+// ============================================================================
+function openVoxelChest(wx, wy, wz) {
+  if (getVoxelGlobal(wx, wy, wz) !== BLOCK.CHEST) return null;
+  const key = `${wx},${wy},${wz}`;
+  sfx.play('chest');
+  spawnBlockParticles(wx, wy + 0.65, wz, BLOCK.GOLD_ORE, 14);
+
+  let record = chestLootMap[key];
+  if (!record || !record.opened) {
+    // First-time opening: award expedition treasure!
+    const lootItems = [
+      { id: BLOCK.DIAMOND_ORE, count: 2 },
+      { id: BLOCK.GOLD_ORE, count: 3 },
+      { id: BLOCK.ITEM_BREAD, count: 2 },
+      { id: BLOCK.ITEM_APPLE, count: 2 },
+      { id: BLOCK.RAIL, count: 8 },
+      { id: BLOCK.ITEM_MINECART, count: 1 }
+    ];
+    for (const item of lootItems) {
+      inventoryCounts[item.id] = (inventoryCounts[item.id] || 0) + item.count;
+    }
+    record = { opened: true, storedId: 0, storedCount: 0, lootAwarded: lootItems.length };
+    chestLootMap[key] = record;
+    refreshInventoryCountsUI();
+    saveWorldData();
+    const lbl = document.getElementById('block-label');
+    if (lbl) lbl.textContent = '🎁 Cofre del Tesoro: +2 Diamantes, +3 Oro, +2 Pan, +8 Vías y Vagoneta!';
+    return { action: 'looted', lootItems, record };
+  }
+
+  // Already looted: acts as interactive storage container!
+  const lbl = document.getElementById('block-label');
+  if (record.storedCount > 0 && record.storedId > 0) {
+    const itemId = record.storedId;
+    const count = record.storedCount;
+    inventoryCounts[itemId] = (inventoryCounts[itemId] || 0) + count;
+    record.storedId = 0;
+    record.storedCount = 0;
+    refreshInventoryCountsUI();
+    saveWorldData();
+    if (lbl) lbl.textContent = `📦 Cofre: Retirado ${count}× ${BLOCK_DEFS[itemId]?.name || 'Objeto'}`;
+    return { action: 'withdrawn', itemId, count, record };
+  } else {
+    const heldId = hotbarSlots[selectedSlot];
+    const avail = gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[heldId] || 0);
+    if (avail > 0) {
+      if (gameMode === 'survival') inventoryCounts[heldId] -= avail;
+      record.storedId = heldId;
+      record.storedCount = avail;
+      refreshInventoryCountsUI();
+      saveWorldData();
+      if (lbl) lbl.textContent = `📦 Cofre: Guardado ${avail}× ${BLOCK_DEFS[heldId]?.name || 'Objeto'}`;
+      return { action: 'stored', itemId: heldId, count: avail, record };
+    }
+  }
+  return { action: 'empty', record };
+}
+
+// ============================================================================
+// 8C-6. 3D RIDEABLE MINECARTS & RAILROAD TRACK PHYSICS (BLOCK.RAIL)
+// ============================================================================
+const minecarts = [];
+let ridingCart = null;
+const cartOuterGeo = new THREE.BoxGeometry(0.84, 0.48, 0.68);
+const cartInnerGeo = new THREE.BoxGeometry(0.72, 0.36, 0.56);
+const cartWheelGeo = new THREE.BoxGeometry(0.18, 0.18, 0.08);
+const cartMatSteel = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
+const cartMatDark = new THREE.MeshLambertMaterial({ color: 0x334155 });
+
+function spawnMinecart(wx, wy, wz) {
+  const bx = Math.floor(wx);
+  const by = Math.floor(wy);
+  const bz = Math.floor(wz);
+  for (const existing of minecarts) {
+    if (Math.hypot(existing.x - (bx + 0.5), existing.y - (by + 0.35), existing.z - (bz + 0.5)) < 0.9) {
+      return existing;
+    }
+  }
+
+  const root = new THREE.Group();
+  const hull = new THREE.Mesh(cartOuterGeo, cartMatSteel);
+  hull.position.y = 0.28;
+  root.add(hull);
+  const well = new THREE.Mesh(cartInnerGeo, cartMatDark);
+  well.position.y = 0.36;
+  root.add(well);
+
+  for (const [ox, oz] of [[-0.28, -0.34], [0.28, -0.34], [-0.28, 0.34], [0.28, 0.34]]) {
+    const w = new THREE.Mesh(cartWheelGeo, cartMatDark);
+    w.position.set(ox, 0.09, oz);
+    root.add(w);
+  }
+
+  // Pick initial rail orientation
+  let dirX = 1, dirZ = 0;
+  if (getVoxelGlobal(bx, by, bz + 1) === BLOCK.RAIL || getVoxelGlobal(bx, by, bz - 1) === BLOCK.RAIL) {
+    dirX = 0; dirZ = 1;
+  }
+
+  const cart = { x: bx + 0.5, y: by + 0.05, z: bz + 0.5, dirX, dirZ, speed: 0, soundTimer: 0, root };
+  root.position.set(cart.x, cart.y, cart.z);
+  root.rotation.y = Math.atan2(dirX, dirZ);
+  scene.add(root);
+  minecarts.push(cart);
+  sfx.play('rail');
+  return cart;
+}
+
+function isRailAt(bx, by, bz) {
+  return getVoxelGlobal(bx, by, bz) === BLOCK.RAIL;
+}
+
+function toggleRideMinecart(cartOverride) {
+  const btn = document.getElementById('tbtn-cart');
+  if (ridingCart) {
+    ridingCart.speed = 0;
+    ridingCart = null;
+    player.vy = 4.2;
+    if (btn) btn.classList.remove('toggled');
+    sfx.play('step');
+    return false;
+  }
+
+  let targetCart = cartOverride || null;
+  if (!targetCart) {
+    let bestDist = 4.5;
+    for (const c of minecarts) {
+      const d = Math.hypot(c.x - player.x, (c.y + 0.5) - (player.y + 0.8), c.z - player.z);
+      if (d < bestDist) {
+        bestDist = d;
+        targetCart = c;
+      }
+    }
+  }
+
+  // If no cart nearby, check if player is standing on or looking at a RAIL block
+  if (!targetCart) {
+    const px = Math.floor(player.x);
+    const py = Math.floor(player.y);
+    const pz = Math.floor(player.z);
+    if (isRailAt(px, py, pz)) {
+      targetCart = spawnMinecart(px, py, pz);
+    } else if (isRailAt(px, py - 1, pz)) {
+      targetCart = spawnMinecart(px, py - 1, pz);
+    } else if (currentTarget && isRailAt(currentTarget.bx, currentTarget.by, currentTarget.bz)) {
+      targetCart = spawnMinecart(currentTarget.bx, currentTarget.by, currentTarget.bz);
+    }
+  }
+
+  if (!targetCart) return false;
+
+  ridingCart = targetCart;
+  // Determine launch direction along rail based on player yaw
+  const lookX = -Math.sin(player.yaw);
+  const lookZ = -Math.cos(player.yaw);
+  const bx = Math.floor(targetCart.x);
+  const by = Math.floor(targetCart.y + 0.1);
+  const bz = Math.floor(targetCart.z);
+
+  const candidates = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  let bestDir = [targetCart.dirX, targetCart.dirZ];
+  let bestScore = -999;
+  for (const [dx, dz] of candidates) {
+    const hasRail = isRailAt(bx + dx, by, bz + dz) || isRailAt(bx + dx, by + 1, bz + dz) || isRailAt(bx + dx, by - 1, bz + dz);
+    const dot = dx * lookX + dz * lookZ + (hasRail ? 2.0 : 0.0);
+    if (dot > bestScore) {
+      bestScore = dot;
+      bestDir = [dx, dz];
+    }
+  }
+  targetCart.dirX = bestDir[0];
+  targetCart.dirZ = bestDir[1];
+  targetCart.speed = 11.5;
+  player.x = targetCart.x;
+  player.y = targetCart.y + 0.35;
+  player.z = targetCart.z;
+  player.vx = 0; player.vy = 0; player.vz = 0;
+  player.maxFallVel = 0;
+  if (btn) btn.classList.add('toggled');
+  sfx.play('rail');
+  return true;
+}
+
+function updateMinecarts(dt) {
+  for (let i = 0; i < minecarts.length; i++) {
+    const c = minecarts[i];
+    if (c.speed <= 0.05) continue;
+
+    let stepRem = c.speed * dt;
+    while (stepRem > 0.0001) {
+      const step = Math.min(stepRem, 0.25);
+      stepRem -= step;
+
+      const nextX = c.x + c.dirX * step;
+      const nextZ = c.z + c.dirZ * step;
+      const bx = Math.floor(nextX);
+      const by = Math.floor(c.y + 0.15);
+      const bz = Math.floor(nextZ);
+
+      if (isRailAt(bx, by, bz)) {
+        c.x = nextX;
+        c.z = nextZ;
+        c.y = by + 0.05;
+      } else if (isRailAt(bx, by + 1, bz)) {
+        // Climb 1-block slope
+        c.x = nextX;
+        c.z = nextZ;
+        c.y = by + 1.05;
+      } else if (isRailAt(bx, by - 1, bz)) {
+        // Descend 1-block slope
+        c.x = nextX;
+        c.z = nextZ;
+        c.y = by - 0.95;
+      } else {
+        // Check current block for 90-degree corner rail turn
+        const curBx = Math.floor(c.x);
+        const curBz = Math.floor(c.z);
+        const leftX = -c.dirZ, leftZ = c.dirX;
+        const rightX = c.dirZ, rightZ = -c.dirX;
+
+        if (isRailAt(curBx + leftX, by, curBz + leftZ) || isRailAt(curBx + leftX, by + 1, curBz + leftZ)) {
+          c.x = curBx + 0.5;
+          c.z = curBz + 0.5;
+          c.dirX = leftX;
+          c.dirZ = leftZ;
+        } else if (isRailAt(curBx + rightX, by, curBz + rightZ) || isRailAt(curBx + rightX, by + 1, curBz + rightZ)) {
+          c.x = curBx + 0.5;
+          c.z = curBz + 0.5;
+          c.dirX = rightX;
+          c.dirZ = rightZ;
+        } else if (isRailAt(curBx - c.dirX, by, curBz - c.dirZ) && BLOCK_DEFS[getVoxelGlobal(bx, by, bz)]?.solid) {
+          // Bounce back at solid bumper
+          c.dirX = -c.dirX;
+          c.dirZ = -c.dirZ;
+          sfx.play('rail');
+        } else {
+          // End of track
+          c.speed = 0;
+          break;
+        }
+      }
+    }
+
+    c.root.position.set(c.x, c.y, c.z);
+    c.root.rotation.y = Math.atan2(c.dirX, c.dirZ);
+
+    c.soundTimer += dt;
+    if (c.soundTimer > 0.28) {
+      c.soundTimer = 0;
+      sfx.play('rail');
+    }
+
+    if (ridingCart === c) {
+      player.x = c.x;
+      player.y = c.y + 0.35;
+      player.z = c.z;
+      player.vx = 0;
+      player.vy = 0;
+      player.vz = 0;
+      player.maxFallVel = 0;
+    }
+  }
 }
 

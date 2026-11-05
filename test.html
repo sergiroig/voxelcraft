@@ -1131,6 +1131,208 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 25: Punto 16 — Escaleras de Mano (LADDER) y Trampillas Mecánicas
+      // =========================================================================
+      describe('25. Escaleras de Mano (Escalado Vertical) y Trampillas Mecánicas Redstone', () => {
+        it('Permite trepar verticalmente por Escaleras de Mano (BLOCK.LADDER) y anula el daño por caída', () => {
+          const lx = Math.floor(vc.player.x);
+          const ly = 48;
+          const lz = Math.floor(vc.player.z);
+          vc.setVoxelGlobal(lx, ly, lz, vc.BLOCK.LADDER);
+          vc.setVoxelGlobal(lx, ly + 1, lz, vc.BLOCK.LADDER);
+          vc.setVoxelGlobal(lx, ly + 2, lz, vc.BLOCK.AIR);
+
+          const origY = vc.player.y;
+          const origFly = vc.player.flying;
+          vc.player.flying = false;
+          vc.player.y = ly + 0.1;
+          vc.player.maxFallVel = -25.0; // Lethal fall velocity before grabbing ladder
+
+          // Simulate holding Space/Jump on a ladder -> climbs up (vy = 4.6) and resets maxFallVel = 0
+          win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'Space' }));
+          vc.updatePlayerPhysics(0.05);
+          win.dispatchEvent(new win.KeyboardEvent('keyup', { code: 'Space' }));
+
+          assert(vc.player.maxFallVel === 0, 'Estar en una Escalera de Mano debe anular maxFallVel (0 daño por caída)');
+          assert(vc.player.vy > 4.0, `Al pulsar Espacio en una escalera debe ascender (vy=${vc.player.vy.toFixed(2)})`);
+          assert(vc.player.y > ly + 0.1, 'La altura Y del jugador debe incrementarse al trepar la escalera');
+
+          vc.player.vy = 0;
+          vc.player.y = origY;
+          vc.player.flying = origFly;
+          vc.setVoxelGlobal(lx, ly, lz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(lx, ly + 1, lz, vc.BLOCK.AIR);
+        });
+
+        it('Abre y cierra Trampillas Mecánicas (TRAPDOOR) manualmente y con Palancas Redstone', () => {
+          const tx = 14, ty = 52, tz = 10;
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.TRAPDOOR_CLOSED);
+          assert(vc.BLOCK_DEFS[vc.BLOCK.TRAPDOOR_CLOSED].solid === true, 'La trampilla cerrada debe ser sólida');
+
+          const opened = vc.toggleVoxelTrapdoor(tx, ty, tz);
+          assert(opened === true && vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.TRAPDOOR_OPEN, 'toggleVoxelTrapdoor debe abrir la trampilla');
+          assert(vc.BLOCK_DEFS[vc.BLOCK.TRAPDOOR_OPEN].solid === false, 'La trampilla abierta debe permitir el paso vertical');
+
+          // Toggle via nearby Redstone Lever
+          vc.setVoxelGlobal(tx - 1, ty, tz, vc.BLOCK.LEVER_ON);
+          vc.toggleVoxelLever(tx - 1, ty, tz); // Lever OFF -> Trapdoor closes
+          assert(vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.TRAPDOOR_CLOSED, 'Apagar la palanca Redstone debe cerrar la trampilla');
+          vc.toggleVoxelLever(tx - 1, ty, tz); // Lever ON -> Trapdoor opens
+          assert(vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.TRAPDOOR_OPEN, 'Encender la palanca Redstone debe abrir la trampilla');
+
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(tx - 1, ty, tz, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 26: Punto 17 — Vías de Ferrocarril (RAIL) y Vagoneta 3D Montable
+      // =========================================================================
+      describe('26. Vías de Ferrocarril (BLOCK.RAIL) y Vagoneta de Tren 3D Montable (R)', () => {
+        it('Desplaza la Vagoneta 3D automáticamente sobre vías rectas, curvas de 90° y pendientes', () => {
+          const rx = 6, ry = 53, rz = 6;
+          // Build an L-shaped railroad track: (6,53,6) -> (7,53,6) -> (8,53,6) -> corner turn -> (8,53,7) -> slope up -> (8,54,8)
+          vc.setVoxelGlobal(rx,     ry,     rz,     vc.BLOCK.RAIL);
+          vc.setVoxelGlobal(rx + 1, ry,     rz,     vc.BLOCK.RAIL);
+          vc.setVoxelGlobal(rx + 2, ry,     rz,     vc.BLOCK.RAIL);
+          vc.setVoxelGlobal(rx + 2, ry,     rz + 1, vc.BLOCK.RAIL);
+          vc.setVoxelGlobal(rx + 2, ry + 1, rz + 2, vc.BLOCK.RAIL);
+
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          vc.player.yaw = -Math.PI / 2; // Facing +X
+
+          const cart = vc.spawnMinecart(rx, ry, rz);
+          assert(cart && vc.minecarts.includes(cart), 'spawnMinecart debe crear e insertar la vagoneta 3D');
+
+          const mounted = vc.toggleRideMinecart(cart);
+          assert(mounted === true && vc.getRidingCart() === cart, 'toggleRideMinecart debe montar al jugador en la vagoneta');
+
+          // Advance minecart along straight + corner + slope
+          for (let step = 0; step < 18; step++) {
+            vc.updateMinecarts(0.025);
+          }
+
+          assert(cart.x > rx + 1.5, `La vagoneta debe haber avanzado en +X por la vía (x=${cart.x.toFixed(2)})`);
+          assert(cart.z > rz + 0.7, `La vagoneta debe haber girado 90° en la curva hacia +Z (z=${cart.z.toFixed(2)})`);
+          assertApprox(vc.player.x, cart.x, 0.05, 'El jugador montado debe viajar sincronizado con la vagoneta');
+
+          // Dismount
+          const dismounted = vc.toggleRideMinecart();
+          assert(dismounted === false && vc.getRidingCart() === null, 'Volver a llamar a toggleRideMinecart debe desmontar al jugador');
+
+          // Cleanup
+          while (vc.minecarts.length > 0) {
+            const c = vc.minecarts.pop();
+            vc.scene.remove(c.root);
+          }
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.setVoxelGlobal(rx,     ry,     rz,     vc.BLOCK.AIR);
+          vc.setVoxelGlobal(rx + 1, ry,     rz,     vc.BLOCK.AIR);
+          vc.setVoxelGlobal(rx + 2, ry,     rz,     vc.BLOCK.AIR);
+          vc.setVoxelGlobal(rx + 2, ry,     rz + 1, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(rx + 2, ry + 1, rz + 2, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 27: Punto 18 — Cofres del Tesoro y Almacenamiento Persistente
+      // =========================================================================
+      describe('27. Cofres del Tesoro (BLOCK.CHEST) y Almacenamiento Persistente', () => {
+        it('Entrega botín de tesoro al abrir un Cofre por primera vez y permite guardar/retirar objetos después', () => {
+          const cx = 10, cy = 53, cz = 10;
+          const key = `${cx},${cy},${cz}`;
+          delete vc.chestLootMap[key];
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.CHEST);
+
+          const diamondsBefore = vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] || 0;
+          const res1 = vc.openVoxelChest(cx, cy, cz);
+          assert(res1 && res1.action === 'looted', 'La primera apertura del cofre debe otorgar el botín (action="looted")');
+          assert(
+            vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] >= diamondsBefore + 2,
+            'Abrir el cofre del tesoro debe añadir Diamantes al inventario'
+          );
+
+          // Second interaction stores items from currently selected hotbar slot
+          vc.updateHotbarSelection(6); // Cobblestone slot
+          vc.inventoryCounts[vc.BLOCK.COBBLE] = 20;
+          const res2 = vc.openVoxelChest(cx, cy, cz);
+          assert(res2 && res2.action === 'stored' && res2.count === 4, 'La segunda interacción con el cofre vacío debe guardar 4 bloques');
+          assert(vc.inventoryCounts[vc.BLOCK.COBBLE] === 16, 'En supervivencia guardar en el cofre debe descontar del inventario');
+
+          // Third interaction withdraws the stored items back to inventory
+          const res3 = vc.openVoxelChest(cx, cy, cz);
+          assert(res3 && res3.action === 'withdrawn' && res3.count === 4, 'La tercera interacción debe retirar los 4 bloques guardados');
+          assert(vc.inventoryCounts[vc.BLOCK.COBBLE] === 20, 'Al retirar del cofre los bloques vuelven al inventario del jugador');
+
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.AIR);
+          delete vc.chestLootMap[key];
+        });
+      });
+
+      // =========================================================================
+      // SUITE 28: Punto 19 — Creeper Explosivo y Gólem de Hierro Aliado
+      // =========================================================================
+      describe('28. Creeper Explosivo y Gólem de Hierro Guardián Aliado', () => {
+        it('El Creeper se hincha al acercarse al jugador y detona tras 1.3s de mecha', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          const creeper = vc.spawnMob('creeper', vc.player.x + 1.2, vc.player.y, vc.player.z);
+          assert(creeper && creeper.type === 'creeper', 'spawnMob("creeper") debe crear un Creeper');
+
+          vc.updateMobs(0.4);
+          assert(creeper.fuseTimer > 0.3, `El Creeper cercano al jugador debe activar su mecha (fuseTimer=${creeper.fuseTimer.toFixed(2)})`);
+          assert(creeper.root.scale.x > 1.05, 'El modelo 3D del Creeper debe hincharse antes de explotar');
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+
+        it('Invoca un Gólem de Hierro Aliado al colocar Piedra Luminosa sobre 2 bloques de Hierro y ataca Zombis/Creepers', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          const gx = 12, gy = 53, gz = 12;
+          vc.setVoxelGlobal(gx, gy - 2, gz, vc.BLOCK.IRON_ORE);
+          vc.setVoxelGlobal(gx, gy - 1, gz, vc.BLOCK.IRON_ORE);
+          vc.setVoxelGlobal(gx, gy,     gz, vc.BLOCK.GLOWSTONE);
+
+          const golem = vc.trySummonIronGolem(gx, gy, gz);
+          assert(golem && golem.type === 'golem' && golem.allied === true, 'trySummonIronGolem debe invocar un Gólem de Hierro aliado');
+          assert(vc.getVoxelGlobal(gx, gy - 1, gz) === vc.BLOCK.AIR, 'Los bloques del tótem deben consumirse al invocar al Gólem');
+
+          // Spawn a hostile zombie right next to the Golem and step AI -> Golem strikes and launches the zombie!
+          const zom = vc.spawnMob('zombie', gx + 1.2, gy - 2, gz + 0.5);
+          const hpBefore = zom.hp;
+          vc.updateMobs(0.05);
+          assert(zom.hp < hpBefore, `El Gólem de Hierro debe atacar a los monstruos hostiles cercanos (HP ${zom.hp} vs ${hpBefore})`);
+
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 29: Punto 20 — Balizas GPS (Waypoints), Brújula en Radar y Teletransporte
+      // =========================================================================
+      describe('29. Balizas GPS (Waypoints), Brújula en Radar 2D y Teletransporte (B)', () => {
+        it('Crea Balizas GPS con coordenadas/color, las dibuja en el Radar 2D y teletransporta al jugador', () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          const initialCount = vc.waypoints.length;
+
+          vc.player.x = 24.5; vc.player.y = 40; vc.player.z = -18.5;
+          const wp = vc.addWaypoint('Mina de Diamantes');
+          assert(vc.waypoints.length === initialCount + 1, 'addWaypoint debe añadir una nueva baliza a la lista');
+          assert(wp.name === 'Mina de Diamantes' && wp.x === 25 && wp.z === -18, 'La baliza debe registrar nombre y coordenadas exactas');
+
+          // Move player away and teleport back to the new waypoint
+          vc.player.x = 8.5; vc.player.z = 8.5;
+          const tpRes = vc.teleportToWaypoint(vc.waypoints.length - 1);
+          assert(tpRes === wp, 'teleportToWaypoint debe devolver la baliza destino');
+          assertApprox(vc.player.x, wp.x + 0.5, 0.1, 'El jugador debe teletransportarse a la coordenada X de la baliza');
+          assertApprox(vc.player.z, wp.z + 0.5, 0.1, 'El jugador debe teletransportarse a la coordenada Z de la baliza');
+
+          // Remove test waypoint and restore player position
+          vc.removeWaypoint(vc.waypoints.length - 1);
+          assert(vc.waypoints.length === initialCount, 'removeWaypoint debe eliminar la baliza');
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -1187,6 +1389,10 @@
       }
       vc.toggleWeather('rain');
       vc.shootArrow(vc.player.x, vc.player.y + 1.5, vc.player.z, 0, 0.2, -1);
+      vc.setVoxelGlobal(10, 52, 10, vc.BLOCK.RAIL);
+      vc.setVoxelGlobal(11, 52, 10, vc.BLOCK.RAIL);
+      const benchCart = vc.spawnMinecart(10, 52, 10);
+      benchCart.speed = 11.5;
 
       const perFrameFeatures = [
         { name: 'Render WebGL + Shaders GPU (Viento/Olas/Lava)',    ms: bench(() => { vc.renderer.render(vc.scene, vc.camera); }, 120) },
@@ -1194,7 +1400,8 @@
         { name: 'Drops 3D Flotantes e Imantados (InstancedMesh)',   ms: bench(() => { vc.updateItemDrops(0.016); }, 500) },
         { name: 'Clima Dinámico: Lluvia/Nieve/Tormentas (1 Draw)',  ms: bench(() => { vc.updateWeather(0.016); }, 500) },
         { name: 'Smart Frustum Culling 3D (Box3 vs Camera)',        ms: bench(() => { vc.updateFrustumCulling(); }, 500) },
-        { name: 'Minimapa Radar 2D Topográfico (Amortizado 10 Hz)', ms: bench(() => { vc.updateMinimap(0.016, false); }, 500) },
+        { name: 'Minimapa Radar 2D + Balizas GPS (Amortizado 10 Hz)',ms: bench(() => { vc.updateMinimap(0.016, false); }, 500) },
+        { name: 'Vagonetas 3D y Físicas de Vías (BLOCK.RAIL)',       ms: bench(() => { vc.updateMinecarts(0.016); }, 500) },
         { name: 'Flechas Balísticas 3D (Arco InstancedMesh)',       ms: bench(() => { vc.updateArrows(0.016); }, 500) },
         { name: 'Físicas del Jugador + Avatar 3ªP + Slime Bounce',  ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
         { name: 'Pool Partículas InstancedMesh (120 instancias)',   ms: bench(() => { vc.updateParticles(0.016); }, 500) },
@@ -1206,6 +1413,12 @@
       ];
 
       while (vc.mobs.length > 0) vc.removeMobAt(0);
+      while (vc.minecarts.length > 0) {
+        const c = vc.minecarts.pop();
+        vc.scene.remove(c.root);
+      }
+      vc.setVoxelGlobal(10, 52, 10, vc.BLOCK.AIR);
+      vc.setVoxelGlobal(11, 52, 10, vc.BLOCK.AIR);
       for (const d of vc.itemDrops) d.active = false;
       for (const a of vc.arrows) a.active = false;
       vc.toggleWeather('clear');

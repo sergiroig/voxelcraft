@@ -357,11 +357,15 @@ function createWorldGenerator(seed) {
       }
       setLocal(7, chamberY + 1, 8, BLOCK.GOLD_ORE);
       setLocal(9, chamberY + 1, 8, BLOCK.DIAMOND_ORE);
+      setLocal(8, chamberY + 1, 7, BLOCK.CHEST);
       setLocal(8, chamberY + 1, 8, BLOCK.TNT);
       setLocal(8, chamberY + 2, 8, BLOCK.GLOWSTONE);
+      for (let ly = chamberY + 1; ly <= baseY + 1; ly++) {
+        setLocal(7, ly, 7, BLOCK.LADDER);
+      }
       return { type: 'pyramid', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8, chamberY };
     } else {
-      // 5x4x5 Explorer Cabin (Oak corner pillars, Plank walls, Glass windows, Torch inside)
+      // 5x4x5 Explorer Cabin (Oak corner pillars, Plank walls, Glass windows, Torch & Treasure Chest inside)
       for (let dz = -2; dz <= 2; dz++) {
         for (let dx = -2; dx <= 2; dx++) {
           setLocal(8 + dx, baseY, 8 + dz, BLOCK.COBBLE);
@@ -386,6 +390,7 @@ function createWorldGenerator(seed) {
         }
       }
       setLocal(8, baseY + 1, 8, BLOCK.TORCH);
+      setLocal(7, baseY + 1, 7, BLOCK.CHEST);
       return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
     }
   }

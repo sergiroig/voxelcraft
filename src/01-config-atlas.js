@@ -50,16 +50,22 @@ const BLOCK = {
   SLIME: 37,
   DOOR_CLOSED: 38,
   DOOR_OPEN: 39,
+  LADDER: 40,
+  TRAPDOOR_CLOSED: 41,
+  TRAPDOOR_OPEN: 42,
+  RAIL: 43,
+  CHEST: 44,
   // Special Tool & Consumable IDs (not placed as blocks)
   TOOL_PICKAXE: 100,
   TOOL_SWORD: 101,
   TOOL_BOW: 102,
   ITEM_APPLE: 103,
-  ITEM_BREAD: 104
+  ITEM_BREAD: 104,
+  ITEM_MINECART: 105
 };
 
-// Atlas has 42 tiles (columns) of 16x16 pixels
-const ATLAS_COLS = 42;
+// Atlas has 47 tiles (columns) of 16x16 pixels
+const ATLAS_COLS = 47;
 const TILE_PX = 16;
 
 // Block Definitions:
@@ -107,11 +113,17 @@ const BLOCK_DEFS = {
   [BLOCK.SLIME]:             { name: 'Bloque de Slime (Rebote)', solid: true, opaque: true, shape: 'cube', light: 0,  hardness: 0.25, stoneLike: false, color: 0x4ade80, tiles: [40,40,40,40,40,40] },
   [BLOCK.DOOR_CLOSED]:       { name: 'Compuerta Mecánica',    solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.55, stoneLike: false, color: 0x92400e, tiles: [41,41,41,41,41,41] },
   [BLOCK.DOOR_OPEN]:         { name: 'Compuerta (Abierta)',   solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.55, stoneLike: false, color: 0xb45309, tiles: [41,41,41,41,41,41] },
+  [BLOCK.LADDER]:            { name: 'Escalera de Mano',      solid: false, opaque: false, climbable: true, shape: 'cube', light: 0, hardness: 0.30, stoneLike: false, color: 0xc28e4c, tiles: [42,42,42,42,42,42] },
+  [BLOCK.TRAPDOOR_CLOSED]:   { name: 'Trampilla Mecánica',    solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.45, stoneLike: false, color: 0x854d0e, tiles: [43,43,43,43,43,43] },
+  [BLOCK.TRAPDOOR_OPEN]:     { name: 'Trampilla (Abierta)',   solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.45, stoneLike: false, color: 0xa16207, tiles: [43,43,43,43,43,43] },
+  [BLOCK.RAIL]:              { name: 'Vía de Ferrocarril',    solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.25, stoneLike: true,  color: 0x94a3b8, tiles: [44,44,44,44,44,44] },
+  [BLOCK.CHEST]:             { name: 'Cofre de Tesoro',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xd97706, tiles: [45,45,46,46,46,46] },
   [BLOCK.TOOL_PICKAXE]:      { name: 'Pico de Diamante',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_SWORD]:        { name: 'Espada de Diamante',    solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_BOW]:          { name: 'Arco y Flechas',        solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
   [BLOCK.ITEM_APPLE]:        { name: 'Manzana Curativa (+4❤)',solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xef4444, tiles: [23,23,23,23,23,23] },
-  [BLOCK.ITEM_BREAD]:        { name: 'Pan Crujiente (+5❤)',   solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] }
+  [BLOCK.ITEM_BREAD]:        { name: 'Pan Crujiente (+5❤)',   solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] },
+  [BLOCK.ITEM_MINECART]:     { name: 'Vagoneta de Tren (R)',  solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x94a3b8, tiles: [44,44,44,44,44,44] }
 };
 
 const ALL_INVENTORY_ITEMS = [
@@ -120,6 +132,11 @@ const ALL_INVENTORY_ITEMS = [
   BLOCK.TOOL_BOW,
   BLOCK.ITEM_APPLE,
   BLOCK.ITEM_BREAD,
+  BLOCK.ITEM_MINECART,
+  BLOCK.RAIL,
+  BLOCK.LADDER,
+  BLOCK.TRAPDOOR_CLOSED,
+  BLOCK.CHEST,
   BLOCK.TORCH,
   BLOCK.TNT,
   BLOCK.SLIME,
@@ -264,6 +281,36 @@ const CRAFTING_RECIPES = [
     outId: BLOCK.DOOR_CLOSED,
     outCount: 2,
     ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.COBBLE, count: 1 }]
+  },
+  {
+    name: '4× Escalera de Mano',
+    outId: BLOCK.LADDER,
+    outCount: 4,
+    ingredients: [{ id: BLOCK.PLANKS, count: 2 }]
+  },
+  {
+    name: '2× Trampilla Mecánica',
+    outId: BLOCK.TRAPDOOR_CLOSED,
+    outCount: 2,
+    ingredients: [{ id: BLOCK.PLANKS, count: 2 }]
+  },
+  {
+    name: '6× Vía de Ferrocarril',
+    outId: BLOCK.RAIL,
+    outCount: 6,
+    ingredients: [{ id: BLOCK.IRON_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
+  },
+  {
+    name: '1× Vagoneta de Tren (R)',
+    outId: BLOCK.ITEM_MINECART,
+    outCount: 1,
+    ingredients: [{ id: BLOCK.IRON_ORE, count: 2 }]
+  },
+  {
+    name: '1× Cofre de Tesoro',
+    outId: BLOCK.CHEST,
+    outCount: 1,
+    ingredients: [{ id: BLOCK.PLANKS, count: 4 }]
   }
 ];
 
@@ -275,6 +322,11 @@ function createInitialInventoryCounts() {
   counts[BLOCK.TOOL_BOW] = 1;
   counts[BLOCK.ITEM_APPLE] = 6;
   counts[BLOCK.ITEM_BREAD] = 4;
+  counts[BLOCK.ITEM_MINECART] = 2;
+  counts[BLOCK.RAIL] = 24;
+  counts[BLOCK.LADDER] = 16;
+  counts[BLOCK.TRAPDOOR_CLOSED] = 8;
+  counts[BLOCK.CHEST] = 4;
   counts[BLOCK.SAPLING] = 8;
   counts[BLOCK.WHEAT_1] = 10;
   counts[BLOCK.WHEAT_3] = 6;
@@ -296,6 +348,7 @@ function createInitialInventoryCounts() {
   counts[BLOCK.GLOWSTONE] = 16;
   counts[BLOCK.WOOD] = 12;
   counts[BLOCK.COAL_ORE] = 12;
+  counts[BLOCK.IRON_ORE] = 8;
   counts[BLOCK.GOLD_ORE] = 6;
   counts[BLOCK.DIAMOND_ORE] = 4;
   return counts;
@@ -309,6 +362,7 @@ function getDropItemForBlock(blockId) {
   if (blockId === BLOCK.LEVER_ON) return BLOCK.LEVER_OFF;
   if (blockId === BLOCK.REDSTONE_LAMP_ON) return BLOCK.REDSTONE_LAMP_OFF;
   if (blockId === BLOCK.DOOR_OPEN) return BLOCK.DOOR_CLOSED;
+  if (blockId === BLOCK.TRAPDOOR_OPEN) return BLOCK.TRAPDOOR_CLOSED;
   if (blockId === BLOCK.WHEAT_2) return BLOCK.WHEAT_1;
   if (blockId === BLOCK.LEAVES) {
     const r = Math.random();
@@ -602,6 +656,48 @@ function createProceduralAtlas() {
     if (y < 7 && (x === 5 || x === 10)) return shade(148, 163, 184, 0.92);
     if (y < 7) return null;
     return shade(156, 108, 62, 0.88 + r * 0.16);
+  });
+
+  // 42: Ladder (Vertical rails + horizontal wooden rungs)
+  drawTile(42, (x, y, r) => {
+    const rail = (x >= 2 && x <= 3) || (x >= 12 && x <= 13);
+    const rung = (x >= 2 && x <= 13) && (y === 2 || y === 6 || y === 10 || y === 14);
+    if (rail) return shade(162, 114, 62, 0.9 + r * 0.15);
+    if (rung) return shade(194, 142, 76, 0.92 + r * 0.14);
+    return null;
+  });
+
+  // 43: Trapdoor (Oak hatch with 4 square cutouts & iron hinges)
+  drawTile(43, (x, y, r) => {
+    const frame = x <= 2 || x >= 13 || y <= 2 || y >= 13 || x === 7 || x === 8 || y === 7 || y === 8;
+    if ((x === 1 || x === 14) && (y === 3 || y === 12)) return shade(148, 163, 184, 0.95);
+    if (frame) return shade(146, 96, 48, 0.9 + r * 0.14);
+    return null;
+  });
+
+  // 44: Railroad Track (Wooden sleepers + metallic steel rails)
+  drawTile(44, (x, y, r) => {
+    const rail = (x === 3 || x === 4 || x === 11 || x === 12);
+    const tie = (x >= 1 && x <= 14) && (y % 4 === 1 || y % 4 === 2);
+    if (rail) return shade(203, 213, 225, 0.92 + r * 0.12);
+    if (tie) return shade(132, 88, 46, 0.88 + r * 0.14);
+    return null;
+  });
+
+  // 45: Treasure Chest Top/Bottom (Oak lid with dark iron trim)
+  drawTile(45, (x, y, r) => {
+    const rim = x === 0 || x === 15 || y === 0 || y === 15;
+    if (rim) return shade(45, 32, 20, 0.95);
+    return shade(184, 118, 42, 0.88 + r * 0.16);
+  });
+
+  // 46: Treasure Chest Side (Oak planks + black seam + golden latch)
+  drawTile(46, (x, y, r) => {
+    if (x >= 7 && x <= 8 && y >= 4 && y <= 7) return shade(250, 204, 21, 0.98);
+    if (y === 5) return shade(28, 22, 16, 0.98);
+    const rim = x === 0 || x === 15 || y === 0 || y === 15;
+    if (rim) return shade(62, 40, 22, 0.94);
+    return shade(176, 112, 38, 0.88 + r * 0.16);
   });
 
   const texture = new THREE.CanvasTexture(canvas);

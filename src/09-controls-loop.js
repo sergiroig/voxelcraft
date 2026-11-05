@@ -66,6 +66,10 @@ window.addEventListener('keydown', (e) => {
     toggleCameraMode();
   } else if (e.code === 'KeyZ') {
     toggleZoom();
+  } else if (e.code === 'KeyR') {
+    toggleRideMinecart();
+  } else if (e.code === 'KeyB') {
+    addWaypoint();
   } else if (e.code === 'KeyT') {
     toggleDayNight();
   } else if (e.code === 'KeyV') {
@@ -320,6 +324,8 @@ bindTap('tbtn-mode',    () => toggleGameMode());
 bindTap('tbtn-fly',     () => toggleFlyingMode());
 bindTap('tbtn-cam',     () => toggleCameraMode());
 bindTap('tbtn-zoom',    () => toggleZoom());
+bindTap('tbtn-cart',    () => toggleRideMinecart());
+bindTap('tbtn-wp',      () => addWaypoint());
 bindTap('tbtn-time',    () => toggleDayNight());
 bindTap('tbtn-weather', () => toggleWeather());
 bindTap('tbtn-music',   () => toggleMusic());
@@ -364,6 +370,7 @@ function animate(now) {
   lastTime = now;
 
   if (isGameActive()) {
+    updateMinecarts(dt);
     updatePlayerPhysics(dt);
     updateVoxelSimulation(dt);
     updateMobs(dt);
@@ -430,6 +437,8 @@ function animate(now) {
   }
 }
 
+requestAnimationFrame(animate);
+
 // Expose zero-overhead testing & introspection hook for automated test suites
 window.__VOXELCRAFT__ = {
   BLOCK,
@@ -480,6 +489,20 @@ window.__VOXELCRAFT__ = {
   eatHeldApple,
   growTreeAt,
   toggleVoxelDoor,
+  toggleVoxelTrapdoor,
+  chestLootMap,
+  openVoxelChest,
+  minecarts,
+  getRidingCart: () => ridingCart,
+  spawnMinecart,
+  toggleRideMinecart,
+  updateMinecarts,
+  trySummonIronGolem,
+  waypoints,
+  addWaypoint,
+  removeWaypoint,
+  teleportToWaypoint,
+  buildWaypointsUI,
   weatherInstanced,
   toggleWeather,
   triggerLightningFlash,
