@@ -15,67 +15,39 @@ const tbtnModeEl = document.getElementById('tbtn-mode');
 function drawItemIcon(canvas, itemId) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 16, 16);
-  if (itemId === BLOCK.TOOL_PICKAXE) {
-    ctx.fillStyle = '#7a542e';
-    for (let i = 2; i <= 12; i++) ctx.fillRect(i, 15 - i, 2, 2);
-    ctx.fillStyle = '#5decf5';
-    ctx.fillRect(8, 2, 6, 2);
-    ctx.fillRect(12, 4, 2, 4);
-    ctx.fillRect(7, 3, 2, 2);
+  if (!itemId || itemId === BLOCK.AIR) {
+    ctx.fillStyle = '#0284c7'; ctx.fillRect(5, 11, 6, 4);
+    ctx.fillStyle = '#f1c27d'; ctx.fillRect(5, 5, 6, 6); ctx.fillRect(4, 6, 1, 3);
+  } else if (itemId === BLOCK.TOOL_PICKAXE) {
+    ctx.fillStyle = '#7a542e'; for (let i = 2; i <= 12; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#5decf5'; ctx.fillRect(8, 2, 6, 2); ctx.fillRect(12, 4, 2, 4); ctx.fillRect(7, 3, 2, 2);
   } else if (itemId === BLOCK.TOOL_SWORD) {
-    ctx.fillStyle = '#7a542e';
-    ctx.fillRect(2, 12, 3, 3);
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(4, 9, 4, 2);
-    ctx.fillStyle = '#38bdf8';
-    for (let i = 5; i <= 13; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#7a542e'; ctx.fillRect(2, 12, 3, 3);
+    ctx.fillStyle = '#facc15'; ctx.fillRect(4, 9, 4, 2);
+    ctx.fillStyle = '#38bdf8'; for (let i = 5; i <= 13; i++) ctx.fillRect(i, 15 - i, 2, 2);
   } else if (itemId === BLOCK.TOOL_BOW) {
-    ctx.fillStyle = '#cbd5e1';
-    for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(5, 2, 4, 2);
-    ctx.fillRect(9, 4, 2, 8);
-    ctx.fillRect(5, 12, 4, 2);
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(3, 7, 10, 2);
+    ctx.fillStyle = '#cbd5e1'; for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
+    ctx.fillStyle = '#92400e'; ctx.fillRect(5, 2, 4, 2); ctx.fillRect(9, 4, 2, 8); ctx.fillRect(5, 12, 4, 2);
+    ctx.fillStyle = '#fef08a'; ctx.fillRect(3, 7, 10, 2);
   } else if (itemId === BLOCK.ITEM_APPLE) {
-    ctx.fillStyle = '#22c55e';
-    ctx.fillRect(8, 2, 3, 2);
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(4, 4, 8, 9);
-    ctx.fillRect(3, 5, 10, 7);
-    ctx.fillStyle = '#fca5a5';
-    ctx.fillRect(5, 5, 2, 2);
+    ctx.fillStyle = '#22c55e'; ctx.fillRect(8, 2, 3, 2);
+    ctx.fillStyle = '#ef4444'; ctx.fillRect(4, 4, 8, 9); ctx.fillRect(3, 5, 10, 7);
+    ctx.fillStyle = '#fca5a5'; ctx.fillRect(5, 5, 2, 2);
   } else if (itemId === BLOCK.ITEM_BREAD) {
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(2, 6, 12, 6);
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(3, 5, 10, 6);
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(4, 6, 8, 3);
+    ctx.fillStyle = '#92400e'; ctx.fillRect(2, 6, 12, 6);
+    ctx.fillStyle = '#d97706'; ctx.fillRect(3, 5, 10, 6);
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(4, 6, 8, 3);
   } else if (itemId === BLOCK.ITEM_MINECART) {
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(2, 5, 12, 6);
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(4, 6, 8, 3);
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(3, 11, 3, 3);
-    ctx.fillRect(10, 11, 3, 3);
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(2, 5, 12, 6);
+    ctx.fillStyle = '#475569'; ctx.fillRect(4, 6, 8, 3);
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(3, 11, 3, 3); ctx.fillRect(10, 11, 3, 3);
   } else if (itemId === BLOCK.ITEM_BOAT) {
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(1, 8, 14, 5);
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(3, 7, 10, 4);
-    ctx.fillStyle = '#fcd34d';
-    ctx.fillRect(6, 3, 2, 6);
-    ctx.fillRect(9, 3, 2, 6);
+    ctx.fillStyle = '#78350f'; ctx.fillRect(1, 8, 14, 5);
+    ctx.fillStyle = '#d97706'; ctx.fillRect(3, 7, 10, 4);
+    ctx.fillStyle = '#fcd34d'; ctx.fillRect(6, 3, 2, 6); ctx.fillRect(9, 3, 2, 6);
   } else if (itemId === BLOCK.TOOL_GRAPPLING_HOOK) {
-    ctx.fillStyle = '#cbd5e1';
-    for (let i = 2; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
-    ctx.fillStyle = '#c084fc';
-    ctx.fillRect(9, 2, 5, 2);
-    ctx.fillRect(12, 4, 2, 4);
-    ctx.fillRect(7, 4, 3, 2);
+    ctx.fillStyle = '#cbd5e1'; for (let i = 2; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#c084fc'; ctx.fillRect(9, 2, 5, 2); ctx.fillRect(12, 4, 2, 4); ctx.fillRect(7, 4, 3, 2);
   } else {
     const def = BLOCK_DEFS[itemId];
     const tileIndex = def.tiles[2];
@@ -84,16 +56,11 @@ function drawItemIcon(canvas, itemId) {
 }
 
 function formatItemCountBadge(itemId) {
-  if (
-    itemId === BLOCK.TOOL_PICKAXE ||
-    itemId === BLOCK.TOOL_SWORD ||
-    itemId === BLOCK.TOOL_BOW ||
-    itemId === BLOCK.TOOL_GRAPPLING_HOOK ||
-    gameMode === 'creative'
-  ) {
-    return '∞';
-  }
-  return `${inventoryCounts[itemId] || 0}`;
+  if (!itemId || itemId === BLOCK.AIR) return '';
+  if (gameMode === 'creative') return '∞';
+  const count = inventoryCounts[itemId] || 0;
+  if ((itemId >= 100 && itemId <= 102) || itemId === BLOCK.TOOL_GRAPPLING_HOOK) return count > 0 ? '∞' : '0';
+  return `${count}`;
 }
 
 function canCraftRecipe(recipeIdx) {
@@ -115,6 +82,8 @@ function craftRecipe(recipeIdx) {
     }
   }
   inventoryCounts[rec.outId] = (inventoryCounts[rec.outId] || 0) + rec.outCount;
+  autoEquipToHotbar(rec.outId);
+  saveWorldData();
   sfx.play('craft');
   refreshInventoryCountsUI();
   return true;
@@ -248,10 +217,12 @@ if (btnAddWaypointEl) {
 
 function buildInventoryModal() {
   invGridEl.innerHTML = '';
-  ALL_INVENTORY_ITEMS.forEach((bId) => {
+  [BLOCK.AIR, ...ALL_INVENTORY_ITEMS].forEach((bId) => {
     const def = BLOCK_DEFS[bId];
+    const hasItem = bId === BLOCK.AIR || gameMode === 'creative' || (inventoryCounts[bId] || 0) > 0;
     const card = document.createElement('div');
     card.className = 'inv-item';
+    if (!hasItem) card.style.opacity = '0.42';
     const badge = document.createElement('div');
     badge.className = 'count';
     badge.textContent = formatItemCountBadge(bId);
@@ -267,7 +238,8 @@ function buildInventoryModal() {
 
     const selectItem = (e) => {
       e.preventDefault();
-      hotbarSlots[selectedSlot] = bId;
+      hotbarSlots[selectedSlot] = hasItem ? bId : BLOCK.AIR;
+      saveWorldData();
       buildHotbarUI();
       toggleInventory(false);
     };
@@ -416,7 +388,7 @@ function toggleFlyingMode() {
 }
 
 function placeBlockAtCurrentTarget() {
-  const bId = hotbarSlots[selectedSlot];
+  const bId = getActiveHeldItem();
 
   // 1. Always prioritize interacting with targeted interactive world blocks (Chest, Lever, Door, Trapdoor, Portal, Obsidian)
   if (currentHit) {
@@ -514,7 +486,7 @@ function placeBlockAtCurrentTarget() {
     return true;
   }
 
-  if (bId === BLOCK.TOOL_PICKAXE) return false;
+  if (bId === BLOCK.AIR || bId === BLOCK.TOOL_PICKAXE) return false;
   if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
 
   const isReplaceable = currentHit.block === BLOCK.TALL_GRASS;
@@ -551,6 +523,8 @@ function placeBlockAtCurrentTarget() {
     if (setVoxelGlobal(px, py, pz, actualPlaceId)) {
       if (gameMode === 'survival') {
         inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
+        if (inventoryCounts[bId] <= 0 && hotbarSlots[selectedSlot] === bId) hotbarSlots[selectedSlot] = BLOCK.AIR;
+        saveWorldData();
         refreshInventoryCountsUI();
       }
       if (actualPlaceId === BLOCK.GLOWSTONE) trySummonIronGolem(px, py, pz);
@@ -567,9 +541,9 @@ function updateHotbarSelection(idx) {
   selectedSlot = (idx + hotbarSlots.length) % hotbarSlots.length;
   const slots = hotbarEl.querySelectorAll('.slot');
   slots.forEach((s, i) => s.classList.toggle('active', i === selectedSlot));
-  const bId = hotbarSlots[selectedSlot];
+  const bId = getActiveHeldItem();
   const badge = formatItemCountBadge(bId);
-  blockLabelEl.textContent = `${selectedSlot + 1}. ${BLOCK_DEFS[bId].name} (${badge})`;
+  blockLabelEl.textContent = bId === BLOCK.AIR ? `${selectedSlot + 1}. Mano` : `${selectedSlot + 1}. ${BLOCK_DEFS[bId].name} (${badge})`;
   updateHeldItemVisual();
 }
 
@@ -636,6 +610,10 @@ function applyWorldSeed(newSeed) {
   const parsed = Number(newSeed);
   worldSeed = (!Number.isNaN(parsed) && parsed > 0) ? Math.floor(parsed) : Math.floor(Math.random() * 999999);
   worldDeltas = {};
+  chestLootMap = {};
+  for (const bId of ALL_INVENTORY_ITEMS) inventoryCounts[bId] = 0;
+  hotbarSlots.fill(BLOCK.AIR);
+  refreshInventoryCountsUI();
   saveWorldData();
   generator = createWorldGenerator(worldSeed);
 

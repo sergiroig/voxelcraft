@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=10"></iframe>
+    <iframe id="game-frame" src="./index.html?v=11"></iframe>
   </div>
 
   <script>
@@ -311,6 +311,30 @@
           vc.setVoxelGlobal(11, 50, 10, vc.BLOCK.STONE);
           const hit = { x: 11, y: 50, z: 10, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.STONE };
           vc.setTouchPlaying(true);
+          // 1. Verificar que una partida nueva empieza sin objetos (todo a 0) y con la Mano vacía (BLOCK.AIR)
+          const initCounts = vc.createInitialInventoryCounts();
+          assert(
+            Object.values(initCounts).every(v => v === 0),
+            'Cada nueva partida debe empezar con 0 objetos en createInitialInventoryCounts()'
+          );
+          vc.hotbarSlots[0] = vc.BLOCK.AIR;
+          vc.updateHotbarSelection(0);
+          assert(
+            doc.getElementById('block-label').textContent.includes('Mano'),
+            `Con la ranura vacía debe mostrarse "Mano" en la interfaz (obtuvo "${doc.getElementById('block-label').textContent}")`
+          );
+
+          // 2. Picar Piedra con la Mano debe ser lento (speedMult=0.35 -> < 10% en 0.15s)
+          vc.setMiningHeld(true);
+          vc.updateMining(0.15, hit);
+          const pHand = vc.getState().mineProgress;
+          assert(pHand > 0.02 && pHand < 0.12, `La Mano debe picar piedra lentamente (pHand=${pHand.toFixed(3)})`);
+          vc.setMiningHeld(false);
+          vc.updateMining(0.01, null);
+
+          // 3. Equipar Pico de Diamante en ranura 0 -> acelera x3.5 sobre la dureza base (10x más rápido que la Mano en piedra)
+          vc.inventoryCounts[vc.BLOCK.TOOL_PICKAXE] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.TOOL_PICKAXE;
           vc.updateHotbarSelection(0); // Ranura 0: Pico de Diamante
           vc.setMiningHeld(true);
 
@@ -1302,6 +1326,7 @@
           );
 
           // Second interaction stores items from currently selected hotbar slot
+          vc.hotbarSlots[6] = vc.BLOCK.COBBLE;
           vc.updateHotbarSelection(6); // Cobblestone slot
           vc.inventoryCounts[vc.BLOCK.COBBLE] = 20;
           const res2 = vc.openVoxelChest(cx, cy, cz);
@@ -1336,6 +1361,8 @@
           assert(hit && hit.block === vc.BLOCK.CHEST, `Mirar al cofre desde la entrada de la cabaña debe apuntar a BLOCK.CHEST y no ser bloqueado por la antorcha (obtuvo block=${hit ? hit.block : 'null'})`);
 
           // Select Bow slot (slot 2) and right-click the chest -> must open #chest-modal instead of shooting arrow
+          vc.inventoryCounts[vc.BLOCK.TOOL_BOW] = 1;
+          vc.hotbarSlots[2] = vc.BLOCK.TOOL_BOW;
           vc.updateHotbarSelection(2);
           vc.setCurrentHit(hit);
           vc.placeBlockAtCurrentTarget();

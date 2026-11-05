@@ -420,10 +420,14 @@ function eatHeldApple(foodItemOverride) {
   const healAmount = heldId === BLOCK.ITEM_BREAD ? 5 : 4;
   if (gameMode === 'survival' && (inventoryCounts[heldId] || 0) <= 0) return false;
   if (player.health >= player.maxHealth && gameMode === 'survival') return false;
-  if (gameMode === 'survival') inventoryCounts[heldId] = Math.max(0, (inventoryCounts[heldId] || 1) - 1);
+  if (gameMode === 'survival') {
+    inventoryCounts[heldId] = Math.max(0, (inventoryCounts[heldId] || 1) - 1);
+    if (inventoryCounts[heldId] <= 0 && hotbarSlots[selectedSlot] === heldId) hotbarSlots[selectedSlot] = BLOCK.AIR;
+  }
   player.health = Math.min(player.maxHealth, player.health + healAmount);
   renderHeartsUI();
   refreshInventoryCountsUI();
+  saveWorldData();
   player.swingTime = 1.0;
   sfx.play('eat');
   return true;
@@ -572,7 +576,10 @@ function openVoxelChest(wx, wy, wz) {
       { id: BLOCK.RAIL, count: 8 },
       { id: BLOCK.ITEM_MINECART, count: 1 }
     ];
-    for (const item of lootItems) inventoryCounts[item.id] = (inventoryCounts[item.id] || 0) + item.count;
+    for (const item of lootItems) {
+      inventoryCounts[item.id] = (inventoryCounts[item.id] || 0) + item.count;
+      autoEquipToHotbar(item.id);
+    }
     record = { opened: true, storedId: 0, storedCount: 0, items: [], lastLoot: lootItems, lootAwarded: lootItems.length };
     chestLootMap[key] = record;
     refreshInventoryCountsUI();

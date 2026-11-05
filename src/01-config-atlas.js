@@ -79,7 +79,7 @@ const TILE_PX = 16;
 // light: 0..15 emitted block light
 // hardness: seconds to break by hand (pickaxe mines stone/ores 3.2x faster)
 const BLOCK_DEFS = {
-  [BLOCK.AIR]:                 { name: 'Aire',                     solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xffffff, tiles: [0,0,0,0,0,0] },
+  [BLOCK.AIR]:                 { name: 'Mano',                     solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xf1c27d, tiles: [0,0,0,0,0,0] },
   [BLOCK.GRASS]:               { name: 'Césped',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x58a83a, tiles: [0, 2, 1, 1, 1, 1] },
   [BLOCK.DIRT]:                { name: 'Tierra',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.38, stoneLike: false, color: 0x866043, tiles: [2, 2, 2, 2, 2, 2] },
   [BLOCK.STONE]:               { name: 'Piedra',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.05, stoneLike: true,  color: 0x7d8084, tiles: [3, 3, 3, 3, 3, 3] },
@@ -190,17 +190,7 @@ const ALL_INVENTORY_ITEMS = [
   BLOCK.CACTUS
 ];
 
-const hotbarSlots = [
-  BLOCK.TOOL_PICKAXE,
-  BLOCK.TOOL_SWORD,
-  BLOCK.TOOL_BOW,
-  BLOCK.ITEM_APPLE,
-  BLOCK.TORCH,
-  BLOCK.TNT,
-  BLOCK.COBBLE,
-  BLOCK.PLANKS,
-  BLOCK.LEVER_OFF
-];
+const hotbarSlots = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 // Fast Crafting Recipes (1-click / 1-tap in Inventory Modal E)
 const CRAFTING_RECIPES = [
@@ -235,52 +225,25 @@ const CRAFTING_RECIPES = [
 
 function createInitialInventoryCounts() {
   const counts = {};
-  for (const bId of ALL_INVENTORY_ITEMS) counts[bId] = 8;
-  counts[BLOCK.TOOL_PICKAXE] = 1;
-  counts[BLOCK.TOOL_SWORD] = 1;
-  counts[BLOCK.TOOL_BOW] = 1;
-  counts[BLOCK.TOOL_GRAPPLING_HOOK] = 1;
-  counts[BLOCK.ITEM_APPLE] = 6;
-  counts[BLOCK.ITEM_BREAD] = 4;
-  counts[BLOCK.ITEM_MINECART] = 2;
-  counts[BLOCK.ITEM_BOAT] = 2;
-  counts[BLOCK.LILY_PAD] = 12;
-  counts[BLOCK.PISTON] = 8;
-  counts[BLOCK.PORTAL] = 6;
-  counts[BLOCK.ICE] = 16;
-  counts[BLOCK.RAIL] = 24;
-  counts[BLOCK.LADDER] = 16;
-  counts[BLOCK.TRAPDOOR_CLOSED] = 8;
-  counts[BLOCK.CHEST] = 4;
-  counts[BLOCK.SAPLING] = 8;
-  counts[BLOCK.WHEAT_1] = 10;
-  counts[BLOCK.WHEAT_3] = 6;
-  counts[BLOCK.AMETHYST] = 10;
-  counts[BLOCK.GLOW_MUSHROOM] = 10;
-  counts[BLOCK.SLIME] = 12;
-  counts[BLOCK.DOOR_CLOSED] = 8;
-  counts[BLOCK.TORCH] = 24;
-  counts[BLOCK.TNT] = 10;
-  counts[BLOCK.LEVER_OFF] = 8;
-  counts[BLOCK.REDSTONE_LAMP_OFF] = 8;
-  counts[BLOCK.LAVA] = 6;
-  counts[BLOCK.OBSIDIAN] = 12;
-  counts[BLOCK.COBBLE] = 48;
-  counts[BLOCK.PLANKS] = 48;
-  counts[BLOCK.SAND] = 24;
-  counts[BLOCK.BRICK] = 24;
-  counts[BLOCK.GLASS] = 24;
-  counts[BLOCK.GLOWSTONE] = 16;
-  counts[BLOCK.WOOD] = 12;
-  counts[BLOCK.COAL_ORE] = 12;
-  counts[BLOCK.IRON_ORE] = 8;
-  counts[BLOCK.GOLD_ORE] = 6;
-  counts[BLOCK.DIAMOND_ORE] = 4;
+  for (const bId of ALL_INVENTORY_ITEMS) counts[bId] = 0;
   return counts;
 }
 
 let gameMode = 'survival'; // 'survival' or 'creative'
 let inventoryCounts = createInitialInventoryCounts();
+
+function getActiveHeldItem() {
+  const bId = hotbarSlots[selectedSlot] || BLOCK.AIR;
+  if (bId === BLOCK.AIR) return BLOCK.AIR;
+  if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return BLOCK.AIR;
+  return bId;
+}
+
+function autoEquipToHotbar(itemId) {
+  if (!itemId || itemId === BLOCK.AIR || hotbarSlots.includes(itemId)) return;
+  const emptyIdx = hotbarSlots.indexOf(BLOCK.AIR);
+  if (emptyIdx !== -1) hotbarSlots[emptyIdx] = itemId;
+}
 
 function getDropItemForBlock(blockId) {
   if (blockId === BLOCK.STONE) return BLOCK.COBBLE;

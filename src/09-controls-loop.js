@@ -76,7 +76,7 @@ let currentHit = null;
 
 function triggerPrimaryAttackOrMine() {
   player.swingTime = 1.0;
-  const heldId = hotbarSlots[selectedSlot];
+  const heldId = getActiveHeldItem();
   const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
 
   if (heldId === BLOCK.TOOL_BOW) {
@@ -114,7 +114,7 @@ window.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
     triggerPrimaryAttackOrMine();
   } else if (e.button === 2) {
-    if (hotbarSlots[selectedSlot] === BLOCK.TOOL_SWORD && !currentHit) {
+    if (getActiveHeldItem() === BLOCK.TOOL_SWORD && !currentHit) {
       toggleShieldBlock(true);
     } else {
       placeBlockAtCurrentTarget();
@@ -520,7 +520,7 @@ requestAnimationFrame(animate);
 // Expose zero-overhead testing & introspection hook for automated test suites
 window.__VOXELCRAFT__ = {
   BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES,
-  hotbarSlots, inventoryCounts, CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS,
+  hotbarSlots, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar, CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS,
   atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
   player, playerAvatar, toggleCameraMode, toggleZoom,
   getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),

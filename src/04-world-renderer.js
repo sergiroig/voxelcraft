@@ -21,13 +21,15 @@ function loadSaveData() {
       worldDeltas = parsed.deltas || {};
       if (parsed.chests && typeof parsed.chests === 'object') chestLootMap = parsed.chests;
       if (Array.isArray(parsed.waypoints) && parsed.waypoints.length > 0) waypoints = parsed.waypoints;
+      if (parsed.inventory && typeof parsed.inventory === 'object') Object.assign(inventoryCounts, parsed.inventory);
+      if (Array.isArray(parsed.hotbar) && parsed.hotbar.length === 9) for (let i = 0; i < 9; i++) hotbarSlots[i] = parsed.hotbar[i];
     }
   } catch (_) {}
 }
 
 function saveWorldData() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ seed: worldSeed, deltas: worldDeltas, chests: chestLootMap, waypoints }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ seed: worldSeed, deltas: worldDeltas, chests: chestLootMap, waypoints, inventory: inventoryCounts, hotbar: hotbarSlots }));
   } catch (_) {}
 }
 
@@ -468,7 +470,8 @@ const handMesh = new THREE.Mesh(handGeo, handMat);
 handGroup.add(handMesh);
 
 function updateHeldItemVisual() {
-  const bId = hotbarSlots[selectedSlot];
+  const bId = getActiveHeldItem();
+  if (bId === BLOCK.AIR) { handMat.color.setHex(0xf1c27d); handMesh.scale.set(0.48, 0.48, 1.15); handMesh.rotation.set(0.35, -0.35, 0.12); return; }
   const def = BLOCK_DEFS[bId];
   handMat.color.setHex(def.color || 0xffffff);
   if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) {
@@ -618,6 +621,7 @@ function spawnItemDrop(wx, wy, wz, blockOrItemId, count = 1, pickupDelay = 0.22)
 function addInventoryItem(itemId, count = 1) {
   if (!ALL_INVENTORY_ITEMS.includes(itemId)) return;
   inventoryCounts[itemId] = (inventoryCounts[itemId] || 0) + count;
+  autoEquipToHotbar(itemId); saveWorldData();
   if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
 }
 

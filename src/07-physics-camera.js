@@ -587,8 +587,8 @@ function updateMining(dt, currentHit) {
   if (key !== mineTargetKey) { mineTargetKey = key; mineProgress = 0; }
 
   const def = BLOCK_DEFS[currentHit.block];
-  const holdingPickaxe = hotbarSlots[selectedSlot] === BLOCK.TOOL_PICKAXE;
-  const speedMult = (holdingPickaxe && def.stoneLike) ? 3.5 : (holdingPickaxe ? 1.5 : 1.0);
+  const holdingPickaxe = getActiveHeldItem() === BLOCK.TOOL_PICKAXE;
+  const speedMult = holdingPickaxe ? (def.stoneLike ? 3.5 : 1.5) : (def.stoneLike ? 0.35 : 0.55);
   const duration = Math.max(0.05, def.hardness / speedMult);
 
   mineProgress += dt / duration;
