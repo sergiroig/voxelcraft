@@ -8,9 +8,10 @@ const MAX_MOBS = 14;
 const mobs = [];
 let mobSpawnTimer = 0;
 
-// Procedural 16-tile Pixel-Art Mob Atlas (128x8 px, 0 external assets, 0 extra draw calls)
+// Procedural 23-tile Pixel-Art Mob Atlas (184x8 px, 0 external assets, 0 extra draw calls)
+const MOB_ATLAS_TILES = 23, MOB_ATLAS_W = MOB_ATLAS_TILES * 8;
 const mobAtlasCanvas = document.createElement('canvas');
-mobAtlasCanvas.width = 128;
+mobAtlasCanvas.width = MOB_ATLAS_W;
 mobAtlasCanvas.height = 8;
 const mobCtx = mobAtlasCanvas.getContext('2d');
 const paintMobTile = (t, base, alt, fn) => {
@@ -23,28 +24,35 @@ const paintMobTile = (t, base, alt, fn) => {
   }
   if (fn) fn((x, y, w, h, c) => { mobCtx.fillStyle = c; mobCtx.fillRect(x0 + x, y, w, h); });
 };
-// 0..3: Zombie (Face, Skin/Hair, Shirt, Pants/Shoes)
+// 0..5: Zombie (Face, HeadSide, CleanSkin, HairTop, Shirt, Pants/Shoes)
 paintMobTile(0, '#4d7c43', '#3f6837', (r) => { r(0,0,8,2,'#273b22'); r(1,3,2,2,'#111827'); r(5,3,2,2,'#111827'); r(3,4,2,1,'#2e4f28'); r(2,6,4,1,'#1e293b'); });
 paintMobTile(1, '#4d7c43', '#3f6837', (r) => { r(0,0,8,2,'#273b22'); });
-paintMobTile(2, '#0e7490', '#0891b2', (r) => { r(3,0,2,2,'#3f6837'); r(2,1,4,1,'#164e63'); r(0,6,8,2,'#155e75'); });
-paintMobTile(3, '#312e81', '#3730a3', (r) => { r(3,0,2,6,'#1e1b4b'); r(0,6,8,2,'#1e293b'); });
-// 4..6: Skeleton (Skull Face, Ribcage, Bone) & 15: Bow Arm
-paintMobTile(4, '#e2e8f0', '#cbd5e1', (r) => { r(1,3,2,2,'#0f172a'); r(5,3,2,2,'#0f172a'); r(3,5,2,1,'#1e293b'); r(1,6,6,1,'#334155'); r(2,6,1,1,'#f8fafc'); r(4,6,1,1,'#f8fafc'); r(6,6,1,1,'#f8fafc'); });
-paintMobTile(5, '#1e293b', '#0f172a', (r) => { r(3,0,2,8,'#e2e8f0'); r(1,1,6,1,'#cbd5e1'); r(1,3,6,1,'#cbd5e1'); r(1,5,6,1,'#cbd5e1'); r(1,7,6,1,'#94a3b8'); });
-paintMobTile(6, '#cbd5e1', '#94a3b8', (r) => { r(2,0,4,8,'#e2e8f0'); });
-// 7..8: Creeper (Iconic Face, Camo Body/Feet)
-paintMobTile(7, '#22c55e', '#16a34a', (r) => { r(0,1,2,1,'#4ade80'); r(6,0,2,2,'#4ade80'); r(1,2,2,2,'#090d0a'); r(5,2,2,2,'#090d0a'); r(3,4,2,3,'#090d0a'); r(2,5,1,3,'#090d0a'); r(5,5,1,3,'#090d0a'); });
-paintMobTile(8, '#22c55e', '#15803d', (r) => { r(1,2,2,2,'#4ade80'); r(5,4,2,2,'#4ade80'); r(1,7,2,1,'#0f172a'); r(5,7,2,1,'#0f172a'); });
-// 9..10: Iron Golem (Red-Eyed Face, Vine-Clad Iron Body)
-paintMobTile(9, '#cbd5e1', '#94a3b8', (r) => { r(1,2,6,1,'#334155'); r(1,3,2,1,'#dc2626'); r(5,3,2,1,'#dc2626'); r(2,3,1,1,'#facc15'); r(5,3,1,1,'#facc15'); r(3,3,2,4,'#64748b'); });
-paintMobTile(10, '#e2e8f0', '#cbd5e1', (r) => { r(0,0,8,1,'#94a3b8'); r(1,1,2,6,'#65a30d'); r(2,2,2,5,'#4d7c0f'); r(5,3,2,5,'#65a30d'); });
-// 11..13: Sheep (Face, Fluffy Wool, Hoofed Leg)
-paintMobTile(11, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,2,'#f8fafc'); r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); r(3,5,2,2,'#f472b6'); });
-paintMobTile(12, '#f8fafc', '#e2e8f0', (r) => { r(1,1,2,2,'#cbd5e1'); r(5,4,2,2,'#cbd5e1'); });
-paintMobTile(13, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,3,'#f8fafc'); r(0,6,8,2,'#475569'); });
-// 14..15: Pig (Face + Snout, Pink Body + Hooves) & Skeleton Bow
-paintMobTile(14, '#f49cbb', '#ec83a8', (r) => { r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); r(2,4,4,3,'#f472b6'); r(2,5,1,1,'#831843'); r(5,5,1,1,'#831843'); });
-paintMobTile(15, '#f49cbb', '#ec83a8', (r) => { r(0,6,8,2,'#9d174d'); });
+paintMobTile(2, '#4d7c43', '#3f6837');
+paintMobTile(3, '#273b22', '#1f351b');
+paintMobTile(4, '#0e7490', '#0891b2', (r) => { r(3,0,2,2,'#3f6837'); r(2,1,4,1,'#164e63'); r(0,6,8,2,'#155e75'); });
+paintMobTile(5, '#312e81', '#3730a3', (r) => { r(3,0,2,6,'#1e1b4b'); r(0,6,8,2,'#1e293b'); });
+// 6..9: Skeleton (Skull Face, Ribcage, Bone, Wooden Bow)
+paintMobTile(6, '#e2e8f0', '#cbd5e1', (r) => { r(1,3,2,2,'#0f172a'); r(5,3,2,2,'#0f172a'); r(3,5,2,1,'#1e293b'); r(1,6,6,1,'#334155'); r(2,6,1,1,'#f8fafc'); r(4,6,1,1,'#f8fafc'); r(6,6,1,1,'#f8fafc'); });
+paintMobTile(7, '#1e293b', '#0f172a', (r) => { r(3,0,2,8,'#e2e8f0'); r(1,1,6,1,'#cbd5e1'); r(1,3,6,1,'#cbd5e1'); r(1,5,6,1,'#cbd5e1'); r(1,7,6,1,'#94a3b8'); });
+paintMobTile(8, '#cbd5e1', '#94a3b8', (r) => { r(2,0,4,8,'#e2e8f0'); });
+paintMobTile(9, '#92400e', '#78350f', (r) => { r(6,0,1,8,'#e2e8f0'); });
+// 10..12: Creeper (Iconic Face, Clean Camo, Toed Foot)
+paintMobTile(10, '#22c55e', '#16a34a', (r) => { r(0,1,2,1,'#4ade80'); r(6,0,2,2,'#4ade80'); r(1,2,2,2,'#090d0a'); r(5,2,2,2,'#090d0a'); r(3,4,2,3,'#090d0a'); r(2,5,1,3,'#090d0a'); r(5,5,1,3,'#090d0a'); });
+paintMobTile(11, '#22c55e', '#15803d', (r) => { r(1,2,2,2,'#4ade80'); r(5,4,2,2,'#4ade80'); });
+paintMobTile(12, '#22c55e', '#15803d', (r) => { r(1,7,2,1,'#0f172a'); r(5,7,2,1,'#0f172a'); });
+// 13..15: Iron Golem (Red-Eyed Face, Vine-Clad Iron Chest, Clean Weathered Iron)
+paintMobTile(13, '#cbd5e1', '#94a3b8', (r) => { r(1,2,6,1,'#334155'); r(1,3,2,1,'#dc2626'); r(5,3,2,1,'#dc2626'); r(2,3,1,1,'#facc15'); r(5,3,1,1,'#facc15'); });
+paintMobTile(14, '#e2e8f0', '#cbd5e1', (r) => { r(0,0,8,1,'#94a3b8'); r(1,1,2,6,'#65a30d'); r(2,2,2,5,'#4d7c0f'); r(5,3,2,5,'#65a30d'); });
+paintMobTile(15, '#cbd5e1', '#94a3b8', (r) => { r(0,0,8,1,'#e2e8f0'); });
+// 16..18: Sheep (Face, Fluffy Wool, Hoofed Leg)
+paintMobTile(16, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,2,'#f8fafc'); r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); r(3,5,2,2,'#f472b6'); });
+paintMobTile(17, '#f8fafc', '#e2e8f0', (r) => { r(1,1,2,2,'#cbd5e1'); r(5,4,2,2,'#cbd5e1'); });
+paintMobTile(18, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,3,'#f8fafc'); r(0,6,8,2,'#475569'); });
+// 19..22: Pig (Face with Eyes Only, 3D Snout Front with Nostrils Only, Clean Pink Skin, Hoofed Leg)
+paintMobTile(19, '#f49cbb', '#ec83a8', (r) => { r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); });
+paintMobTile(20, '#f472b6', '#ec83a8', (r) => { r(1,3,2,2,'#831843'); r(5,3,2,2,'#831843'); });
+paintMobTile(21, '#f49cbb', '#ec83a8');
+paintMobTile(22, '#f49cbb', '#ec83a8', (r) => { r(0,6,8,2,'#9d174d'); });
 
 const mobAtlasTexture = new THREE.CanvasTexture(mobAtlasCanvas);
 mobAtlasTexture.magFilter = THREE.NearestFilter;
@@ -58,7 +66,7 @@ function makeMobBox(w, h, d, fFront, fSide, fTop = fSide, fBot = fSide, extra = 
     const sh = [0.82, 0.82, 1.0, 0.62, 0.95, 0.76];
     const col = new Float32Array(24 * 3);
     for (let f = 0; f < 6; f++) {
-      const t = tiles[f], u0 = (t * 8 + 0.15) / 128, u1 = ((t + 1) * 8 - 0.15) / 128;
+      const t = tiles[f], u0 = (t * 8 + 0.15) / MOB_ATLAS_W, u1 = ((t + 1) * 8 - 0.15) / MOB_ATLAS_W;
       const b = f * 8;
       uv[b] = u0; uv[b + 1] = 0.98; uv[b + 2] = u1; uv[b + 3] = 0.98;
       uv[b + 4] = u0; uv[b + 5] = 0.02; uv[b + 6] = u1; uv[b + 7] = 0.02;
@@ -72,7 +80,8 @@ function makeMobBox(w, h, d, fFront, fSide, fTop = fSide, fBot = fSide, extra = 
   };
   const main = buildPart(w, h, d, 0, 0, 0, [fSide, fSide, fTop, fBot, fFront, fSide]);
   if (!extra) return main;
-  const sub = buildPart(extra[0], extra[1], extra[2], extra[3], extra[4], extra[5], [extra[6], extra[6], extra[6], extra[6], extra[6], extra[6]]);
+  const eFront = extra[6], eSide = extra[7] !== undefined ? extra[7] : eFront;
+  const sub = buildPart(extra[0], extra[1], extra[2], extra[3], extra[4], extra[5], [eSide, eSide, eSide, eSide, eFront, eSide]);
   const merged = new THREE.BufferGeometry();
   for (const attr of ['position', 'normal', 'uv', 'color']) {
     const a = main.attributes[attr].array, b = sub.attributes[attr].array, itemSize = main.attributes[attr].itemSize;
@@ -89,28 +98,28 @@ function makeMobBox(w, h, d, fFront, fSide, fTop = fSide, fBot = fSide, extra = 
 
 // Shared detailed geometries across all mobs (zero per-mob geometry allocation & zero extra draw calls!)
 const mobGeos = {
-  headZombie:  makeMobBox(0.46, 0.46, 0.46, 0, 1, 1, 1),
-  bodyZombie:  makeMobBox(0.50, 0.72, 0.28, 2, 2, 2, 2),
-  armZombie:   makeMobBox(0.20, 0.20, 0.64, 1, 1, 2, 1),
-  legZombie:   makeMobBox(0.22, 0.68, 0.22, 3, 3, 3, 3),
-  headSkel:    makeMobBox(0.46, 0.46, 0.46, 4, 6, 6, 6),
-  bodySkel:    makeMobBox(0.46, 0.72, 0.24, 5, 5, 6, 6),
-  armSkelL:    makeMobBox(0.16, 0.16, 0.64, 6, 6, 6, 6),
-  armSkelR:    makeMobBox(0.16, 0.16, 0.64, 6, 6, 6, 6, [0.07, 0.50, 0.10, 0, 0, 0.34, 3]),
-  legSkel:     makeMobBox(0.16, 0.68, 0.16, 6, 6, 6, 6),
-  headCreeper: makeMobBox(0.46, 0.46, 0.46, 7, 8, 8, 8),
-  bodyCreeper: makeMobBox(0.46, 0.82, 0.28, 8, 8, 8, 8),
-  legCreeper:  makeMobBox(0.22, 0.36, 0.22, 8, 8, 8, 8),
-  headGolem:   makeMobBox(0.46, 0.50, 0.46, 9, 10, 10, 10, [0.12, 0.22, 0.09, 0, -0.09, 0.25, 9]),
-  bodyGolem:   makeMobBox(0.82, 0.94, 0.46, 10, 10, 10, 10),
-  armGolem:    makeMobBox(0.24, 1.12, 0.24, 10, 10, 10, 10),
-  legGolem:    makeMobBox(0.24, 0.68, 0.24, 10, 10, 10, 10),
-  headSheep:   makeMobBox(0.44, 0.44, 0.46, 11, 12, 12, 11, [0.48, 0.18, 0.40, 0, 0.15, -0.02, 12]),
-  bodySheep:   makeMobBox(0.64, 0.54, 0.92, 12, 12, 12, 12),
-  legSheep:    makeMobBox(0.20, 0.42, 0.20, 13, 13, 12, 13),
-  headPig:     makeMobBox(0.46, 0.46, 0.46, 14, 15, 15, 15, [0.22, 0.15, 0.09, 0, -0.07, 0.25, 14]),
-  bodyPig:     makeMobBox(0.62, 0.52, 0.92, 15, 15, 15, 15),
-  legPig:      makeMobBox(0.20, 0.42, 0.20, 15, 15, 15, 15)
+  headZombie:  makeMobBox(0.46, 0.46, 0.46, 0, 1, 3, 2),
+  bodyZombie:  makeMobBox(0.50, 0.72, 0.28, 4, 4, 4, 4),
+  armZombie:   makeMobBox(0.20, 0.20, 0.64, 2, 2, 2, 2),
+  legZombie:   makeMobBox(0.22, 0.68, 0.22, 5, 5, 5, 5),
+  headSkel:    makeMobBox(0.46, 0.46, 0.46, 6, 8, 8, 8),
+  bodySkel:    makeMobBox(0.46, 0.72, 0.24, 7, 7, 8, 8),
+  armSkelL:    makeMobBox(0.16, 0.16, 0.64, 8, 8, 8, 8),
+  armSkelR:    makeMobBox(0.16, 0.16, 0.64, 8, 8, 8, 8, [0.07, 0.50, 0.10, 0, 0, 0.34, 9, 9]),
+  legSkel:     makeMobBox(0.16, 0.68, 0.16, 8, 8, 8, 8),
+  headCreeper: makeMobBox(0.46, 0.46, 0.46, 10, 11, 11, 11),
+  bodyCreeper: makeMobBox(0.46, 0.82, 0.28, 11, 11, 11, 11),
+  legCreeper:  makeMobBox(0.22, 0.36, 0.22, 12, 12, 11, 12),
+  headGolem:   makeMobBox(0.46, 0.50, 0.46, 13, 15, 15, 15, [0.12, 0.22, 0.09, 0, -0.09, 0.25, 15, 15]),
+  bodyGolem:   makeMobBox(0.82, 0.94, 0.46, 14, 15, 15, 15),
+  armGolem:    makeMobBox(0.24, 1.12, 0.24, 14, 15, 15, 15),
+  legGolem:    makeMobBox(0.24, 0.68, 0.24, 15, 15, 15, 15),
+  headSheep:   makeMobBox(0.44, 0.44, 0.46, 16, 17, 17, 16, [0.48, 0.18, 0.40, 0, 0.15, -0.02, 17, 17]),
+  bodySheep:   makeMobBox(0.64, 0.54, 0.92, 17, 17, 17, 17),
+  legSheep:    makeMobBox(0.20, 0.42, 0.20, 18, 18, 17, 18),
+  headPig:     makeMobBox(0.46, 0.46, 0.46, 19, 21, 21, 21, [0.22, 0.15, 0.09, 0, -0.07, 0.25, 20, 21]),
+  bodyPig:     makeMobBox(0.62, 0.52, 0.92, 21, 21, 21, 21),
+  legPig:      makeMobBox(0.20, 0.42, 0.20, 22, 22, 21, 22)
 };
 
 function createMobMesh(type) {
