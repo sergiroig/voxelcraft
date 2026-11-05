@@ -1164,9 +1164,9 @@
       }
 
       function hash3D(x, y, z) {
-        let h = (x * 374761393 + y * 668265263 + z * 2147483647 + seed * 1442695041) | 0;
-        h = (h ^ (h >> 13)) * 1274126177;
-        return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+        let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1442695041) + Math.imul(seed, 1274126177)) | 0;
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
       }
 
       function getBiomeAt(wx, wz) {
@@ -2418,11 +2418,13 @@
       if (simAccum < 0.16 || simQueue.size === 0) return;
       simAccum = 0;
 
-      const batch = Array.from(simQueue).slice(0, 40);
+      const batch = Array.from(simQueue).slice(0, 256);
       for (const key of batch) simQueue.delete(key);
 
       const dirtySet = new Set();
+      const movedThisTick = new Set();
       for (let i = 0; i < batch.length; i++) {
+        if (movedThisTick.has(batch[i])) continue;
         const [wx, wy, wz] = batch[i].split(',').map(Number);
         if (wy <= 1 || wy >= CHUNK_HEIGHT) continue;
         const b = getVoxelGlobal(wx, wy, wz);
@@ -2432,17 +2434,20 @@
           if (below === BLOCK.AIR || below === BLOCK.WATER) {
             setVoxelRawNoRebuild(wx, wy, wz, below === BLOCK.WATER ? BLOCK.WATER : BLOCK.AIR, dirtySet);
             setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.SAND, dirtySet);
+            movedThisTick.add(`${wx},${wy - 1},${wz}`);
           }
         } else if (b === BLOCK.WATER) {
           const below = getVoxelGlobal(wx, wy - 1, wz);
           if (below === BLOCK.AIR && wy - 1 > 1) {
             setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet);
+            movedThisTick.add(`${wx},${wy - 1},${wz}`);
           } else if (wy <= SEA_LEVEL) {
             for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
               if (getVoxelGlobal(wx + dx, wy, wz + dz) === BLOCK.AIR) {
                 const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
                 if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER) {
                   setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet);
+                  movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
                 }
               }
             }
@@ -3611,9 +3616,9 @@
 
     function updateJoystickFromTouch(touch) {
       const rect = joyZoneEl.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const maxR = rect.width * 0.42;
+      const cx = rect.width > 0 ? rect.left + rect.width / 2 : 90;
+      const cy = rect.height > 0 ? rect.top + rect.height / 2 : 400;
+      const maxR = Math.max(28, rect.width * 0.42);
 
       let dx = touch.clientX - cx;
       let dy = touch.clientY - cy;
@@ -3874,6 +3879,91 @@
         frameDurationSum = 0;
       }
     }
+
+    // Expose zero-overhead testing & introspection hook for automated test suites
+    window.__VOXELCRAFT__ = {
+      BLOCK,
+      BLOCK_DEFS,
+      ALL_INVENTORY_ITEMS,
+      hotbarSlots,
+      CHUNK_SIZE,
+      CHUNK_HEIGHT,
+      CHUNK_VOLUME,
+      SEA_LEVEL,
+      ATLAS_COLS,
+      atlasCanvas,
+      atlasTexture,
+      crackTextures,
+      scene,
+      camera,
+      renderer,
+      player,
+      chunks,
+      buildQueue,
+      simQueue,
+      mobs,
+      activeTNTs,
+      particles,
+      particleInstanced,
+      skyGroup,
+      sunMesh,
+      moonMesh,
+      starField,
+      cloudMesh,
+      getChunkData,
+      getVoxelGlobal,
+      setVoxelGlobal,
+      getLightGlobal,
+      computeChunkLighting,
+      buildChunkMeshArrays,
+      rebuildChunkImmediate,
+      raycastVoxel,
+      raycastMob,
+      igniteTNT,
+      explodeAt,
+      updateVoxelSimulation,
+      spawnMob,
+      damageMob,
+      removeMobAt,
+      updateMobs,
+      updatePlayerPhysics,
+      checkAABBCollision,
+      damagePlayer,
+      updateMining,
+      updateDynamicSky,
+      updateChunkStreaming,
+      toggleDayNight,
+      toggleFlyingMode,
+      toggleInventory,
+      updateHotbarSelection,
+      placeBlockAtCurrentTarget,
+      triggerPrimaryAttackOrMine,
+      startGameplay,
+      isGameActive,
+      getState: () => ({
+        worldSeed,
+        worldDeltas,
+        selectedSlot,
+        renderDistance,
+        isNight,
+        sunFactor,
+        invOpen,
+        isLocked,
+        touchPlaying,
+        isMiningHeld,
+        mineProgress,
+        currentHit,
+        joyX,
+        joyY,
+        joySprint
+      }),
+      setMiningHeld: (v) => { isMiningHeld = v; },
+      setCurrentHit: (h) => { currentHit = h; },
+      setTouchPlaying: (v) => {
+        touchPlaying = v;
+        touchControlsEl.classList.toggle('active', !!v);
+      }
+    };
 
     requestAnimationFrame(animate);
   })();

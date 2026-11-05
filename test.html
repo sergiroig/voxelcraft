@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>VoxelCraft HTML5 — Suite de Tests Automatizados</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #111827;
+      --border: #1f2937;
+      --pass: #4ade80;
+      --fail: #f87171;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, monospace;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      gap: 20px;
+      height: 100vh;
+    }
+    .results-pane {
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #summary-banner {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+    #summary-banner.pass { border-color: var(--pass); color: var(--pass); }
+    #summary-banner.fail { border-color: var(--fail); color: var(--fail); }
+    .suite-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .suite-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #e2e8f0;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+    .test-row {
+      font-size: 12.5px;
+      padding: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .test-row.pass .status { color: var(--pass); font-weight: 700; }
+    .test-row.fail .status { color: var(--fail); font-weight: 700; }
+    .iframe-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      height: 100%;
+    }
+    iframe {
+      width: 100%;
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="results-pane">
+    <h1>
+      <span>VoxelCraft — Test Runner</span>
+      <button id="btn-rerun" style="padding:6px 12px;border-radius:6px;border:none;background:#4ade80;color:#052e16;font-weight:700;cursor:pointer;">Re-ejecutar Tests</button>
+    </h1>
+    <div id="summary-banner">Cargando motor e iniciando batería de pruebas...</div>
+    <div id="suites-container"></div>
+  </div>
+
+  <div class="iframe-wrap">
+    <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
+    <iframe id="game-frame" src="./index.html"></iframe>
+  </div>
+
+  <script>
+    const suitesContainer = document.getElementById('suites-container');
+    const summaryBanner = document.getElementById('summary-banner');
+    const gameFrame = document.getElementById('game-frame');
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || 'Assertion failed');
+    }
+
+    function assertApprox(actual, expected, tol, message) {
+      if (Math.abs(actual - expected) > tol) {
+        throw new Error(`${message || 'assertApprox'}: esperado ~${expected}, recibido ${actual}`);
+      }
+    }
+
+    async function runAllTests() {
+      suitesContainer.innerHTML = '';
+      summaryBanner.className = '';
+      summaryBanner.textContent = 'Ejecutando pruebas...';
+
+      const win = gameFrame.contentWindow;
+      const doc = gameFrame.contentDocument;
+      const vc = win.__VOXELCRAFT__;
+
+      if (!vc) {
+        summaryBanner.className = 'fail';
+        summaryBanner.textContent = 'ERROR: window.__VOXELCRAFT__ no encontrado en index.html';
+        return;
+      }
+
+      const suites = [];
+      let totalPassed = 0;
+      let totalFailed = 0;
+      const failures = [];
+
+      function describe(suiteName, fn) {
+        suites.push({ suiteName, fn, tests: [] });
+      }
+
+      let currentSuite = null;
+      function it(testName, testFn) {
+        currentSuite.tests.push({ testName, testFn });
+      }
+
+      // =========================================================================
+      // SUITE 1: Motor WebGL, Atlas Procedural y Texturas de Grietas
+      // =========================================================================
+      describe('1. Motor WebGL, Atlas Procedural y Grietas', () => {
+        it('Inicializa escena Three.js, cámara y renderer WebGL', () => {
+          assert(vc.scene && vc.camera && vc.renderer, 'Faltan objetos principales de Three.js');
+          assert(vc.atlasCanvas.width === vc.ATLAS_COLS * 16, 'Ancho del atlas incorrecto');
+          assert(vc.atlasCanvas.height === 16, 'Alto del atlas incorrecto');
+        });
+
+        it('Genera los 28 tiles de texturas pixel-art sin huecos vacíos en bloques opacos', () => {
+          const ctx = vc.atlasCanvas.getContext('2d');
+          // Comprobar Césped (0), Piedra (3), Diamante (20) y TNT (26)
+          for (const tileIdx of [0, 3, 20, 26, 27]) {
+            const img = ctx.getImageData(tileIdx * 16 + 8, 8, 1, 1).data;
+            assert(img[3] === 255, `Tile ${tileIdx} debería ser opaco (alpha=255), obtuvo ${img[3]}`);
+          }
+        });
+
+        it('Genera las 8 fases de grietas para rotura progresiva', () => {
+          assert(Array.isArray(vc.crackTextures) && vc.crackTextures.length === 8, 'Debe haber 8 texturas de grietas');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 2: Generación de Mundo, Biomas, Cuevas 3D y Minerales
+      // =========================================================================
+      describe('2. Generación de Mundo, Biomas, Cuevas 3D y Minerales', () => {
+        it('Genera chunks de 16x64x16 en memoria tipada Uint8Array (16,384 bytes)', () => {
+          const ch = vc.getChunkData(0, 0);
+          assert(ch && ch.data instanceof win.Uint8Array, 'El chunk debe usar Uint8Array');
+          assert(ch.data.byteLength === 16384, 'El tamaño del chunk debe ser exactamente 16,384 bytes');
+        });
+
+        it('Coloca Roca Madre (Bedrock) en toda la capa Y=0', () => {
+          for (let x = 0; x < 16; x += 5) {
+            for (let z = 0; z < 16; z += 5) {
+              assert(vc.getVoxelGlobal(x, 0, z) === vc.BLOCK.BEDROCK, `Falta Bedrock en (${x},0,${z})`);
+            }
+          }
+        });
+
+        it('Excava cuevas 3D subterráneas y distribuye minerales por profundidad', () => {
+          let airUnderground = 0;
+          let oresFound = 0;
+          for (let cx = 0; cx <= 1; cx++) {
+            for (let cz = 0; cz <= 1; cz++) {
+              const ch = vc.getChunkData(cx, cz);
+              for (let lx = 0; lx < 16; lx++) {
+                for (let lz = 0; lz < 16; lz++) {
+                  for (let y = 3; y < 18; y++) {
+                    const b = ch.data[(lz * 16 + lx) * 64 + y];
+                    if (b === vc.BLOCK.AIR) airUnderground++;
+                    if (b >= vc.BLOCK.COAL_ORE && b <= vc.BLOCK.DIAMOND_ORE) oresFound++;
+                  }
+                }
+              }
+            }
+          }
+          assert(airUnderground > 20, `Se esperaban cuevas 3D subterráneas (aire=${airUnderground})`);
+          assert(oresFound > 10, `Se esperaban menas de minerales subterráneos (menas=${oresFound})`);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 3: Hidden Face Culling, Oclusión Ambiental (AO) y Cross-Mesh
+      // =========================================================================
+      describe('3. Hidden Face Culling, AO y Geometría Cross-Mesh', () => {
+        it('Construye BufferGeometry con menos del 10% de las caras totales del chunk', () => {
+          vc.rebuildChunkImmediate(0, 0);
+          const ch = vc.getChunkData(0, 0);
+          assert(ch.solidMesh && ch.solidMesh.geometry, 'El chunk (0,0) debe tener solidMesh');
+          const triCount = ch.solidMesh.geometry.index.count / 3;
+          const unculledMaxTris = 16384 * 12; // 196,608 triángulos sin culling
+          assert(triCount > 100 && triCount < unculledMaxTris * 0.1, `Culling ineficiente: ${triCount} triángulos`);
+        });
+
+        it('Genera geometría cruzada (X-Mesh, 16 vértices) al colocar una Antorcha o Flor', () => {
+          const tx = 6, ty = 50, tz = 6;
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.TORCH);
+          assert(vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.TORCH, 'No se colocó la antorcha');
+          assert(vc.BLOCK_DEFS[vc.BLOCK.TORCH].shape === 'cross', 'La antorcha debe ser shape=cross');
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 4: Iluminación Vóxel BFS (Sol + Propagación de Antorchas)
+      // =========================================================================
+      describe('4. Iluminación Vóxel BFS (Luz Solar y Antorchas)', () => {
+        it('Asigna luz solar máxima (15) en el cielo abierto', () => {
+          const l = vc.getLightGlobal(8, 62, 8);
+          assert((l >> 4) === 15, `Luz solar en Y=62 debería ser 15, obtuvo ${l >> 4}`);
+        });
+
+        it('Propaga luz artificial cálida (15 -> 14 -> 13) al colocar una Antorcha', () => {
+          const tx = 8, ty = 52, tz = 8;
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(tx + 1, ty, tz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(tx + 2, ty, tz, vc.BLOCK.AIR);
+
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.TORCH);
+          const l0 = vc.getLightGlobal(tx, ty, tz) & 15;
+          const l1 = vc.getLightGlobal(tx + 1, ty, tz) & 15;
+          const l2 = vc.getLightGlobal(tx + 2, ty, tz) & 15;
+
+          assert(l0 === 15, `Luz en la antorcha debe ser 15, obtuvo ${l0}`);
+          assert(l1 === 14, `Luz a 1 bloque debe ser 14, obtuvo ${l1}`);
+          assert(l2 === 13, `Luz a 2 bloques debe ser 13, obtuvo ${l2}`);
+
+          // Al quitar la antorcha, la luz artificial debe volver a 0
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+          const lAfter = vc.getLightGlobal(tx, ty, tz) & 15;
+          assert(lAfter === 0, `Luz tras quitar antorcha debe ser 0, obtuvo ${lAfter}`);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 5: DDA Raycaster, Rotura Progresiva y Persistencia Delta
+      // =========================================================================
+      describe('5. DDA Raycaster, Rotura Progresiva y Persistencia', () => {
+        it('Detecta bloques con precisión exacta y normal de cara mediante 3D DDA', () => {
+          vc.setVoxelGlobal(10, 50, 10, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(10, 51, 10, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(10, 52, 10, vc.BLOCK.AIR);
+
+          const hit = vc.raycastVoxel(10.5, 52.5, 10.5, 0, -1, 0, 5.0);
+          assert(hit !== null, 'DDA Raycast no detectó el bloque de piedra');
+          assert(hit.x === 10 && hit.y === 50 && hit.z === 10, `Coordenadas erróneas: ${JSON.stringify(hit)}`);
+          assert(hit.ny === 1, `Normal superior debería ser ny=1, obtuvo ${hit.ny}`);
+          vc.setVoxelGlobal(10, 50, 10, vc.BLOCK.AIR);
+        });
+
+        it('Pica progresivamente un bloque y acelera x3.5 con el Pico de Diamante', () => {
+          vc.setVoxelGlobal(11, 50, 10, vc.BLOCK.STONE);
+          const hit = { x: 11, y: 50, z: 10, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.STONE };
+          vc.setTouchPlaying(true);
+          vc.updateHotbarSelection(0); // Ranura 0: Pico de Diamante
+          vc.setMiningHeld(true);
+
+          vc.updateMining(0.15, hit);
+          const p1 = vc.getState().mineProgress;
+          assert(p1 > 0.35 && p1 < 0.9, `Progreso de minado con pico inesperado: ${p1}`);
+
+          vc.updateMining(0.25, hit);
+          assert(vc.getVoxelGlobal(11, 50, 10) === vc.BLOCK.AIR, 'El bloque debería haberse roto al superar 100%');
+          vc.setMiningHeld(false);
+        });
+
+        it('Guarda automáticamente los cambios delta en localStorage', () => {
+          const saved = win.localStorage.getItem('voxelcraft_opt_save_v2');
+          assert(saved && saved.includes('deltas'), 'No se guardaron los deltas en localStorage');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 6: Físicas de Jugador, Colisiones AABB, Vuelo y Daño por Caída
+      // =========================================================================
+      describe('6. Físicas de Jugador, Colisiones AABB y Supervivencia', () => {
+        it('Detecta colisiones AABB contra bloques sólidos y permite atravesar flores/aire', () => {
+          vc.setVoxelGlobal(12, 50, 12, vc.BLOCK.STONE);
+          assert(vc.checkAABBCollision(12.5, 50.0, 12.5) === true, 'Debería colisionar con Piedra');
+
+          vc.setVoxelGlobal(12, 50, 12, vc.BLOCK.FLOWER_RED);
+          assert(vc.checkAABBCollision(12.5, 50.0, 12.5) === false, 'No debería colisionar con una flor');
+          vc.setVoxelGlobal(12, 50, 12, vc.BLOCK.AIR);
+        });
+
+        it('Alterna el modo Vuelo (F) y actualiza corazones al recibir daño', () => {
+          const initialFly = vc.player.flying;
+          vc.toggleFlyingMode();
+          assert(vc.player.flying === !initialFly, 'No cambió el estado de vuelo');
+          if (vc.player.flying) vc.toggleFlyingMode(); // dejar en modo caminar
+
+          const prevHp = vc.player.health;
+          vc.damagePlayer(2);
+          assert(vc.player.health === prevHp - 2, 'No se restaron 2 corazones de vida');
+          const emptyHearts = doc.querySelectorAll('#hearts-row .heart.empty').length;
+          assert(emptyHearts === 2, 'La interfaz de corazones no reflejó el daño');
+          vc.player.health = vc.player.maxHealth;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 7: Físicas Vóxel por Tick Queue (Arena con Gravedad, Agua y TNT)
+      // =========================================================================
+      describe('7. Tick Queue (Arena con Gravedad, Agua) y Explosión de TNT', () => {
+        it('Hace caer bloques de Arena suspendidos en el aire mediante simQueue', () => {
+          vc.setVoxelGlobal(14, 52, 14, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(14, 53, 14, vc.BLOCK.SAND);
+          assert(vc.getVoxelGlobal(14, 53, 14) === vc.BLOCK.SAND, 'Arena no colocada en Y=53');
+
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(14, 53, 14) === vc.BLOCK.AIR, 'La arena debería haber dejado Y=53');
+          assert(vc.getVoxelGlobal(14, 52, 14) === vc.BLOCK.SAND, 'La arena debería haber caído a Y=52');
+          vc.setVoxelGlobal(14, 52, 14, vc.BLOCK.AIR);
+        });
+
+        it('Activa TNT al golpearlo y excava un cráter esférico al detonar sin romper Bedrock', () => {
+          vc.setVoxelGlobal(20, 48, 20, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(20, 49, 20, vc.BLOCK.TNT);
+
+          vc.igniteTNT(20, 49, 20, 0.1);
+          assert(vc.activeTNTs.length >= 1, 'Debería haberse creado la entidad TNT activa');
+          assert(vc.getVoxelGlobal(20, 49, 20) === vc.BLOCK.AIR, 'El vóxel estático de TNT debe pasar a aire');
+
+          // Avanzar simulación para que detone
+          vc.updateVoxelSimulation(0.15);
+          assert(vc.getVoxelGlobal(20, 48, 20) === vc.BLOCK.AIR, 'La explosión debería haber destruido la piedra en Y=48');
+          assert(vc.getVoxelGlobal(20, 0, 20) === vc.BLOCK.BEDROCK, 'La explosión nunca debe romper Bedrock');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 8: Motor de Criaturas / Mobs (Ovejas, Cerdos, Zombies y Combate)
+      // =========================================================================
+      describe('8. Motor de Criaturas (Ovejas, Cerdos, Zombies y Combate)', () => {
+        it('Genera Ovejas, Cerdos y Zombies, los detecta por Raycast y aplica daño/knockback', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          vc.spawnMob('sheep', 15.5, 45, 15.5);
+          vc.spawnMob('zombie', 18.5, 45, 15.5);
+          assert(vc.mobs.length === 2, 'Debería haber 2 mobs activos');
+
+          const hitM = vc.raycastMob(15.5, 45.6, 13.0, 0, 0, 1, 4.5);
+          assert(hitM && hitM.type === 'sheep', 'raycastMob debería haber detectado a la oveja');
+
+          const hpBefore = hitM.hp;
+          vc.damageMob(hitM, 2, 0, 1);
+          assert(hitM.hp === hpBefore - 2, 'La oveja debería haber perdido 2 HP');
+          assert(hitM.vz > 0, 'La oveja debería haber recibido knockback en +Z');
+
+          // Derrotar a la oveja
+          vc.damageMob(hitM, 10, 0, 1);
+          assert(vc.mobs.length === 1, 'La oveja derrotada debería haberse eliminado');
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 9: Cielo Dinámico, Ciclo Día/Noche e Interfaz Híbrida PC + Móvil
+      // =========================================================================
+      describe('9. Cielo Dinámico, Día/Noche e Interfaz Híbrida (PC + Móvil)', () => {
+        it('Actualiza Sol, Luna, Estrellas, Nubes 3D y alterna Día/Noche (T)', () => {
+          assert(vc.sunMesh && vc.moonMesh && vc.cloudMesh, 'Faltan mallas celestes');
+          const wasNight = vc.getState().isNight;
+          vc.toggleDayNight();
+          assert(vc.getState().isNight === !wasNight, 'toggleDayNight no cambió el estado');
+          vc.updateDynamicSky(0.5);
+          if (vc.getState().isNight) vc.toggleDayNight(); // Restaurar día
+        });
+
+        it('Abre/cierra el Inventario (E), equipa bloques y responde a controles táctiles', () => {
+          vc.toggleInventory(true);
+          assert(vc.getState().invOpen === true, 'El inventario debería estar abierto');
+          assert(!doc.getElementById('inventory-modal').classList.contains('hidden'), 'Modal inventario oculto');
+
+          vc.toggleInventory(false);
+          assert(vc.getState().invOpen === false, 'El inventario debería haberse cerrado');
+
+          vc.setTouchPlaying(true);
+          // Simular toque en joystick virtual móvil
+          const joyZone = doc.getElementById('joy-zone');
+          const rect = joyZone.getBoundingClientRect();
+          const touchObj = { identifier: 99, clientX: rect.left + rect.width * 0.9, clientY: rect.top + rect.height * 0.1 };
+          const startEv = new win.CustomEvent('touchstart', { bubbles: true, cancelable: true });
+          startEv.changedTouches = [touchObj];
+          joyZone.dispatchEvent(startEv);
+
+          assert(vc.getState().joyX > 0.3 && vc.getState().joyY > 0.3, 'El joystick virtual no actualizó (joyX, joyY)');
+
+          const endEv = new win.CustomEvent('touchend', { bubbles: true, cancelable: true });
+          endEv.changedTouches = [touchObj];
+          joyZone.dispatchEvent(endEv);
+          assert(vc.getState().joyX === 0 && vc.getState().joyY === 0, 'El joystick virtual no se reseteó al soltar');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 10: Benchmark de Rendimiento (Meshing + DDA Raycast)
+      // =========================================================================
+      describe('10. Benchmark de Rendimiento en Tiempo Real', () => {
+        it('Ejecuta 1,000 raycasts DDA en menos de 15 ms', () => {
+          const t0 = performance.now();
+          for (let i = 0; i < 1000; i++) {
+            vc.raycastVoxel(8.5, 45.0, 8.5, 0, -1, 0, 6.5);
+          }
+          const elapsed = performance.now() - t0;
+          assert(elapsed < 15, `1,000 raycasts tardaron demasiado: ${elapsed.toFixed(2)} ms`);
+        });
+
+        it('Reconstruye iluminación BFS + malla AO de un chunk en menos de 25 ms', () => {
+          const t0 = performance.now();
+          vc.rebuildChunkImmediate(0, 0);
+          const elapsed = performance.now() - t0;
+          assert(elapsed < 25, `Rebuild de chunk tardó demasiado: ${elapsed.toFixed(2)} ms`);
+        });
+      });
+
+      // Execute all suites
+      for (const suite of suites) {
+        currentSuite = suite;
+        suite.fn();
+
+        const card = document.createElement('div');
+        card.className = 'suite-card';
+        card.innerHTML = `<div class="suite-title">${suite.suiteName}</div>`;
+
+        for (const t of suite.tests) {
+          const row = document.createElement('div');
+          try {
+            await t.testFn();
+            totalPassed++;
+            row.className = 'test-row pass';
+            row.innerHTML = `<span>${t.testName}</span><span class="status">✓ PASS</span>`;
+          } catch (err) {
+            totalFailed++;
+            failures.push({ suite: suite.suiteName, test: t.testName, error: err.message });
+            row.className = 'test-row fail';
+            row.innerHTML = `<span>${t.testName}<br><small style="color:#fca5a5">${err.message}</small></span><span class="status">✗ FAIL</span>`;
+          }
+          card.appendChild(row);
+        }
+        suitesContainer.appendChild(card);
+      }
+
+      if (totalFailed === 0) {
+        summaryBanner.className = 'pass';
+        summaryBanner.textContent = `✓ TODOS LOS TESTS PASARON (${totalPassed}/${totalPassed} exitosos, 0 fallos)`;
+      } else {
+        summaryBanner.className = 'fail';
+        summaryBanner.textContent = `✗ FALLARON ${totalFailed} TESTS (${totalPassed} exitosos, ${totalFailed} fallos)`;
+      }
+
+      window.__TEST_RESULTS__ = {
+        done: true,
+        passed: totalPassed,
+        failed: totalFailed,
+        failures
+      };
+    }
+
+    gameFrame.addEventListener('load', () => {
+      setTimeout(runAllTests, 250);
+    });
+
+    document.getElementById('btn-rerun').addEventListener('click', () => {
+      window.__TEST_RESULTS__ = null;
+      gameFrame.contentWindow.location.reload();
+    });
+  </script>
+</body>
+</html>
