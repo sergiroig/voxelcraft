@@ -67,6 +67,7 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 | **Cielo Dinámico** | `sunMesh`, `moonMesh`, `starsPoints`, `cloudMesh`, `updateDynamicSky` | Ciclo día/noche continuo o conmutable (`T`), Sol y Luna cúbicos, estrellas nocturnas y nubes vóxel 3D fusionadas en una única llamada de dibujo. |
 | **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en flores/hierba alta (con raíz anclada `uv.y`) y hojas 3D sin grietas, baile de llama en antorchas, destello en menas de oro/diamante, olas 3D con espuma/cáusticas en el agua y atmósfera subacuática. |
 | **Drops 3D, Supervivencia y Crafteo** | `dropInstanced`, `itemDrops`, `spawnItemDrop`, `updateItemDrops`, `CRAFTING_RECIPES`, `craftRecipe`, `toggleGameMode` | Pool `InstancedMesh` de 64 mini-bloques 3D flotantes e imantados en 1 *draw call*, inventario con cantidades en Supervivencia (`G` para alternar con Creativo `∞`) y 8 recetas de crafteo rápido en el modal `E`. |
+| **Música C418 + Paisaje Sonoro** | `SoundFX`, `C418_SCALE_HZ`, `C418_CHORDS`, `triggerMusicChord`, `playCaveEcho`, `updateAmbientAudio`, `toggleMusic` | Sintetizador FM de piano cálido + *Reverb* algorítmica estéreo (`ConvolverNode` de 2s) + generador continuo de brisa/cueva/agua en el hilo de audio nativo (`M` / `🎵` para silenciar). |
 | **Controles Híbridos** | `updateJoystickFromTouch`, `setTouchPlaying`, `joyX`, `joyY` | Captura de ratón (`Pointer Lock`) en PC y joystick virtual analógico + cámara multitáctil + barra de botones en móvil/tablet. |
 | **Persistencia Delta** | `worldDeltas`, `saveWorldState`, `loadWorldState`, `exportWorldJSON` | Guarda en `localStorage` únicamente la semilla (`WORLD_SEED`) y los bloques modificados por el usuario. |
 
@@ -112,9 +113,9 @@ Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
    - **Mini-bloques 3D flotantes e imantados (*Item Drops*):** Al picar un bloque o derrotar un mob, suelta un mini-cubo rotando (`InstancedMesh` de 64 instancias = 1 *draw call*) que es atraído magnéticamente hacia el jugador a `< 2.8m`.
    - **Modo Supervivencia vs. Creativo (`G` / `⚒`):** Cantidades reales de bloques en el inventario al jugar en Supervivencia y bloques infinitos (`∞`) en Creativo.
    - **Sistema de Crafteo Rápido:** 8 recetas directas en el inventario (`E`) para fabricar Madera, Antorchas, Ladrillos, Cristal, Piedra Luminosa, TNT, Piedra Lisa y Pico de Diamante.
-4. ⏳ **Punto 4 — Audio y Música Ambiental Generativa (Web Audio API):**
-   - Música ambiental estilo *C418* generada proceduralmente con acordes pentatónicos suaves en un sintetizador FM + *reverb* algorítmica.
-   - Sonido ambiental dinámico: brisa en exteriores y eco en cuevas profundas.
+4. ✅ **Punto 4 — Audio y Música Ambiental Generativa (Web Audio API, Completado):**
+   - Música ambiental estilo *C418* generada proceduralmente con acordes arpegiados en escala de Re Mayor / Sol Lidio (`Dmaj7, Gadd9, A6, Bm7`) en un sintetizador FM de piano cálido + *reverb* algorítmica estéreo (`ConvolverNode`).
+   - Paisaje sonoro dinámico que adapta el filtro en tiempo real entre brisa exterior (`surface`), resonancia y ecos cristalinos en cuevas oscuras (`cave`) y sonido subacuático (`underwater`), conmutable con `M` / `🎵`.
 5. ⏳ **Punto 5 — Rendimiento Extremo (Multihilo y Escalado Dinámico):**
    - **`Web Worker` inline** (mediante `Blob URL` en el mismo `index.html`) para delegar la generación de terreno, iluminación BFS y *meshing* fuera del hilo principal.
    - **Escalado dinámico de resolución (`Dynamic Pixel Ratio`)** para mantener 60 FPS estables en móviles de gama media/baja.
@@ -142,6 +143,7 @@ Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` p
 | **Drops 3D Flotantes e Imantados (`InstancedMesh`)** *(Gravedad, giro, bobbing e imán de 8-64 drops)* | Punto 3 | `16.0 µs` (`0.016 ms`) | **`-0.058 FPS`** (de 60) | `0.10 %` | **0 FPS** (60 FPS clavados) |
 | **Físicas del Jugador + Colisión AABB** | Base | `4.8 µs` (`0.005 ms`) | **`-0.017 FPS`** (de 60) | `0.03 %` | **0 FPS** (60 FPS clavados) |
 | **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `2.6 µs` (`0.003 ms`) | **`-0.009 FPS`** (de 60) | `0.02 %` | **0 FPS** (60 FPS clavados) |
+| **Música Generativa C418 FM + Paisaje Sonoro (`Web Audio API`)** *(DSP en hilo nativo de audio)* | Punto 4 | `2.7 µs` (`0.003 ms`) | **`-0.010 FPS`** (de 60) | `0.02 %` | **0 FPS** (60 FPS clavados) |
 | **Raycast Vóxel 3D (DDA)** *(Selección de bloque a 6.5m)* | Base | `2.0 µs` (`0.002 ms`) | **`-0.007 FPS`** (de 60) | `0.01 %` | **0 FPS** (60 FPS clavados) |
 | **Cielo Dinámico** *(Sol/Luna cúbicos, 220 estrellas y nubes 3D en 1 malla)* | Punto 1 | `0.8 µs` (`0.0008 ms`) | **`-0.003 FPS`** (de 60) | `0.005 %` | **0 FPS** (60 FPS clavados) |
 | **Actualización CPU de Shaders GPU + Detección Subacuática** | Punto 2 | `0.7 µs` (`0.0007 ms`) | **`-0.002 FPS`** (de 60) | `0.004 %` | **0 FPS** (60 FPS clavados) |

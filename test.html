@@ -572,6 +572,58 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 13: Música Ambiental Generativa (C418 FM + Reverb) y Paisaje Sonoro
+      // =========================================================================
+      describe('13. Música Ambiental Generativa (C418 FM + Reverb) y Paisaje Sonoro', () => {
+        it('Inicializa grafo Web Audio API con Reverb Algorítmica, filtro de viento y sintetizador FM', () => {
+          vc.sfx.init();
+          assert(vc.sfx.ctx !== null, 'AudioContext debería haberse inicializado');
+          assert(vc.sfx.reverbNode !== null, 'ConvolverNode (Reverb algorítmica de 2s) debería estar creado');
+          assert(vc.sfx.windFilter !== null && vc.sfx.windGain !== null, 'El generador de viento/ambiente debería estar conectado');
+          assert(vc.C418_SCALE_HZ.length === 13 && vc.C418_CHORDS.length === 4, 'Escala y acordes estilo C418 deben estar definidos');
+
+          const notesBefore = vc.sfx.notesPlayedCount;
+          const chordsBefore = vc.sfx.chordsPlayedCount;
+          const ok = vc.sfx.triggerMusicChord(0);
+          assert(ok === true, 'triggerMusicChord(0) debería programar un acorde arpegiado');
+          assert(vc.sfx.chordsPlayedCount === chordsBefore + 1, 'chordsPlayedCount debería incrementarse en 1');
+          assert(vc.sfx.notesPlayedCount === notesBefore + 5, 'Un acorde arpegiado + nota melódica debe programar 5 voces FM');
+        });
+
+        it('Adapta la acústica entre Superficie, Cueva Profunda y Agua, y permite silenciar con M / 🎵', () => {
+          const prevY = vc.player.y;
+          // Surface mode
+          vc.player.y = 44;
+          vc.updateAmbientAudio(0.5);
+          assert(vc.sfx.envMode === 'surface', `En superficie iluminada envMode debe ser surface (actual=${vc.sfx.envMode})`);
+
+          // Deep cave mode (low Y and low sunlight)
+          vc.setVoxelGlobal(12, 12, 12, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(12, 10, 12, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(12, 11, 12, vc.BLOCK.AIR);
+          vc.rebuildChunkImmediate(0, 0);
+          const origX = vc.player.x, origZ = vc.player.z;
+          vc.player.x = 12.5; vc.player.y = 10.0; vc.player.z = 12.5;
+          vc.updateAmbientAudio(0.5);
+          assert(vc.sfx.envMode === 'cave', `En cueva profunda oscura envMode debe ser cave (actual=${vc.sfx.envMode})`);
+
+          const echoesBefore = vc.sfx.caveEchoCount;
+          vc.sfx.playCaveEcho();
+          assert(vc.sfx.caveEchoCount === echoesBefore + 1, 'playCaveEcho() debe disparar eco cristalino en el ConvolverNode');
+
+          // Test Music Mute / Unmute toggle
+          vc.toggleMusic(false);
+          assert(vc.sfx.musicEnabled === false, 'toggleMusic(false) debe desactivar la música');
+          assert(vc.sfx.triggerMusicChord(1) === false, 'Con música silenciada no debe programar nuevos acordes');
+          vc.toggleMusic(true);
+          assert(vc.sfx.musicEnabled === true, 'toggleMusic(true) debe reactivar la música');
+
+          vc.player.x = origX; vc.player.y = prevY; vc.player.z = origZ;
+          vc.updateAmbientAudio(0.5);
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -636,6 +688,7 @@
         { name: 'Raycast Vóxel 3D (DDA)',                          ms: bench(() => { vc.raycastVoxel(vc.camera.position.x, vc.camera.position.y, vc.camera.position.z, 0, -0.3, -0.95, 6.5); }, 600) },
         { name: 'Cielo Dinámico (Sol, Luna, Estrellas, Nubes 3D)', ms: bench(() => { vc.updateDynamicSky(0.016); }, 600) },
         { name: 'Uniforms GPU + Atmósfera Subacuática (CPU)',      ms: bench(() => { vc.updateGPUShaders(0.016); }, 600) },
+        { name: 'Música C418 FM + Paisaje Sonoro (Web Audio API)', ms: bench(() => { vc.updateAmbientAudio(0.016); }, 600) },
         { name: 'Cola de Simulación Vóxel (Arena/Agua/TNT tick)',  ms: bench(() => { vc.updateVoxelSimulation(0.001); }, 600) }
       ];
 

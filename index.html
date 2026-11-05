@@ -726,6 +726,7 @@
       <button class="t-pill-btn" id="tbtn-mode">⚒ Superv.</button>
       <button class="t-pill-btn" id="tbtn-fly">🕊 Volar</button>
       <button class="t-pill-btn" id="tbtn-time">☀/🌙</button>
+      <button class="t-pill-btn toggled" id="tbtn-music">🎵</button>
       <button class="t-pill-btn" id="tbtn-hud">📊 HUD</button>
       <button class="t-pill-btn" id="tbtn-menu">⏸</button>
     </div>
@@ -760,7 +761,7 @@
   </div>
 
   <div id="hud-controls-pill">
-    <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Supervivencia/Creativo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>H</kbd> HUD
+    <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Modo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>M</kbd> Música &nbsp;|&nbsp; <kbd>H</kbd> HUD
   </div>
 
   <div id="status-bar">
@@ -1943,16 +1944,183 @@
     }
 
     // ============================================================================
-    // 6. WEB AUDIO SYNTHESIZER
+    // 6. WEB AUDIO SYNTHESIZER + C418 GENERATIVE MUSIC & AMBIENT SOUNDSCAPE
     // ============================================================================
+    const C418_SCALE_HZ = [
+      146.83, 196.00, 220.00, 246.94, // D3, G3, A3, B3
+      293.66, 329.63, 369.99, 392.00, // D4, E4, F#4, G4
+      440.00, 493.88, 554.37, 587.33, 659.25 // A4, B4, C#5, D5, E5
+    ];
+    const C418_CHORDS = [
+      [0, 4, 6, 8],  // Dmaj7
+      [1, 4, 7, 9],  // Gadd9
+      [2, 5, 8, 10], // A6
+      [3, 6, 8, 11]  // Bm7
+    ];
+
     class SoundFX {
-      constructor() { this.ctx = null; }
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.musicGain = null;
+        this.reverbNode = null;
+        this.windFilter = null;
+        this.windGain = null;
+        this.musicEnabled = true;
+        this.envMode = 'surface'; // 'surface', 'cave', 'underwater'
+        this.notesPlayedCount = 0;
+        this.chordsPlayedCount = 0;
+        this.caveEchoCount = 0;
+        this.chordCursor = 0;
+      }
       init() {
         if (!this.ctx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) this.ctx = new AudioCtx();
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.85;
+            this.masterGain.connect(this.ctx.destination);
+
+            this.musicGain = this.ctx.createGain();
+            this.musicGain.gain.value = this.musicEnabled ? 0.28 : 0.0;
+            this.musicGain.connect(this.masterGain);
+
+            // Algorithmic 2.0s stereo hall impulse response for lush C418 reverb
+            const sr = this.ctx.sampleRate;
+            const len = Math.floor(sr * 2.0);
+            const irBuf = this.ctx.createBuffer(2, len, sr);
+            for (let ch = 0; ch < 2; ch++) {
+              const data = irBuf.getChannelData(ch);
+              let prev = 0;
+              for (let i = 0; i < len; i++) {
+                const decay = Math.pow(1 - i / len, 2.6);
+                const white = Math.random() * 2 - 1;
+                prev = prev * 0.78 + white * 0.22; // Warm low-passed tail
+                data[i] = prev * decay * 0.45;
+              }
+            }
+            this.reverbNode = this.ctx.createConvolver();
+            this.reverbNode.buffer = irBuf;
+            this.reverbNode.connect(this.musicGain);
+
+            // Continuous looped noise buffer for zero-CPU wind & cave ambience
+            const nLen = Math.floor(sr * 2.0);
+            const nBuf = this.ctx.createBuffer(1, nLen, sr);
+            const nData = nBuf.getChannelData(0);
+            let b0 = 0, b1 = 0, b2 = 0;
+            for (let i = 0; i < nLen; i++) {
+              const w = Math.random() * 2 - 1;
+              b0 = 0.997 * b0 + w * 0.029;
+              b1 = 0.985 * b1 + w * 0.032;
+              b2 = 0.950 * b2 + w * 0.048;
+              nData[i] = (b0 + b1 + b2) * 0.22;
+            }
+            const windSrc = this.ctx.createBufferSource();
+            windSrc.buffer = nBuf;
+            windSrc.loop = true;
+
+            this.windFilter = this.ctx.createBiquadFilter();
+            this.windFilter.type = 'bandpass';
+            this.windFilter.frequency.value = 340;
+            this.windFilter.Q.value = 1.8;
+
+            this.windGain = this.ctx.createGain();
+            this.windGain.gain.value = this.musicEnabled ? 0.05 : 0.0;
+
+            windSrc.connect(this.windFilter);
+            this.windFilter.connect(this.windGain);
+            this.windGain.connect(this.masterGain);
+            windSrc.start(0);
+          }
         }
-        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+      playMusicNote(freqHz, delaySec = 0, durationSec = 3.4, velocity = 0.18) {
+        this.init();
+        if (!this.ctx || !this.musicEnabled) return false;
+        const start = this.ctx.currentTime + delaySec;
+
+        // Warm FM/additive felt piano voice (sine fundamental + soft detuned triangle)
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const env = this.ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(freqHz, start);
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(freqHz * 2.0, start);
+        osc2.detune.setValueAtTime(4, start);
+
+        const harmGain = this.ctx.createGain();
+        harmGain.gain.setValueAtTime(0.14, start);
+        harmGain.gain.exponentialRampToValueAtTime(0.01, start + durationSec * 0.6);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(920, start);
+        filter.frequency.exponentialRampToValueAtTime(280, start + durationSec);
+
+        env.gain.setValueAtTime(0.0001, start);
+        env.gain.linearRampToValueAtTime(velocity, start + 0.055);
+        env.gain.exponentialRampToValueAtTime(0.0008, start + durationSec);
+
+        osc1.connect(filter);
+        osc2.connect(harmGain);
+        harmGain.connect(filter);
+        filter.connect(env);
+
+        env.connect(this.musicGain);
+        if (this.reverbNode) env.connect(this.reverbNode);
+
+        osc1.start(start);
+        osc2.start(start);
+        osc1.stop(start + durationSec + 0.05);
+        osc2.stop(start + durationSec + 0.05);
+
+        this.notesPlayedCount++;
+        return true;
+      }
+      triggerMusicChord(chordIdx) {
+        this.init();
+        if (!this.ctx || !this.musicEnabled) return false;
+        const idx = typeof chordIdx === 'number'
+          ? (chordIdx % C418_CHORDS.length)
+          : (this.chordCursor++ % C418_CHORDS.length);
+        const chord = C418_CHORDS[idx];
+        for (let i = 0; i < chord.length; i++) {
+          const freq = C418_SCALE_HZ[chord[i]];
+          this.playMusicNote(freq, i * 0.42, 3.6, 0.14);
+        }
+        // Optional gentle high melody note
+        const topFreq = C418_SCALE_HZ[8 + (idx % 5)];
+        this.playMusicNote(topFreq, 1.85, 3.2, 0.12);
+        this.chordsPlayedCount++;
+        return true;
+      }
+      playCaveEcho() {
+        this.init();
+        if (!this.ctx || !this.musicEnabled) return false;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const env = this.ctx.createGain();
+        osc.type = 'sine';
+        const baseF = 880 + (this.caveEchoCount % 3) * 146;
+        osc.frequency.setValueAtTime(baseF, now);
+        osc.frequency.exponentialRampToValueAtTime(baseF * 0.72, now + 0.45);
+        env.gain.setValueAtTime(0.001, now);
+        env.gain.linearRampToValueAtTime(0.08, now + 0.02);
+        env.gain.exponentialRampToValueAtTime(0.0005, now + 0.5);
+        osc.connect(env);
+        if (this.reverbNode) env.connect(this.reverbNode);
+        else env.connect(this.musicGain);
+        osc.start(now);
+        osc.stop(now + 0.55);
+        this.caveEchoCount++;
+        return true;
       }
       play(type) {
         if (!this.ctx) return;
@@ -1960,7 +2128,7 @@
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.masterGain || this.ctx.destination);
 
         if (type === 'break') {
           osc.type = 'sawtooth';
@@ -2043,6 +2211,71 @@
       }
     }
     const sfx = new SoundFX();
+
+    let ambientStepAccum = 0;
+    let musicChordAccum = 6.5;
+
+    function toggleMusic(forceVal) {
+      sfx.musicEnabled = typeof forceVal === 'boolean' ? forceVal : !sfx.musicEnabled;
+      if (sfx.musicGain && sfx.ctx) {
+        sfx.musicGain.gain.setTargetAtTime(sfx.musicEnabled ? 0.28 : 0.0, sfx.ctx.currentTime, 0.12);
+      }
+      if (sfx.windGain && sfx.ctx) {
+        sfx.windGain.gain.setTargetAtTime(sfx.musicEnabled ? 0.05 : 0.0, sfx.ctx.currentTime, 0.12);
+      }
+      const btn = document.getElementById('tbtn-music');
+      if (btn) btn.classList.toggle('toggled', sfx.musicEnabled);
+      return sfx.musicEnabled;
+    }
+
+    function updateAmbientAudio(dt) {
+      ambientStepAccum += dt;
+      if (ambientStepAccum < 0.45) return;
+      const elapsed = ambientStepAccum;
+      ambientStepAccum = 0;
+
+      // Determine environment acoustics (Surface Breeze, Deep Cave, or Underwater)
+      const px = Math.floor(player.x);
+      const py = Math.floor(player.y + 1);
+      const pz = Math.floor(player.z);
+      const packedL = getLightGlobal(px, py, pz);
+      const sunL = packedL >> 4;
+
+      if (isCameraUnderwater) {
+        sfx.envMode = 'underwater';
+      } else if (py < 28 && sunL <= 2) {
+        sfx.envMode = 'cave';
+      } else {
+        sfx.envMode = 'surface';
+      }
+
+      if (sfx.ctx && sfx.musicEnabled && sfx.windFilter && sfx.windGain) {
+        const now = sfx.ctx.currentTime;
+        if (sfx.envMode === 'underwater') {
+          sfx.windFilter.type = 'lowpass';
+          sfx.windFilter.frequency.setTargetAtTime(135, now, 0.25);
+          sfx.windGain.gain.setTargetAtTime(0.08, now, 0.25);
+        } else if (sfx.envMode === 'cave') {
+          sfx.windFilter.type = 'lowpass';
+          sfx.windFilter.frequency.setTargetAtTime(110, now, 0.25);
+          sfx.windGain.gain.setTargetAtTime(0.065, now, 0.25);
+          if (Math.random() < 0.18) sfx.playCaveEcho();
+        } else {
+          sfx.windFilter.type = 'bandpass';
+          const breezeFreq = 240 + Math.min(260, Math.max(0, (player.y - 20) * 6));
+          sfx.windFilter.frequency.setTargetAtTime(breezeFreq, now, 0.3);
+          sfx.windGain.gain.setTargetAtTime(0.045, now, 0.3);
+        }
+      }
+
+      if (sfx.ctx && sfx.musicEnabled) {
+        musicChordAccum += elapsed;
+        if (musicChordAccum >= 9.0) {
+          musicChordAccum = 0;
+          sfx.triggerMusicChord();
+        }
+      }
+    }
 
     // ============================================================================
     // 7. WORLD STATE, LIGHTING & CHUNK STORAGE
@@ -4178,6 +4411,8 @@
         toggleGameMode();
       } else if (e.code === 'KeyT') {
         toggleDayNight();
+      } else if (e.code === 'KeyM') {
+        toggleMusic();
       } else if (e.code === 'KeyH') {
         hudVisible = !hudVisible;
         document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none';
@@ -4408,8 +4643,9 @@
     bindTap('tbtn-inv',  () => toggleInventory());
     bindTap('tbtn-mode', () => toggleGameMode());
     bindTap('tbtn-fly',  () => toggleFlyingMode());
-    bindTap('tbtn-time', () => toggleDayNight());
-    bindTap('tbtn-hud',  () => {
+    bindTap('tbtn-time',  () => toggleDayNight());
+    bindTap('tbtn-music', () => toggleMusic());
+    bindTap('tbtn-hud',   () => {
       hudVisible = !hudVisible;
       document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none';
     });
@@ -4460,6 +4696,7 @@
 
       updateDynamicSky(dt);
       updateGPUShaders(dt);
+      updateAmbientAudio(dt);
       updateChunkStreaming();
 
       rayDir.set(0, 0, -1).applyEuler(camera.rotation);
@@ -4585,6 +4822,11 @@
       craftRecipe,
       toggleGameMode,
       refreshInventoryCountsUI,
+      sfx,
+      C418_SCALE_HZ,
+      C418_CHORDS,
+      toggleMusic,
+      updateAmbientAudio,
       updateDynamicSky,
       getGenerator: () => generator,
       updateChunkStreaming,
