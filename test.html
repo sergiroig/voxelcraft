@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=19"></iframe>
+    <iframe id="game-frame" src="./index.html?v=20"></iframe>
   </div>
 
   <script>
@@ -434,6 +434,9 @@
 
           const hitM = vc.raycastMob(15.5, 45.6, 13.0, 0, 0, 1, 4.5);
           assert(hitM && hitM.type === 'sheep', 'raycastMob debería haber detectado a la oveja');
+          assert(vc.mobAtlasCanvas && vc.mobAtlasCanvas.width === 128 && vc.mobAtlasTexture, 'Debe existir el mini-atlas pixel-art procedural para Mobs (128x8 px)');
+          assert(hitM.head.material.map === vc.mobAtlasTexture && hitM.head.material.vertexColors === true, 'Los Mobs deben usar el atlas pixel-art compartido y sombreado direccional por vértice');
+          assert(vc.mobGeos.headPig.attributes.position.count === 48 && vc.mobGeos.headGolem.attributes.position.count === 48, 'Las cabezas del Cerdo y Gólem deben fusionar hocico/nariz 3D en un solo BufferGeometry (0 draw calls extra)');
 
           const hpBefore = hitM.hp;
           vc.damageMob(hitM, 2, 0, 1);

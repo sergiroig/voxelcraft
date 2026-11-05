@@ -8,141 +8,147 @@ const MAX_MOBS = 14;
 const mobs = [];
 let mobSpawnTimer = 0;
 
-// Shared geometries across all mobs (zero per-mob geometry allocation!)
+// Procedural 16-tile Pixel-Art Mob Atlas (128x8 px, 0 external assets, 0 extra draw calls)
+const mobAtlasCanvas = document.createElement('canvas');
+mobAtlasCanvas.width = 128;
+mobAtlasCanvas.height = 8;
+const mobCtx = mobAtlasCanvas.getContext('2d');
+const paintMobTile = (t, base, alt, fn) => {
+  const x0 = t * 8;
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      mobCtx.fillStyle = ((x * 7 + y * 13 + t * 5) % 5 === 0) ? alt : base;
+      mobCtx.fillRect(x0 + x, y, 1, 1);
+    }
+  }
+  if (fn) fn((x, y, w, h, c) => { mobCtx.fillStyle = c; mobCtx.fillRect(x0 + x, y, w, h); });
+};
+// 0..3: Zombie (Face, Skin/Hair, Shirt, Pants/Shoes)
+paintMobTile(0, '#4d7c43', '#3f6837', (r) => { r(0,0,8,2,'#273b22'); r(1,3,2,2,'#111827'); r(5,3,2,2,'#111827'); r(3,4,2,1,'#2e4f28'); r(2,6,4,1,'#1e293b'); });
+paintMobTile(1, '#4d7c43', '#3f6837', (r) => { r(0,0,8,2,'#273b22'); });
+paintMobTile(2, '#0e7490', '#0891b2', (r) => { r(3,0,2,2,'#3f6837'); r(2,1,4,1,'#164e63'); r(0,6,8,2,'#155e75'); });
+paintMobTile(3, '#312e81', '#3730a3', (r) => { r(3,0,2,6,'#1e1b4b'); r(0,6,8,2,'#1e293b'); });
+// 4..6: Skeleton (Skull Face, Ribcage, Bone) & 15: Bow Arm
+paintMobTile(4, '#e2e8f0', '#cbd5e1', (r) => { r(1,3,2,2,'#0f172a'); r(5,3,2,2,'#0f172a'); r(3,5,2,1,'#1e293b'); r(1,6,6,1,'#334155'); r(2,6,1,1,'#f8fafc'); r(4,6,1,1,'#f8fafc'); r(6,6,1,1,'#f8fafc'); });
+paintMobTile(5, '#1e293b', '#0f172a', (r) => { r(3,0,2,8,'#e2e8f0'); r(1,1,6,1,'#cbd5e1'); r(1,3,6,1,'#cbd5e1'); r(1,5,6,1,'#cbd5e1'); r(1,7,6,1,'#94a3b8'); });
+paintMobTile(6, '#cbd5e1', '#94a3b8', (r) => { r(2,0,4,8,'#e2e8f0'); });
+// 7..8: Creeper (Iconic Face, Camo Body/Feet)
+paintMobTile(7, '#22c55e', '#16a34a', (r) => { r(0,1,2,1,'#4ade80'); r(6,0,2,2,'#4ade80'); r(1,2,2,2,'#090d0a'); r(5,2,2,2,'#090d0a'); r(3,4,2,3,'#090d0a'); r(2,5,1,3,'#090d0a'); r(5,5,1,3,'#090d0a'); });
+paintMobTile(8, '#22c55e', '#15803d', (r) => { r(1,2,2,2,'#4ade80'); r(5,4,2,2,'#4ade80'); r(1,7,2,1,'#0f172a'); r(5,7,2,1,'#0f172a'); });
+// 9..10: Iron Golem (Red-Eyed Face, Vine-Clad Iron Body)
+paintMobTile(9, '#cbd5e1', '#94a3b8', (r) => { r(1,2,6,1,'#334155'); r(1,3,2,1,'#dc2626'); r(5,3,2,1,'#dc2626'); r(2,3,1,1,'#facc15'); r(5,3,1,1,'#facc15'); r(3,3,2,4,'#64748b'); });
+paintMobTile(10, '#e2e8f0', '#cbd5e1', (r) => { r(0,0,8,1,'#94a3b8'); r(1,1,2,6,'#65a30d'); r(2,2,2,5,'#4d7c0f'); r(5,3,2,5,'#65a30d'); });
+// 11..13: Sheep (Face, Fluffy Wool, Hoofed Leg)
+paintMobTile(11, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,2,'#f8fafc'); r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); r(3,5,2,2,'#f472b6'); });
+paintMobTile(12, '#f8fafc', '#e2e8f0', (r) => { r(1,1,2,2,'#cbd5e1'); r(5,4,2,2,'#cbd5e1'); });
+paintMobTile(13, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,3,'#f8fafc'); r(0,6,8,2,'#475569'); });
+// 14..15: Pig (Face + Snout, Pink Body + Hooves) & Skeleton Bow
+paintMobTile(14, '#f49cbb', '#ec83a8', (r) => { r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); r(2,4,4,3,'#f472b6'); r(2,5,1,1,'#831843'); r(5,5,1,1,'#831843'); });
+paintMobTile(15, '#f49cbb', '#ec83a8', (r) => { r(0,6,8,2,'#9d174d'); });
+
+const mobAtlasTexture = new THREE.CanvasTexture(mobAtlasCanvas);
+mobAtlasTexture.magFilter = THREE.NearestFilter;
+mobAtlasTexture.minFilter = THREE.NearestFilter;
+
+function makeMobBox(w, h, d, fFront, fSide, fTop = fSide, fBot = fSide, extra = null) {
+  const buildPart = (pw, ph, pd, ox, oy, oz, tiles) => {
+    const g = new THREE.BoxGeometry(pw, ph, pd);
+    if (ox || oy || oz) g.translate(ox, oy, oz);
+    const uv = g.attributes.uv.array;
+    const sh = [0.82, 0.82, 1.0, 0.62, 0.95, 0.76];
+    const col = new Float32Array(24 * 3);
+    for (let f = 0; f < 6; f++) {
+      const t = tiles[f], u0 = (t * 8 + 0.15) / 128, u1 = ((t + 1) * 8 - 0.15) / 128;
+      const b = f * 8;
+      uv[b] = u0; uv[b + 1] = 0.98; uv[b + 2] = u1; uv[b + 3] = 0.98;
+      uv[b + 4] = u0; uv[b + 5] = 0.02; uv[b + 6] = u1; uv[b + 7] = 0.02;
+      for (let v = 0; v < 4; v++) {
+        const ci = (f * 4 + v) * 3;
+        col[ci] = sh[f]; col[ci + 1] = sh[f]; col[ci + 2] = sh[f];
+      }
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  };
+  const main = buildPart(w, h, d, 0, 0, 0, [fSide, fSide, fTop, fBot, fFront, fSide]);
+  if (!extra) return main;
+  const sub = buildPart(extra[0], extra[1], extra[2], extra[3], extra[4], extra[5], [extra[6], extra[6], extra[6], extra[6], extra[6], extra[6]]);
+  const merged = new THREE.BufferGeometry();
+  for (const attr of ['position', 'normal', 'uv', 'color']) {
+    const a = main.attributes[attr].array, b = sub.attributes[attr].array, itemSize = main.attributes[attr].itemSize;
+    const out = new Float32Array(a.length + b.length);
+    out.set(a, 0); out.set(b, a.length);
+    merged.setAttribute(attr, new THREE.BufferAttribute(out, itemSize));
+  }
+  const ia = main.index.array, ib = sub.index.array, idxOut = new Uint16Array(ia.length + ib.length);
+  idxOut.set(ia, 0);
+  for (let i = 0; i < ib.length; i++) idxOut[ia.length + i] = ib[i] + 24;
+  merged.setIndex(new THREE.BufferAttribute(idxOut, 1));
+  return merged;
+}
+
+// Shared detailed geometries across all mobs (zero per-mob geometry allocation & zero extra draw calls!)
 const mobGeos = {
-  head:        new THREE.BoxGeometry(0.46, 0.46, 0.46),
-  bodyQuad:    new THREE.BoxGeometry(0.62, 0.52, 0.92),
-  legQuad:     new THREE.BoxGeometry(0.20, 0.42, 0.20),
-  bodyBiped:   new THREE.BoxGeometry(0.50, 0.72, 0.28),
-  limbBiped:   new THREE.BoxGeometry(0.22, 0.68, 0.22),
-  armZombie:   new THREE.BoxGeometry(0.20, 0.20, 0.64),
-  bodyCreeper: new THREE.BoxGeometry(0.46, 0.82, 0.28),
-  legCreeper:  new THREE.BoxGeometry(0.22, 0.36, 0.22),
-  bodyGolem:   new THREE.BoxGeometry(0.82, 0.94, 0.46),
-  armGolem:    new THREE.BoxGeometry(0.24, 1.12, 0.24)
+  headZombie:  makeMobBox(0.46, 0.46, 0.46, 0, 1, 1, 1),
+  bodyZombie:  makeMobBox(0.50, 0.72, 0.28, 2, 2, 2, 2),
+  armZombie:   makeMobBox(0.20, 0.20, 0.64, 1, 1, 2, 1),
+  legZombie:   makeMobBox(0.22, 0.68, 0.22, 3, 3, 3, 3),
+  headSkel:    makeMobBox(0.46, 0.46, 0.46, 4, 6, 6, 6),
+  bodySkel:    makeMobBox(0.46, 0.72, 0.24, 5, 5, 6, 6),
+  armSkelL:    makeMobBox(0.16, 0.16, 0.64, 6, 6, 6, 6),
+  armSkelR:    makeMobBox(0.16, 0.16, 0.64, 6, 6, 6, 6, [0.07, 0.50, 0.10, 0, 0, 0.34, 3]),
+  legSkel:     makeMobBox(0.16, 0.68, 0.16, 6, 6, 6, 6),
+  headCreeper: makeMobBox(0.46, 0.46, 0.46, 7, 8, 8, 8),
+  bodyCreeper: makeMobBox(0.46, 0.82, 0.28, 8, 8, 8, 8),
+  legCreeper:  makeMobBox(0.22, 0.36, 0.22, 8, 8, 8, 8),
+  headGolem:   makeMobBox(0.46, 0.50, 0.46, 9, 10, 10, 10, [0.12, 0.22, 0.09, 0, -0.09, 0.25, 9]),
+  bodyGolem:   makeMobBox(0.82, 0.94, 0.46, 10, 10, 10, 10),
+  armGolem:    makeMobBox(0.24, 1.12, 0.24, 10, 10, 10, 10),
+  legGolem:    makeMobBox(0.24, 0.68, 0.24, 10, 10, 10, 10),
+  headSheep:   makeMobBox(0.44, 0.44, 0.46, 11, 12, 12, 11, [0.48, 0.18, 0.40, 0, 0.15, -0.02, 12]),
+  bodySheep:   makeMobBox(0.64, 0.54, 0.92, 12, 12, 12, 12),
+  legSheep:    makeMobBox(0.20, 0.42, 0.20, 13, 13, 12, 13),
+  headPig:     makeMobBox(0.46, 0.46, 0.46, 14, 15, 15, 15, [0.22, 0.15, 0.09, 0, -0.07, 0.25, 14]),
+  bodyPig:     makeMobBox(0.62, 0.52, 0.92, 15, 15, 15, 15),
+  legPig:      makeMobBox(0.20, 0.42, 0.20, 15, 15, 15, 15)
 };
 
 function createMobMesh(type) {
   const root = new THREE.Group();
-  const mats = [];
-  const mkMat = (hex) => {
-    const m = new THREE.MeshBasicMaterial({ color: hex });
-    mats.push({ mat: m, baseHex: hex });
+  const mat = new THREE.MeshBasicMaterial({ map: mobAtlasTexture, vertexColors: true, color: 0xffffff });
+  const mats = [{ mat, baseHex: 0xffffff }];
+  const addPart = (geo, x, y, z) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    root.add(m);
     return m;
   };
 
   if (type === 'zombie' || type === 'skeleton') {
     const isSkel = type === 'skeleton';
-    const skinMat  = mkMat(isSkel ? 0xe2e8f0 : 0x4d7c43);
-    const shirtMat = mkMat(isSkel ? 0xcbd5e1 : 0x0e7490);
-    const pantsMat = mkMat(isSkel ? 0x94a3b8 : 0x312e81);
-
-    const body = new THREE.Mesh(mobGeos.bodyBiped, shirtMat);
-    body.position.set(0, 0.98, 0);
-    root.add(body);
-
-    const head = new THREE.Mesh(mobGeos.head, skinMat);
-    head.position.set(0, 1.56, 0);
-    root.add(head);
-
-    const armL = new THREE.Mesh(mobGeos.armZombie, skinMat);
-    armL.position.set(-0.36, 1.22, 0.26);
-    root.add(armL);
-
-    const armR = new THREE.Mesh(mobGeos.armZombie, isSkel ? mkMat(0x92400e) : skinMat);
-    armR.position.set(0.36, 1.22, 0.26);
-    root.add(armR);
-
-    const legL = new THREE.Mesh(mobGeos.limbBiped, pantsMat);
-    legL.position.set(-0.14, 0.34, 0);
-    root.add(legL);
-
-    const legR = new THREE.Mesh(mobGeos.limbBiped, pantsMat);
-    legR.position.set(0.14, 0.34, 0);
-    root.add(legR);
-
-    return { root, head, legs: [legL, legR], mats, height: 1.8, radius: 0.35 };
+    addPart(isSkel ? mobGeos.bodySkel : mobGeos.bodyZombie, 0, 0.98, 0);
+    const head = addPart(isSkel ? mobGeos.headSkel : mobGeos.headZombie, 0, 1.56, 0);
+    addPart(isSkel ? mobGeos.armSkelL : mobGeos.armZombie, -0.36, 1.22, 0.26);
+    addPart(isSkel ? mobGeos.armSkelR : mobGeos.armZombie, 0.36, 1.22, 0.26);
+    const legGeo = isSkel ? mobGeos.legSkel : mobGeos.legZombie;
+    return { root, head, legs: [addPart(legGeo, -0.14, 0.34, 0), addPart(legGeo, 0.14, 0.34, 0)], mats, height: 1.8, radius: 0.35 };
   } else if (type === 'creeper') {
-    const skinMat = mkMat(0x22c55e);
-    const footMat = mkMat(0x15803d);
-
-    const body = new THREE.Mesh(mobGeos.bodyCreeper, skinMat);
-    body.position.set(0, 0.77, 0);
-    root.add(body);
-
-    const head = new THREE.Mesh(mobGeos.head, skinMat);
-    head.position.set(0, 1.41, 0);
-    root.add(head);
-
-    const legOffsets = [
-      [-0.15, 0.18,  0.22],
-      [ 0.15, 0.18,  0.22],
-      [-0.15, 0.18, -0.22],
-      [ 0.15, 0.18, -0.22]
-    ];
-    const legs = legOffsets.map(([lx, ly, lz]) => {
-      const l = new THREE.Mesh(mobGeos.legCreeper, footMat);
-      l.position.set(lx, ly, lz);
-      root.add(l);
-      return l;
-    });
-
+    addPart(mobGeos.bodyCreeper, 0, 0.77, 0);
+    const head = addPart(mobGeos.headCreeper, 0, 1.41, 0);
+    const legs = [[-0.15, 0.18, 0.22], [0.15, 0.18, 0.22], [-0.15, 0.18, -0.22], [0.15, 0.18, -0.22]].map(([lx, ly, lz]) => addPart(mobGeos.legCreeper, lx, ly, lz));
     return { root, head, legs, mats, height: 1.7, radius: 0.35 };
   } else if (type === 'golem') {
-    const ironMat = mkMat(0xe2e8f0);
-    const vineMat = mkMat(0x65a30d);
-
-    const body = new THREE.Mesh(mobGeos.bodyGolem, ironMat);
-    body.position.set(0, 1.15, 0);
-    root.add(body);
-
-    const head = new THREE.Mesh(mobGeos.head, vineMat);
-    head.position.set(0, 1.86, 0.08);
-    root.add(head);
-
-    const armL = new THREE.Mesh(mobGeos.armGolem, ironMat);
-    armL.position.set(-0.55, 1.10, 0);
-    root.add(armL);
-
-    const armR = new THREE.Mesh(mobGeos.armGolem, ironMat);
-    armR.position.set(0.55, 1.10, 0);
-    root.add(armR);
-
-    const legL = new THREE.Mesh(mobGeos.limbBiped, ironMat);
-    legL.position.set(-0.22, 0.34, 0);
-    root.add(legL);
-
-    const legR = new THREE.Mesh(mobGeos.limbBiped, ironMat);
-    legR.position.set(0.22, 0.34, 0);
-    root.add(legR);
-
+    addPart(mobGeos.bodyGolem, 0, 1.15, 0);
+    const head = addPart(mobGeos.headGolem, 0, 1.86, 0.08);
+    const armL = addPart(mobGeos.armGolem, -0.55, 1.10, 0), armR = addPart(mobGeos.armGolem, 0.55, 1.10, 0);
+    const legL = addPart(mobGeos.legGolem, -0.22, 0.34, 0), legR = addPart(mobGeos.legGolem, 0.22, 0.34, 0);
     return { root, head, legs: [legL, legR, armL, armR], mats, height: 2.2, radius: 0.45 };
   } else {
     const isSheep = type === 'sheep';
-    const coatMat = mkMat(isSheep ? 0xf1f5f9 : 0xf49cbb);
-    const skinMat = mkMat(isSheep ? 0xd6bfa3 : 0xf49cbb);
-
-    const body = new THREE.Mesh(mobGeos.bodyQuad, coatMat);
-    body.position.set(0, 0.64, 0);
-    root.add(body);
-
-    const head = new THREE.Mesh(mobGeos.head, skinMat);
-    head.position.set(0, 0.88, 0.52);
-    root.add(head);
-
-    const legOffsets = [
-      [-0.18, 0.21,  0.30],
-      [ 0.18, 0.21,  0.30],
-      [-0.18, 0.21, -0.30],
-      [ 0.18, 0.21, -0.30]
-    ];
-    const legs = legOffsets.map(([lx, ly, lz]) => {
-      const l = new THREE.Mesh(mobGeos.legQuad, skinMat);
-      l.position.set(lx, ly, lz);
-      root.add(l);
-      return l;
-    });
-
+    addPart(isSheep ? mobGeos.bodySheep : mobGeos.bodyPig, 0, 0.64, 0);
+    const head = addPart(isSheep ? mobGeos.headSheep : mobGeos.headPig, 0, 0.88, 0.52);
+    const legGeo = isSheep ? mobGeos.legSheep : mobGeos.legPig;
+    const legs = [[-0.18, 0.21, 0.30], [0.18, 0.21, 0.30], [-0.18, 0.21, -0.30], [0.18, 0.21, -0.30]].map(([lx, ly, lz]) => addPart(legGeo, lx, ly, lz));
     return { root, head, legs, mats, height: 1.15, radius: 0.4 };
   }
 }
