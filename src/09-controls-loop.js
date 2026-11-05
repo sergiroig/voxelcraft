@@ -546,7 +546,7 @@ window.__VOXELCRAFT__ = {
   toggleVoxelLever, propagateRedstoneSignal,
   minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
   applyWorldSeed, teleportToBiome,
-  skyGroup, sunMesh, moonMesh, starField, cloudMesh,
+  skyGroup, celestialOrbit, sunMesh, moonMesh, starField, cloudMesh, setTimeOfDay, getCelestialAngle: () => celestialAngle,
   solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
   getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }),
   getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,

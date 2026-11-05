@@ -463,6 +463,19 @@
       describe('9. Cielo Dinámico, Día/Noche e Interfaz Híbrida (PC + Móvil)', () => {
         it('Actualiza Sol, Luna, Estrellas, Nubes 3D y alterna Día/Noche (T)', () => {
           assert(vc.sunMesh && vc.moonMesh && vc.cloudMesh, 'Faltan mallas celestes');
+          assert(vc.sunMesh.geometry.type === 'SphereGeometry' && vc.moonMesh.geometry.type === 'SphereGeometry', 'El Sol y la Luna deben ser redondos (SphereGeometry)');
+          const angle0 = vc.getCelestialAngle();
+          vc.updateDynamicSky(5.0);
+          assert(Math.abs(vc.getCelestialAngle() - angle0) > 0.1, 'El Sol y la Luna deben moverse continuamente con dt');
+          vc.setTimeOfDay(0);
+          const noonSun = vc.sunMesh.material.color.clone(), noonSky = vc.scene.background.clone();
+          assert(noonSun.r > 0.95 && noonSun.g > 0.90 && noonSun.b > 0.75, 'Al mediodía el Sol debe tener color solar cálido-blanco brillante');
+          assert(noonSky.b > noonSky.r && noonSky.g > 0.65, 'Al mediodía el cielo debe ser azul celeste realista');
+          vc.setTimeOfDay(Math.PI / 2);
+          const sunsetSun = vc.sunMesh.material.color.clone(), sunsetSky = vc.scene.background.clone();
+          assert(sunsetSun.r > 0.90 && sunsetSun.b < 0.25 && sunsetSun.g < noonSun.g, 'En el horizonte/atardecer el Sol debe tornarse naranja-rojizo realista');
+          assert(sunsetSky.r > sunsetSky.b && Math.abs(sunsetSky.r - noonSky.r) > 0.15, 'En el atardecer el cielo debe cambiar a tonos cálidos crepusculares');
+          vc.setTimeOfDay(0.25);
           const wasNight = vc.getState().isNight;
           vc.toggleDayNight();
           assert(vc.getState().isNight === !wasNight, 'toggleDayNight no cambió el estado');

@@ -374,11 +374,7 @@ function toggleInventory(force) {
 
 function toggleDayNight() {
   isNight = !isNight;
-  sunFactor = isNight ? 0.16 : 1.0;
-  const target = isNight ? skyColorNight : skyColorDay;
-  scene.background.copy(target);
-  scene.fog.color.copy(target);
-  markAllChunksDirtyForRelight();
+  setTimeOfDay(isNight ? Math.PI : 0.25);
 }
 
 function toggleFlyingMode() {

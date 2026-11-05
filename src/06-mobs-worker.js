@@ -558,7 +558,7 @@ function rebuildChunkImmediate(cx, cz) {
     }
   }
   computeChunkLighting(ch, getChunkIfLoaded);
-  const meshData = buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor);
+  const meshData = buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, 1.0);
   applyArraysToMesh(ch, meshData);
 }
 
@@ -732,7 +732,7 @@ function requestChunkMeshWorker(cx, cz) {
   return new Promise((resolve) => {
     pendingWorkerJobs.set(jobId, { cx, cz, version, packMs, resolve });
     meshWorker.postMessage(
-      { jobId, cx, cz, sunFactor, paddedVoxels, paddedLight },
+      { jobId, cx, cz, sunFactor: 1.0, paddedVoxels, paddedLight },
       [paddedVoxels.buffer, paddedLight.buffer]
     );
   });

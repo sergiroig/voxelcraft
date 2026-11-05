@@ -61,25 +61,19 @@ function getChunkIfLoaded(cx, cz) {
 function getVoxelGlobal(wx, wy, wz) {
   if (wy < 0) return BLOCK.BEDROCK;
   if (wy >= CHUNK_HEIGHT) return BLOCK.AIR;
-  const cx = Math.floor(wx / CHUNK_SIZE);
-  const cz = Math.floor(wz / CHUNK_SIZE);
+  const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
   const ch = chunks.get(chunkKey(cx, cz));
   if (!ch) return BLOCK.AIR;
-  const lx = wx - cx * CHUNK_SIZE;
-  const lz = wz - cz * CHUNK_SIZE;
-  return ch.data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + wy];
+  return ch.data[((wz - cz * CHUNK_SIZE) * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)) * CHUNK_HEIGHT + wy];
 }
 
 function getLightGlobal(wx, wy, wz) {
   if (wy < 0) return 0;
   if (wy >= CHUNK_HEIGHT) return 0xF0;
-  const cx = Math.floor(wx / CHUNK_SIZE);
-  const cz = Math.floor(wz / CHUNK_SIZE);
+  const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
   const ch = chunks.get(chunkKey(cx, cz));
   if (!ch || !ch.lightReady) return 0xF0;
-  const lx = wx - cx * CHUNK_SIZE;
-  const lz = wz - cz * CHUNK_SIZE;
-  return ch.light[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + wy];
+  return ch.light[((wz - cz * CHUNK_SIZE) * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)) * CHUNK_HEIGHT + wy];
 }
 
 // Active Cellular Automata Tick Queue (Falling Sand & Flowing Water)
@@ -87,12 +81,9 @@ const simQueue = new Set();
 
 function enqueueSimNeighbors(wx, wy, wz) {
   simQueue.add(`${wx},${wy},${wz}`);
-  simQueue.add(`${wx},${wy + 1},${wz}`);
-  simQueue.add(`${wx},${wy - 1},${wz}`);
-  simQueue.add(`${wx + 1},${wy},${wz}`);
-  simQueue.add(`${wx - 1},${wy},${wz}`);
-  simQueue.add(`${wx},${wy},${wz + 1}`);
-  simQueue.add(`${wx},${wy},${wz - 1}`);
+  simQueue.add(`${wx},${wy + 1},${wz}`); simQueue.add(`${wx},${wy - 1},${wz}`);
+  simQueue.add(`${wx + 1},${wy},${wz}`); simQueue.add(`${wx - 1},${wy},${wz}`);
+  simQueue.add(`${wx},${wy},${wz + 1}`); simQueue.add(`${wx},${wy},${wz - 1}`);
 }
 
 function setVoxelRawNoRebuild(wx, wy, wz, blockId, dirtyChunksSet) {
@@ -197,10 +188,19 @@ function updateDynamicResolution(fpsSample) {
 }
 
 const scene = new THREE.Scene();
-const skyColorDay = new THREE.Color(0x7ec0ee);
-const skyColorNight = new THREE.Color(0x070b16);
-scene.background = skyColorDay.clone();
-scene.fog = new THREE.FogExp2(0x7ec0ee, 0.012);
+const skyColorDay      = new THREE.Color(0x6ec6ff);
+const skyColorGolden   = new THREE.Color(0xf4845f);
+const skyColorTwilight = new THREE.Color(0x4a3560);
+const skyColorNight    = new THREE.Color(0x070b16);
+const currentSkyColor  = skyColorDay.clone();
+const sunColHorizon    = new THREE.Color(0xff4d1a);
+const sunColGolden     = new THREE.Color(0xffa62b);
+const sunColNoon       = new THREE.Color(0xfff9d6);
+const cloudColDay      = new THREE.Color(0xf8fafc);
+const cloudColSunset   = new THREE.Color(0xfdba8c);
+const cloudColNight    = new THREE.Color(0x263147);
+scene.background = currentSkyColor.clone();
+scene.fog = new THREE.FogExp2(0x6ec6ff, 0.012);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 220);
 scene.add(camera);
@@ -210,10 +210,11 @@ const crackTextures = createCrackTextures();
 
 // Shared GPU Shader Uniforms (0 CPU overhead per vertex: animated entirely on GPU!)
 const gpuShaderUniforms = {
-  uTime:         { value: 0.0 },
-  uWindStrength: { value: 1.0 },
-  uSunFactor:    { value: 1.0 },
-  uUnderwater:   { value: 0.0 }
+  uTime:          { value: 0.0 },
+  uWindStrength:  { value: 1.0 },
+  uSunFactor:     { value: 1.0 },
+  uUnderwater:    { value: 0.0 },
+  uSunLightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) }
 };
 let solidShaderRef = null;
 let waterShaderRef = null;
@@ -231,6 +232,7 @@ solidMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uTime = gpuShaderUniforms.uTime;
   shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
   shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
+  shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor;
   solidShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
@@ -281,12 +283,16 @@ solidMaterial.onBeforeCompile = (shader) => {
       `#include <common>
       uniform float uTime;
       uniform float uSunFactor;
+      uniform vec3 uSunLightColor;
       varying float vTileIdx;
       varying vec3 vWorldPos;`
     )
     .replace(
       '#include <fog_fragment>',
-      `if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5)) {
+      `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
+      float torchMask = clamp((vColor.r - vColor.b) * 3.8, 0.0, 1.0);
+      gl_FragColor.rgb *= mix(uSunLightColor, vec3(1.0), max(isEmissiveTile, torchMask));
+      if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5)) {
         float flicker = 1.0 + 0.09 * sin(uTime * 9.5 + vWorldPos.x * 2.3 + vWorldPos.z * 2.3);
         gl_FragColor.rgb *= vec3(flicker * 1.04, flicker, flicker * 0.92);
       } else if (vTileIdx >= 27.5 && vTileIdx <= 28.5) {
@@ -325,6 +331,7 @@ waterMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uTime = gpuShaderUniforms.uTime;
   shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
   shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
+  shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor;
   waterShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
@@ -355,12 +362,14 @@ waterMaterial.onBeforeCompile = (shader) => {
       `#include <common>
       uniform float uTime;
       uniform float uSunFactor;
+      uniform vec3 uSunLightColor;
       varying float vWaveH;
       varying vec3 vWorldPos;`
     )
     .replace(
       '#include <fog_fragment>',
-      `float caustic = sin(vWorldPos.x * 2.4 + uTime * 2.8) * cos(vWorldPos.z * 2.4 - uTime * 2.2);
+      `gl_FragColor.rgb *= uSunLightColor;
+      float caustic = sin(vWorldPos.x * 2.4 + uTime * 2.8) * cos(vWorldPos.z * 2.4 - uTime * 2.2);
       float crestFoam = smoothstep(0.032, 0.082, vWaveH + caustic * 0.024);
       vec3 crestCol = vec3(0.76, 0.93, 1.0) * (0.35 + 0.65 * uSunFactor);
       gl_FragColor.rgb = mix(gl_FragColor.rgb, crestCol, crestFoam * 0.38);
@@ -403,9 +412,8 @@ function updateGPUShaders(dt) {
     scene.background.copy(targetWaterCol);
     scene.fog.density = 0.068;
   } else {
-    const targetSkyCol = isNight ? skyColorNight : skyColorDay;
-    scene.fog.color.copy(targetSkyCol);
-    scene.background.copy(targetSkyCol);
+    scene.fog.color.copy(currentSkyColor);
+    scene.background.copy(currentSkyColor);
     scene.fog.density = 0.055 / renderDistance;
   }
 }
@@ -485,14 +493,9 @@ function spawnBlockParticles(wx, wy, wz, blockId, count = 16) {
   for (let i = 0; i < count; i++) {
     const p = particles[partCursor];
     p.active = true;
-    p.x = wx + 0.2 + Math.random() * 0.6;
-    p.y = wy + 0.2 + Math.random() * 0.6;
-    p.z = wz + 0.2 + Math.random() * 0.6;
-    p.vx = (Math.random() - 0.5) * 3.8;
-    p.vy = 1.5 + Math.random() * 3.2;
-    p.vz = (Math.random() - 0.5) * 3.8;
+    p.x = wx + 0.2 + Math.random() * 0.6; p.y = wy + 0.2 + Math.random() * 0.6; p.z = wz + 0.2 + Math.random() * 0.6;
+    p.vx = (Math.random() - 0.5) * 3.8; p.vy = 1.5 + Math.random() * 3.2; p.vz = (Math.random() - 0.5) * 3.8;
     p.life = 0.45 + Math.random() * 0.35;
-
     dummyColor.setHex(baseColor).multiplyScalar(0.75 + Math.random() * 0.35);
     particleInstanced.setColorAt(partCursor, dummyColor);
     partCursor = (partCursor + 1) % MAX_PARTICLES;
@@ -514,9 +517,7 @@ function updateParticles(dt) {
       continue;
     }
     p.vy -= 14.0 * dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.z += p.vz * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
     dummyMatrix.makeTranslation(p.x, p.y, p.z);
     particleInstanced.setMatrixAt(i, dummyMatrix);
   }
@@ -532,21 +533,10 @@ dropInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 scene.add(dropInstanced);
 
 const itemDrops = [];
-const dropPosVec = new THREE.Vector3();
-const dropQuat = new THREE.Quaternion();
-const dropEuler = new THREE.Euler();
-const dropScaleVec = new THREE.Vector3(1, 1, 1);
+const dropPosVec = new THREE.Vector3(), dropQuat = new THREE.Quaternion(), dropEuler = new THREE.Euler(), dropScaleVec = new THREE.Vector3(1, 1, 1);
 
 for (let i = 0; i < MAX_DROPS; i++) {
-  itemDrops.push({
-    active: false,
-    x: 0, y: -999, z: 0,
-    vx: 0, vy: 0, vz: 0,
-    itemId: BLOCK.COBBLE,
-    count: 1,
-    age: 0,
-    pickupDelay: 0
-  });
+  itemDrops.push({ active: false, x: 0, y: -999, z: 0, vx: 0, vy: 0, vz: 0, itemId: BLOCK.COBBLE, count: 1, age: 0, pickupDelay: 0 });
   dummyMatrix.makeTranslation(0, -999, 0);
   dropInstanced.setMatrixAt(i, dummyMatrix);
   dropInstanced.setColorAt(i, dummyColor.setHex(0xffffff));
@@ -556,25 +546,14 @@ let dropCursor = 0;
 function spawnItemDrop(wx, wy, wz, blockOrItemId, count = 1, pickupDelay = 0.22) {
   const itemId = getDropItemForBlock(blockOrItemId);
   if (itemId === BLOCK.AIR || itemId === BLOCK.WATER || itemId === BLOCK.BEDROCK) return null;
-
-  const d = itemDrops[dropCursor];
-  const idx = dropCursor;
+  const d = itemDrops[dropCursor], idx = dropCursor;
   dropCursor = (dropCursor + 1) % MAX_DROPS;
-
   d.active = true;
-  d.x = wx + 0.35 + Math.random() * 0.3;
-  d.y = wy + 0.35;
-  d.z = wz + 0.35 + Math.random() * 0.3;
-  d.vx = (Math.random() - 0.5) * 2.2;
-  d.vy = 2.6 + Math.random() * 1.4;
-  d.vz = (Math.random() - 0.5) * 2.2;
-  d.itemId = itemId;
-  d.count = count;
-  d.age = Math.random() * 3.0;
-  d.pickupDelay = pickupDelay;
+  d.x = wx + 0.35 + Math.random() * 0.3; d.y = wy + 0.35; d.z = wz + 0.35 + Math.random() * 0.3;
+  d.vx = (Math.random() - 0.5) * 2.2; d.vy = 2.6 + Math.random() * 1.4; d.vz = (Math.random() - 0.5) * 2.2;
+  d.itemId = itemId; d.count = count; d.age = Math.random() * 3.0; d.pickupDelay = pickupDelay;
 
-  const colHex = BLOCK_DEFS[itemId]?.color || 0xffffff;
-  dummyColor.setHex(colHex);
+  dummyColor.setHex(BLOCK_DEFS[itemId]?.color || 0xffffff);
   dropInstanced.setColorAt(idx, dummyColor);
   dropInstanced.instanceColor.needsUpdate = true;
 
@@ -667,7 +646,7 @@ function updateItemDrops(dt) {
 }
 
 // ============================================================================
-// 8B. DYNAMIC SKY: CUBIC SUN, CUBIC MOON, STARS & 1-DRAW-CALL 3D VOXEL CLOUDS
+// 8B. DYNAMIC SKY: ROUND SUN & MOON, ORBITAL CYCLE, STARS & 3D VOXEL CLOUDS
 // ============================================================================
 const skyGroup = new THREE.Group();
 scene.add(skyGroup);
@@ -676,17 +655,29 @@ const celestialOrbit = new THREE.Group();
 skyGroup.add(celestialOrbit);
 
 const sunMesh = new THREE.Mesh(
-  new THREE.BoxGeometry(14, 14, 14),
-  new THREE.MeshBasicMaterial({ color: 0xfff48f, fog: false })
+  new THREE.SphereGeometry(11.5, 28, 20),
+  new THREE.MeshBasicMaterial({ color: 0xfff9d6, fog: false })
 );
-sunMesh.position.set(0, 145, -60);
+sunMesh.position.set(0, 150, -65);
 celestialOrbit.add(sunMesh);
 
+const moonGeo = new THREE.SphereGeometry(8.8, 28, 20);
+(() => {
+  const pos = moonGeo.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const nx = pos.getX(i), ny = pos.getY(i), nz = pos.getZ(i);
+    const crater = Math.sin(nx * 0.45 + ny * 0.35) * Math.cos(nz * 0.42 - nx * 0.28);
+    const c = crater > 0.2 ? 0.84 : (crater < -0.25 ? 0.92 : 1.0);
+    col[i * 3] = c * 0.96; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = c;
+  }
+  moonGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+})();
 const moonMesh = new THREE.Mesh(
-  new THREE.BoxGeometry(11, 11, 11),
-  new THREE.MeshBasicMaterial({ color: 0xdbeafe, fog: false })
+  moonGeo,
+  new THREE.MeshBasicMaterial({ color: 0xe2e8f0, vertexColors: true, fog: false })
 );
-moonMesh.position.set(0, -145, 60);
+moonMesh.position.set(0, -150, -65);
 celestialOrbit.add(moonMesh);
 
 const starPositions = new Float32Array(220 * 3);
@@ -710,14 +701,11 @@ const cloudMesh = (() => {
   let cSeed = 9001;
   const cRand = () => { cSeed = (cSeed * 1664525 + 1013904223) >>> 0; return (cSeed & 0xffff) / 0x10000; };
   for (let i = 0; i < 26; i++) {
-    const cx = (cRand() - 0.5) * 220;
-    const cz = (cRand() - 0.5) * 220;
-    const w = 8 + Math.floor(cRand() * 14);
-    const d = 6 + Math.floor(cRand() * 12);
+    const cx = (cRand() - 0.5) * 220, cz = (cRand() - 0.5) * 220;
+    const w = 8 + Math.floor(cRand() * 14), d = 6 + Math.floor(cRand() * 12);
     boxes.push({ x: cx, z: cz, w, d });
   }
-  const pos = [];
-  const idx = [];
+  const pos = [], idx = [];
   let vOff = 0;
   const pushQuad = (p0, p1, p2, p3) => {
     pos.push(...p0, ...p1, ...p2, ...p3);
@@ -725,9 +713,7 @@ const cloudMesh = (() => {
     vOff += 4;
   };
   for (const b of boxes) {
-    const x0 = b.x, x1 = b.x + b.w;
-    const y0 = 65,  y1 = 67.2;
-    const z0 = b.z, z1 = b.z + b.d;
+    const x0 = b.x, x1 = b.x + b.w, y0 = 65, y1 = 67.2, z0 = b.z, z1 = b.z + b.d;
     pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]);
     pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]);
     pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]);
@@ -738,29 +724,68 @@ const cloudMesh = (() => {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setIndex(idx);
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.78,
-    depthWrite: false
-  });
-  const m = new THREE.Mesh(geo, mat);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.78, depthWrite: false }));
   scene.add(m);
   return m;
 })();
 
 let cloudDrift = 0;
-let targetSkyAngle = 0;
+let celestialAngle = 0.45; // 0 = Noon, PI/2 = Sunset, PI = Midnight, 3*PI/2 = Sunrise
+const DAY_CYCLE_SPEED = (Math.PI * 2) / 140; // Full 24h cycle every 140s
+
+function setTimeOfDay(angle) {
+  celestialAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  updateDynamicSky(0);
+  updateGPUShaders(0);
+}
 
 function updateDynamicSky(dt) {
   skyGroup.position.set(player.x, 0, player.z);
-  targetSkyAngle = isNight ? Math.PI : 0;
-  celestialOrbit.rotation.x += (targetSkyAngle - celestialOrbit.rotation.x) * Math.min(1, dt * 3.5);
-  starMat.opacity = isNight ? 0.85 : 0.0;
+  celestialAngle = (celestialAngle + dt * DAY_CYCLE_SPEED) % (Math.PI * 2);
+  celestialOrbit.rotation.z = celestialAngle;
+  celestialOrbit.rotation.x = Math.sin(celestialAngle) * 0.12;
 
+  const sunElev = Math.cos(celestialAngle); // +1 at zenith, 0 at horizon, -1 at midnight
+  isNight = sunElev < -0.05;
+  sunFactor = THREE.MathUtils.clamp(0.16 + (sunElev + 0.15) * 0.88, 0.16, 1.0);
+
+  // Realistic Sun color & horizon atmospheric magnification
+  if (sunElev <= 0.28) {
+    const t = THREE.MathUtils.clamp((sunElev + 0.12) / 0.40, 0, 1);
+    sunMesh.material.color.copy(sunColHorizon).lerp(sunColGolden, t);
+  } else {
+    const t = THREE.MathUtils.clamp((sunElev - 0.28) / 0.52, 0, 1);
+    sunMesh.material.color.copy(sunColGolden).lerp(sunColNoon, t);
+  }
+  const horizonScale = 1.0 + Math.max(0, 1.0 - Math.abs(sunElev) / 0.38) * 0.24;
+  sunMesh.scale.setScalar(horizonScale);
+
+  // Realistic Sky, Fog, Cloud & GPU Terrain Sunlight color across Noon -> Golden Sunset/Sunrise -> Twilight -> Night
+  if (sunElev >= 0.0) {
+    const t = Math.min(1, sunElev / 0.45);
+    currentSkyColor.copy(skyColorGolden).lerp(skyColorDay, t);
+    cloudMesh.material.color.copy(cloudColSunset).lerp(cloudColDay, t);
+    gpuShaderUniforms.uSunLightColor.value.set(1.0, 0.78 + 0.22 * t, 0.58 + 0.42 * t);
+  } else if (sunElev >= -0.18) {
+    const t = (sunElev + 0.18) / 0.18;
+    currentSkyColor.copy(skyColorTwilight).lerp(skyColorGolden, t);
+    cloudMesh.material.color.copy(cloudColNight).lerp(cloudColSunset, t);
+    gpuShaderUniforms.uSunLightColor.value.set(0.32 + 0.68 * t, 0.28 + 0.50 * t, 0.38 + 0.20 * t);
+  } else if (sunElev >= -0.36) {
+    const t = (sunElev + 0.36) / 0.18;
+    currentSkyColor.copy(skyColorNight).lerp(skyColorTwilight, t);
+    cloudMesh.material.color.copy(cloudColNight);
+    gpuShaderUniforms.uSunLightColor.value.set(0.18 + 0.14 * t, 0.22 + 0.06 * t, 0.34 + 0.04 * t);
+  } else {
+    currentSkyColor.copy(skyColorNight);
+    cloudMesh.material.color.copy(cloudColNight);
+    gpuShaderUniforms.uSunLightColor.value.set(0.18, 0.22, 0.34);
+  }
+  gpuShaderUniforms.uSunFactor.value = sunFactor;
+  if (!isCameraUnderwater) { scene.background.copy(currentSkyColor); scene.fog.color.copy(currentSkyColor); }
+
+  starMat.opacity = THREE.MathUtils.clamp((-sunElev + 0.05) * 2.6, 0, 0.88);
   cloudDrift = (cloudDrift + dt * 1.6) % 220;
-  const snapX = Math.floor(player.x / 220) * 220;
-  const snapZ = Math.floor(player.z / 220) * 220;
+  const snapX = Math.floor(player.x / 220) * 220, snapZ = Math.floor(player.z / 220) * 220;
   cloudMesh.position.set(snapX + cloudDrift - 110, 0, snapZ);
-  cloudMesh.material.color.setScalar(isNight ? 0.28 : 0.96);
 }
