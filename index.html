@@ -783,12 +783,13 @@
       FLOWER_RED: 21,
       FLOWER_YELLOW: 22,
       CACTUS: 23,
-      // Special Tool ID (not placed as a block, boosts mining speed)
+      TNT: 24,
+      // Special Tool ID (not placed as a block, boosts mining speed & combat damage)
       TOOL_PICKAXE: 100
     };
 
-    // Atlas has 26 tiles (columns) of 16x16 pixels
-    const ATLAS_COLS = 26;
+    // Atlas has 28 tiles (columns) of 16x16 pixels
+    const ATLAS_COLS = 28;
     const TILE_PX = 16;
 
     // Block Definitions:
@@ -820,12 +821,14 @@
       [BLOCK.FLOWER_RED]:    { name: 'Rosa Roja',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xe83b3b, tiles: [23,23,23,23,23,23] },
       [BLOCK.FLOWER_YELLOW]: { name: 'Diente de León',   solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xfacc15, tiles: [24,24,24,24,24,24] },
       [BLOCK.CACTUS]:        { name: 'Cactus',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [25,25,25,25,25,25] },
+      [BLOCK.TNT]:           { name: 'TNT (Explosivo)',  solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,27,26,26,26,26] },
       [BLOCK.TOOL_PICKAXE]:  { name: 'Pico de Diamante', solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] }
     };
 
     const ALL_INVENTORY_ITEMS = [
       BLOCK.TOOL_PICKAXE,
       BLOCK.TORCH,
+      BLOCK.TNT,
       BLOCK.GRASS,
       BLOCK.DIRT,
       BLOCK.STONE,
@@ -851,10 +854,10 @@
     const hotbarSlots = [
       BLOCK.TOOL_PICKAXE,
       BLOCK.TORCH,
+      BLOCK.TNT,
       BLOCK.COBBLE,
       BLOCK.PLANKS,
-      BLOCK.GRASS,
-      BLOCK.STONE,
+      BLOCK.SAND,
       BLOCK.BRICK,
       BLOCK.GLASS,
       BLOCK.GLOWSTONE
@@ -1017,6 +1020,28 @@
         const spine = rib && (y % 5 === 2);
         if (spine) return '#e2e8f0';
         return shade(44, 138, 60, (rib ? 0.78 : 0.96) + r * 0.14);
+      });
+
+      // 26: TNT Side
+      drawTile(26, (x, y, r) => {
+        if (y >= 5 && y <= 10) {
+          // White label band with dark "TNT" pixel letters
+          const inText = (y >= 6 && y <= 9) && (
+            (x >= 2 && x <= 4 && (y === 6 || x === 3)) ||
+            (x >= 6 && x <= 9 && (x === 6 || x === 9 || x - 6 === y - 6)) ||
+            (x >= 11 && x <= 13 && (y === 6 || x === 12))
+          );
+          return inText ? '#1e293b' : shade(245, 245, 245, 0.94 + r * 0.08);
+        }
+        const stickGap = (x % 4 === 0);
+        return shade(215, 38, 38, (stickGap ? 0.75 : 0.96) + r * 0.12);
+      });
+
+      // 27: TNT Top
+      drawTile(27, (x, y, r) => {
+        if (x >= 7 && x <= 8 && y >= 7 && y <= 8) return '#f8fafc';
+        if (x >= 6 && x <= 9 && y >= 6 && y <= 9) return '#334155';
+        return shade(200, 35, 35, 0.85 + r * 0.2);
       });
 
       const texture = new THREE.CanvasTexture(canvas);
@@ -1797,6 +1822,34 @@
           gain.gain.setValueAtTime(0.2, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
           osc.start(now); osc.stop(now + 0.16);
+        } else if (type === 'fuse') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.18);
+          gain.gain.setValueAtTime(0.11, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+          osc.start(now); osc.stop(now + 0.18);
+        } else if (type === 'boom') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.exponentialRampToValueAtTime(24, now + 0.45);
+          gain.gain.setValueAtTime(0.32, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now); osc.stop(now + 0.45);
+        } else if (type === 'mobHit') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(290 + Math.random() * 60, now);
+          osc.frequency.exponentialRampToValueAtTime(120, now + 0.11);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+          osc.start(now); osc.stop(now + 0.11);
+        } else if (type === 'zombie') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(92, now);
+          osc.frequency.linearRampToValueAtTime(64, now + 0.24);
+          gain.gain.setValueAtTime(0.13, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+          osc.start(now); osc.stop(now + 0.24);
         }
       }
     }
@@ -1878,6 +1931,71 @@
       return ch.light[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + wy];
     }
 
+    // Active Cellular Automata Tick Queue (Falling Sand & Flowing Water)
+    const simQueue = new Set();
+
+    function enqueueSimNeighbors(wx, wy, wz) {
+      simQueue.add(`${wx},${wy},${wz}`);
+      simQueue.add(`${wx},${wy + 1},${wz}`);
+      simQueue.add(`${wx},${wy - 1},${wz}`);
+      simQueue.add(`${wx + 1},${wy},${wz}`);
+      simQueue.add(`${wx - 1},${wy},${wz}`);
+      simQueue.add(`${wx},${wy},${wz + 1}`);
+      simQueue.add(`${wx},${wy},${wz - 1}`);
+    }
+
+    function setVoxelRawNoRebuild(wx, wy, wz, blockId, dirtyChunksSet) {
+      if (wy <= 0 || wy >= CHUNK_HEIGHT) return false;
+      const cx = Math.floor(wx / CHUNK_SIZE);
+      const cz = Math.floor(wz / CHUNK_SIZE);
+      const lx = wx - cx * CHUNK_SIZE;
+      const lz = wz - cz * CHUNK_SIZE;
+      const key = chunkKey(cx, cz);
+      const ch = getChunkData(cx, cz);
+      const idx = voxelIndex(lx, wy, lz);
+
+      if (ch.data[idx] === blockId) return false;
+      ch.data[idx] = blockId;
+
+      if (!worldDeltas[key]) worldDeltas[key] = [];
+      const dArr = worldDeltas[key];
+      let found = false;
+      for (let i = 0; i < dArr.length; i += 2) {
+        if (dArr[i] === idx) { dArr[i + 1] = blockId; found = true; break; }
+      }
+      if (!found) dArr.push(idx, blockId);
+
+      if (blockId === BLOCK.AIR && wy + 1 < CHUNK_HEIGHT) {
+        const above = ch.data[idx + 1];
+        if (BLOCK_DEFS[above].shape === 'cross') {
+          ch.data[idx + 1] = BLOCK.AIR;
+          dArr.push(idx + 1, BLOCK.AIR);
+        }
+      }
+
+      enqueueSimNeighbors(wx, wy, wz);
+      if (dirtyChunksSet) {
+        dirtyChunksSet.add(key);
+        if (lx <= 2) dirtyChunksSet.add(chunkKey(cx - 1, cz));
+        if (lx >= CHUNK_SIZE - 3) dirtyChunksSet.add(chunkKey(cx + 1, cz));
+        if (lz <= 2) dirtyChunksSet.add(chunkKey(cx, cz - 1));
+        if (lz >= CHUNK_SIZE - 3) dirtyChunksSet.add(chunkKey(cx, cz + 1));
+      }
+      return true;
+    }
+
+    function rebuildAffectedChunksSet(dirtyChunksSet) {
+      if (dirtyChunksSet.size === 0) return;
+      saveWorldData();
+      const chList = [];
+      for (const key of dirtyChunksSet) {
+        const ch = chunks.get(key);
+        if (ch) chList.push(ch);
+      }
+      for (const ch of chList) computeChunkLighting(ch, getChunkIfLoaded);
+      for (const ch of chList) rebuildChunkImmediate(ch.cx, ch.cz);
+    }
+
     function setVoxelGlobal(wx, wy, wz, blockId) {
       if (wy <= 0 || wy >= CHUNK_HEIGHT) return false;
       const cx = Math.floor(wx / CHUNK_SIZE);
@@ -1908,6 +2026,7 @@
         }
       }
 
+      enqueueSimNeighbors(wx, wy, wz);
       saveWorldData();
 
       // Recompute lighting on current chunk + 4 neighbors so torches illuminate across chunk borders
@@ -2074,6 +2193,605 @@
         particleInstanced.setMatrixAt(i, dummyMatrix);
       }
       if (anyUpdated) particleInstanced.instanceMatrix.needsUpdate = true;
+    }
+
+    // ============================================================================
+    // 8B. DYNAMIC SKY: CUBIC SUN, CUBIC MOON, STARS & 1-DRAW-CALL 3D VOXEL CLOUDS
+    // ============================================================================
+    const skyGroup = new THREE.Group();
+    scene.add(skyGroup);
+
+    const celestialOrbit = new THREE.Group();
+    skyGroup.add(celestialOrbit);
+
+    // Cubic Sun
+    const sunMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(14, 14, 14),
+      new THREE.MeshBasicMaterial({ color: 0xfff48f, fog: false })
+    );
+    sunMesh.position.set(0, 145, -60);
+    celestialOrbit.add(sunMesh);
+
+    // Cubic Moon
+    const moonMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(11, 11, 11),
+      new THREE.MeshBasicMaterial({ color: 0xdbeafe, fog: false })
+    );
+    moonMesh.position.set(0, -145, 60);
+    celestialOrbit.add(moonMesh);
+
+    // Night Starfield (1 Points draw call)
+    const starPositions = new Float32Array(220 * 3);
+    for (let i = 0; i < 220; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 165;
+      starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+      starPositions[i * 3 + 1] = r * Math.cos(phi);
+      starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.8, fog: false, transparent: true, opacity: 0.0 });
+    const starField = new THREE.Points(starGeo, starMat);
+    celestialOrbit.add(starField);
+
+    // Merged 3D Voxel Clouds (Single BufferGeometry = 1 Draw Call!)
+    const cloudMesh = (() => {
+      const boxes = [];
+      let cSeed = 9001;
+      const cRand = () => { cSeed = (cSeed * 1664525 + 1013904223) >>> 0; return (cSeed & 0xffff) / 0x10000; };
+      for (let i = 0; i < 26; i++) {
+        const cx = (cRand() - 0.5) * 220;
+        const cz = (cRand() - 0.5) * 220;
+        const w = 8 + Math.floor(cRand() * 14);
+        const d = 6 + Math.floor(cRand() * 12);
+        boxes.push({ x: cx, z: cz, w, d });
+      }
+      const pos = [];
+      const idx = [];
+      let vOff = 0;
+      const pushQuad = (p0, p1, p2, p3) => {
+        pos.push(...p0, ...p1, ...p2, ...p3);
+        idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3);
+        vOff += 4;
+      };
+      for (const b of boxes) {
+        const x0 = b.x, x1 = b.x + b.w;
+        const y0 = 65,  y1 = 67.2;
+        const z0 = b.z, z1 = b.z + b.d;
+        pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]); // Top
+        pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]); // Bottom
+        pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]); // North
+        pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]); // South
+        pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]); // East
+        pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]); // West
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.78,
+        depthWrite: false
+      });
+      const m = new THREE.Mesh(geo, mat);
+      scene.add(m);
+      return m;
+    })();
+
+    let cloudDrift = 0;
+    let targetSkyAngle = 0;
+
+    function updateDynamicSky(dt) {
+      skyGroup.position.set(player.x, 0, player.z);
+      targetSkyAngle = isNight ? Math.PI : 0;
+      celestialOrbit.rotation.x += (targetSkyAngle - celestialOrbit.rotation.x) * Math.min(1, dt * 3.5);
+      starMat.opacity = isNight ? 0.85 : 0.0;
+
+      cloudDrift = (cloudDrift + dt * 1.6) % 220;
+      const snapX = Math.floor(player.x / 220) * 220;
+      const snapZ = Math.floor(player.z / 220) * 220;
+      cloudMesh.position.set(snapX + cloudDrift - 110, 0, snapZ);
+      cloudMesh.material.color.setScalar(isNight ? 0.28 : 0.96);
+    }
+
+    // ============================================================================
+    // 8C. VOXEL PHYSICS TICK QUEUE (SAND, WATER) & PRIMED TNT EXPLOSIONS
+    // ============================================================================
+    const activeTNTs = [];
+    const tntGeo = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+    const tntMatRed = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+    const tntMatWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    function igniteTNT(wx, wy, wz, fuse = 2.6) {
+      setVoxelGlobal(wx, wy, wz, BLOCK.AIR);
+      sfx.play('fuse');
+      const mesh = new THREE.Mesh(tntGeo, tntMatRed);
+      mesh.position.set(wx + 0.5, wy + 0.3, wz + 0.5);
+      scene.add(mesh);
+      activeTNTs.push({
+        x: wx + 0.5,
+        y: wy + 0.5,
+        z: wz + 0.5,
+        vy: 3.5,
+        fuse,
+        mesh
+      });
+    }
+
+    function explodeAt(ex, ey, ez, radius = 3.6) {
+      sfx.play('boom');
+      spawnBlockParticles(ex, ey, ez, BLOCK.TNT, 48);
+      spawnBlockParticles(ex, ey, ez, BLOCK.STONE, 36);
+
+      const dirtySet = new Set();
+      const rCeil = Math.ceil(radius);
+      const bx0 = Math.floor(ex);
+      const by0 = Math.floor(ey);
+      const bz0 = Math.floor(ez);
+
+      for (let dy = -rCeil; dy <= rCeil; dy++) {
+        for (let dz = -rCeil; dz <= rCeil; dz++) {
+          for (let dx = -rCeil; dx <= rCeil; dx++) {
+            const distSq = dx * dx + dy * dy + dz * dz;
+            if (distSq > radius * radius) continue;
+            const wx = bx0 + dx;
+            const wy = by0 + dy;
+            const wz = bz0 + dz;
+            if (wy <= 1 || wy >= CHUNK_HEIGHT) continue;
+            const b = getVoxelGlobal(wx, wy, wz);
+            if (b === BLOCK.AIR || b === BLOCK.BEDROCK) continue;
+
+            if (b === BLOCK.TNT) {
+              // Chain reaction!
+              setVoxelRawNoRebuild(wx, wy, wz, BLOCK.AIR, dirtySet);
+              igniteTNT(wx, wy, wz, 0.45 + Math.random() * 0.35);
+            } else {
+              setVoxelRawNoRebuild(wx, wy, wz, BLOCK.AIR, dirtySet);
+            }
+          }
+        }
+      }
+
+      // Single batch relight & mesh rebuild for the entire crater
+      rebuildAffectedChunksSet(dirtySet);
+
+      // Blast shockwave on Player
+      const pdx = player.x - ex;
+      const pdy = (player.y + 0.9) - ey;
+      const pdz = player.z - ez;
+      const pDist = Math.hypot(pdx, pdy, pdz);
+      if (pDist < radius * 2.1 && pDist > 0.01) {
+        const force = (1 - pDist / (radius * 2.1)) * 14;
+        player.vy = Math.max(player.vy, 6.5);
+        player.x += (pdx / pDist) * 0.4;
+        player.z += (pdz / pDist) * 0.4;
+        const dmg = Math.max(1, Math.round(force * 0.45));
+        damagePlayer(dmg);
+      }
+
+      // Blast shockwave on Mobs
+      for (let i = mobs.length - 1; i >= 0; i--) {
+        const m = mobs[i];
+        const mdx = m.x - ex;
+        const mdy = m.y - ey;
+        const mdz = m.z - ez;
+        const mDist = Math.hypot(mdx, mdy, mdz);
+        if (mDist < radius * 2.0) {
+          damageMob(m, 8, mdx, mdz);
+        }
+      }
+    }
+
+    let simAccum = 0;
+
+    function updateVoxelSimulation(dt) {
+      // 1. Update primed TNT entities
+      for (let i = activeTNTs.length - 1; i >= 0; i--) {
+        const t = activeTNTs[i];
+        t.fuse -= dt;
+        t.vy -= 18.0 * dt;
+        const nextY = t.y + t.vy * dt;
+        if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(t.x), Math.floor(nextY - 0.48), Math.floor(t.z))].solid) {
+          t.y = nextY;
+        } else {
+          t.vy = 0;
+        }
+        t.mesh.position.set(t.x, t.y, t.z);
+        // Blink faster as fuse approaches 0
+        const blink = Math.floor(t.fuse * (t.fuse < 0.8 ? 16 : 7)) % 2 === 0;
+        t.mesh.material = blink ? tntMatWhite : tntMatRed;
+        const swell = t.fuse < 0.35 ? 1.0 + (0.35 - t.fuse) * 0.65 : 1.0;
+        t.mesh.scale.setScalar(swell);
+
+        if (t.fuse <= 0) {
+          scene.remove(t.mesh);
+          activeTNTs.splice(i, 1);
+          explodeAt(t.x, t.y, t.z, 3.6);
+        }
+      }
+
+      // 2. Cellular Automata Tick Queue (every 160ms) for Falling Sand & Flowing Water
+      simAccum += dt;
+      if (simAccum < 0.16 || simQueue.size === 0) return;
+      simAccum = 0;
+
+      const batch = Array.from(simQueue).slice(0, 40);
+      for (const key of batch) simQueue.delete(key);
+
+      const dirtySet = new Set();
+      for (let i = 0; i < batch.length; i++) {
+        const [wx, wy, wz] = batch[i].split(',').map(Number);
+        if (wy <= 1 || wy >= CHUNK_HEIGHT) continue;
+        const b = getVoxelGlobal(wx, wy, wz);
+
+        if (b === BLOCK.SAND) {
+          const below = getVoxelGlobal(wx, wy - 1, wz);
+          if (below === BLOCK.AIR || below === BLOCK.WATER) {
+            setVoxelRawNoRebuild(wx, wy, wz, below === BLOCK.WATER ? BLOCK.WATER : BLOCK.AIR, dirtySet);
+            setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.SAND, dirtySet);
+          }
+        } else if (b === BLOCK.WATER) {
+          const below = getVoxelGlobal(wx, wy - 1, wz);
+          if (below === BLOCK.AIR && wy - 1 > 1) {
+            setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet);
+          } else if (wy <= SEA_LEVEL) {
+            for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+              if (getVoxelGlobal(wx + dx, wy, wz + dz) === BLOCK.AIR) {
+                const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
+                if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER) {
+                  setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      rebuildAffectedChunksSet(dirtySet);
+    }
+
+    // ============================================================================
+    // 8D. OPTIMIZED MOB ENGINE (SHEEP, PIGS & DARKNESS-SPAWNING ZOMBIES)
+    // ============================================================================
+    const MAX_MOBS = 14;
+    const mobs = [];
+    let mobSpawnTimer = 0;
+
+    // Shared geometries across all mobs (zero per-mob geometry allocation!)
+    const mobGeos = {
+      head:      new THREE.BoxGeometry(0.46, 0.46, 0.46),
+      bodyQuad:  new THREE.BoxGeometry(0.62, 0.52, 0.92),
+      legQuad:   new THREE.BoxGeometry(0.20, 0.42, 0.20),
+      bodyBiped: new THREE.BoxGeometry(0.50, 0.72, 0.28),
+      limbBiped: new THREE.BoxGeometry(0.22, 0.68, 0.22),
+      armZombie: new THREE.BoxGeometry(0.20, 0.20, 0.64)
+    };
+
+    function createMobMesh(type) {
+      const root = new THREE.Group();
+      const mats = [];
+      const mkMat = (hex) => {
+        const m = new THREE.MeshBasicMaterial({ color: hex });
+        mats.push({ mat: m, baseHex: hex });
+        return m;
+      };
+
+      if (type === 'zombie') {
+        const skinMat  = mkMat(0x4d7c43);
+        const shirtMat = mkMat(0x0e7490);
+        const pantsMat = mkMat(0x312e81);
+
+        const body = new THREE.Mesh(mobGeos.bodyBiped, shirtMat);
+        body.position.set(0, 0.98, 0);
+        root.add(body);
+
+        const head = new THREE.Mesh(mobGeos.head, skinMat);
+        head.position.set(0, 1.56, 0);
+        root.add(head);
+
+        const armL = new THREE.Mesh(mobGeos.armZombie, skinMat);
+        armL.position.set(-0.36, 1.22, 0.26);
+        root.add(armL);
+
+        const armR = new THREE.Mesh(mobGeos.armZombie, skinMat);
+        armR.position.set(0.36, 1.22, 0.26);
+        root.add(armR);
+
+        const legL = new THREE.Mesh(mobGeos.limbBiped, pantsMat);
+        legL.position.set(-0.14, 0.34, 0);
+        root.add(legL);
+
+        const legR = new THREE.Mesh(mobGeos.limbBiped, pantsMat);
+        legR.position.set(0.14, 0.34, 0);
+        root.add(legR);
+
+        return { root, head, legs: [legL, legR], mats, height: 1.8, radius: 0.35 };
+      } else {
+        const isSheep = type === 'sheep';
+        const coatMat = mkMat(isSheep ? 0xf1f5f9 : 0xf49cbb);
+        const skinMat = mkMat(isSheep ? 0xd6bfa3 : 0xf49cbb);
+
+        const body = new THREE.Mesh(mobGeos.bodyQuad, coatMat);
+        body.position.set(0, 0.64, 0);
+        root.add(body);
+
+        const head = new THREE.Mesh(mobGeos.head, skinMat);
+        head.position.set(0, 0.88, 0.52);
+        root.add(head);
+
+        const legOffsets = [
+          [-0.18, 0.21,  0.30],
+          [ 0.18, 0.21,  0.30],
+          [-0.18, 0.21, -0.30],
+          [ 0.18, 0.21, -0.30]
+        ];
+        const legs = legOffsets.map(([lx, ly, lz]) => {
+          const l = new THREE.Mesh(mobGeos.legQuad, skinMat);
+          l.position.set(lx, ly, lz);
+          root.add(l);
+          return l;
+        });
+
+        return { root, head, legs, mats, height: 1.15, radius: 0.4 };
+      }
+    }
+
+    function spawnMob(type, x, y, z) {
+      const built = createMobMesh(type);
+      built.root.position.set(x, y, z);
+      scene.add(built.root);
+      mobs.push({
+        type,
+        x, y, z,
+        vx: 0, vy: 0, vz: 0,
+        yaw: Math.random() * Math.PI * 2,
+        targetYaw: Math.random() * Math.PI * 2,
+        aiTimer: 1 + Math.random() * 2,
+        moving: true,
+        hp: type === 'zombie' ? 7 : 4,
+        hurtTimer: 0,
+        attackCooldown: 0,
+        animTime: Math.random() * 10,
+        ...built
+      });
+    }
+
+    function removeMobAt(idx) {
+      const m = mobs[idx];
+      scene.remove(m.root);
+      for (const entry of m.mats) entry.mat.dispose();
+      mobs.splice(idx, 1);
+    }
+
+    function damageMob(mob, dmg, kdx, kdz) {
+      mob.hp -= dmg;
+      mob.hurtTimer = 0.28;
+      for (const entry of mob.mats) entry.mat.color.setHex(0xff3b3b);
+      sfx.play('mobHit');
+
+      const kLen = Math.hypot(kdx, kdz) || 1;
+      mob.vx = (kdx / kLen) * 6.5;
+      mob.vz = (kdz / kLen) * 6.5;
+      mob.vy = 5.2;
+
+      if (mob.hp <= 0) {
+        const pBlock = mob.type === 'zombie' ? BLOCK.LEAVES : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK);
+        spawnBlockParticles(mob.x - 0.5, mob.y + 0.4, mob.z - 0.5, pBlock, 22);
+        const idx = mobs.indexOf(mob);
+        if (idx !== -1) removeMobAt(idx);
+      }
+    }
+
+    function raycastMob(ox, oy, oz, dx, dy, dz, maxDist = 4.2) {
+      let bestMob = null;
+      let bestDist = maxDist;
+
+      for (let i = 0; i < mobs.length; i++) {
+        const m = mobs[i];
+        const cx = m.x;
+        const cy = m.y + m.height * 0.5;
+        const cz = m.z;
+        const vx = cx - ox;
+        const vy = cy - oy;
+        const vz = cz - oz;
+        const t = vx * dx + vy * dy + vz * dz;
+        if (t < 0 || t > bestDist) continue;
+        const px = ox + dx * t - cx;
+        const py = oy + dy * t - cy;
+        const pz = oz + dz * t - cz;
+        if (Math.abs(px) < m.radius + 0.25 && Math.abs(py) < m.height * 0.55 && Math.abs(pz) < m.radius + 0.25) {
+          bestDist = t;
+          bestMob = m;
+        }
+      }
+      return bestMob;
+    }
+
+    function trySpawnMobsAroundPlayer() {
+      if (mobs.length >= MAX_MOBS) return;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 14 + Math.random() * 18;
+      const wx = Math.floor(player.x + Math.cos(angle) * dist);
+      const wz = Math.floor(player.z + Math.sin(angle) * dist);
+
+      const cx = Math.floor(wx / CHUNK_SIZE);
+      const cz = Math.floor(wz / CHUNK_SIZE);
+      if (!chunks.has(chunkKey(cx, cz))) return;
+
+      // Decide whether to attempt cave/night zombie or surface animal
+      const tryCaveOrNight = isNight || Math.random() < 0.45;
+      if (tryCaveOrNight) {
+        const minY = isNight ? SEA_LEVEL : 5;
+        const maxY = isNight ? CHUNK_HEIGHT - 4 : Math.max(10, Math.floor(player.y + 8));
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const y = minY + Math.floor(Math.random() * (maxY - minY));
+          const ground = getVoxelGlobal(wx, y - 1, wz);
+          const b0 = getVoxelGlobal(wx, y, wz);
+          const b1 = getVoxelGlobal(wx, y + 1, wz);
+          if (BLOCK_DEFS[ground].solid && b0 === BLOCK.AIR && b1 === BLOCK.AIR) {
+            const packed = getLightGlobal(wx, y, wz);
+            const effSun = Math.round((packed >> 4) * sunFactor);
+            const blkL = packed & 15;
+            const effLight = Math.max(effSun, blkL);
+            if (effLight < 7) {
+              spawnMob('zombie', wx + 0.5, y, wz + 0.5);
+              return;
+            }
+          }
+        }
+      } else {
+        // Find surface grass/snow for sheep or pig
+        for (let y = CHUNK_HEIGHT - 3; y > SEA_LEVEL; y--) {
+          const b = getVoxelGlobal(wx, y, wz);
+          if (b === BLOCK.AIR) continue;
+          if ((b === BLOCK.GRASS || b === BLOCK.SNOW) && getVoxelGlobal(wx, y + 1, wz) === BLOCK.AIR) {
+            const type = Math.random() < 0.55 ? 'sheep' : 'pig';
+            spawnMob(type, wx + 0.5, y + 1, wz + 0.5);
+          }
+          break;
+        }
+      }
+    }
+
+    function updateMobs(dt) {
+      mobSpawnTimer += dt;
+      if (mobSpawnTimer > 1.8) {
+        mobSpawnTimer = 0;
+        trySpawnMobsAroundPlayer();
+      }
+
+      for (let i = mobs.length - 1; i >= 0; i--) {
+        const m = mobs[i];
+        const dxP = player.x - m.x;
+        const dyP = player.y - m.y;
+        const dzP = player.z - m.z;
+        const distP = Math.hypot(dxP, dyP, dzP);
+
+        // Despawn distant mobs to save CPU/GPU
+        if (distP > 54) {
+          removeMobAt(i);
+          continue;
+        }
+
+        // Recover from red hurt flash & apply local voxel lighting to mob color
+        const packedL = getLightGlobal(Math.floor(m.x), Math.floor(m.y + 0.8), Math.floor(m.z));
+        const sL = ((packedL >> 4) / 15) * sunFactor;
+        const bL = (packedL & 15) / 15;
+        const shade = Math.max(0.14, Math.min(1.0, Math.max(sL, bL)));
+
+        if (m.hurtTimer > 0) {
+          m.hurtTimer -= dt;
+        } else {
+          for (const entry of m.mats) {
+            entry.mat.color.setHex(entry.baseHex).multiplyScalar(shade);
+          }
+        }
+
+        // Zombies burn in bright direct sunlight!
+        if (m.type === 'zombie' && sunFactor > 0.8 && (packedL >> 4) >= 14) {
+          m.attackCooldown += dt;
+          if (m.attackCooldown > 1.2) {
+            m.attackCooldown = 0;
+            damageMob(m, 1, 0, 0);
+            if (!mobs.includes(m)) continue;
+          }
+        }
+
+        // AI Decision
+        if (m.type === 'zombie' && distP < 16) {
+          m.targetYaw = Math.atan2(dxP, dzP);
+          m.moving = true;
+          // Attack player on contact
+          if (distP < 1.15 && Math.abs(dyP) < 1.6) {
+            m.attackCooldown += dt;
+            if (m.attackCooldown > 0.95) {
+              m.attackCooldown = 0;
+              sfx.play('zombie');
+              damagePlayer(2);
+            }
+          }
+        } else {
+          m.aiTimer -= dt;
+          if (m.aiTimer <= 0) {
+            m.aiTimer = 1.5 + Math.random() * 3.0;
+            m.moving = Math.random() < 0.68;
+            if (m.moving) m.targetYaw += (Math.random() - 0.5) * 2.2;
+          }
+        }
+
+        // Smooth yaw turn
+        const diffYaw = Math.atan2(Math.sin(m.targetYaw - m.yaw), Math.cos(m.targetYaw - m.yaw));
+        m.yaw += diffYaw * Math.min(1, dt * 6);
+        m.root.rotation.y = m.yaw;
+
+        const moveSpeed = m.type === 'zombie' ? 2.65 : (m.hurtTimer > 0 ? 4.2 : 1.55);
+        if (m.hurtTimer <= 0) {
+          m.vx = m.moving ? Math.sin(m.yaw) * moveSpeed : 0;
+          m.vz = m.moving ? Math.cos(m.yaw) * moveSpeed : 0;
+        } else {
+          m.vx *= 0.88;
+          m.vz *= 0.88;
+        }
+
+        m.vy -= 24.0 * dt;
+        if (m.vy < -30) m.vy = -30;
+
+        // Horizontal movement + auto-jump over 1-block obstacle
+        const nx = m.x + m.vx * dt;
+        const nz = m.z + m.vz * dt;
+        const footY = Math.floor(m.y + 0.05);
+        const blockedX = BLOCK_DEFS[getVoxelGlobal(Math.floor(nx + Math.sign(m.vx) * m.radius), footY, Math.floor(m.z))].solid;
+        const blockedZ = BLOCK_DEFS[getVoxelGlobal(Math.floor(m.x), footY, Math.floor(nz + Math.sign(m.vz) * m.radius))].solid;
+
+        if (!blockedX) m.x = nx;
+        if (!blockedZ) m.z = nz;
+
+        if ((blockedX || blockedZ) && m.onGround) {
+          const stepClear = !BLOCK_DEFS[getVoxelGlobal(Math.floor(nx + Math.sign(m.vx) * m.radius), footY + 1, Math.floor(nz + Math.sign(m.vz) * m.radius))].solid;
+          if (stepClear) {
+            m.vy = 7.4;
+            m.onGround = false;
+          } else {
+            m.targetYaw += Math.PI * 0.7;
+          }
+        }
+
+        // Vertical collision
+        const ny = m.y + m.vy * dt;
+        const belowSolid = BLOCK_DEFS[getVoxelGlobal(Math.floor(m.x), Math.floor(ny), Math.floor(m.z))].solid;
+        if (!belowSolid) {
+          m.y = ny;
+          m.onGround = false;
+        } else {
+          if (m.vy < 0) {
+            m.y = Math.floor(ny) + 1;
+            m.onGround = true;
+          }
+          m.vy = 0;
+        }
+
+        m.root.position.set(m.x, m.y, m.z);
+
+        // Limb walk animation
+        if (m.moving) {
+          m.animTime += dt * moveSpeed * 4.2;
+          const a = Math.sin(m.animTime) * 0.55;
+          if (m.legs.length === 2) {
+            m.legs[0].rotation.x =  a;
+            m.legs[1].rotation.x = -a;
+          } else if (m.legs.length === 4) {
+            m.legs[0].rotation.x =  a;
+            m.legs[1].rotation.x = -a;
+            m.legs[2].rotation.x = -a;
+            m.legs[3].rotation.x =  a;
+          }
+        } else {
+          for (const l of m.legs) l.rotation.x *= 0.8;
+        }
+      }
     }
 
     function applyArraysToMesh(ch, meshData) {
@@ -2433,6 +3151,16 @@
         return;
       }
 
+      // Clicking / punching a placed TNT block ignites it immediately!
+      if (currentHit.block === BLOCK.TNT) {
+        igniteTNT(currentHit.x, currentHit.y, currentHit.z, 2.6);
+        isMiningHeld = false;
+        mineProgress = 0;
+        crackBox.visible = false;
+        mineBarWrap.style.display = 'none';
+        return;
+      }
+
       const key = `${currentHit.x},${currentHit.y},${currentHit.z}`;
       if (key !== mineTargetKey) {
         mineTargetKey = key;
@@ -2760,6 +3488,10 @@
       }
       chunks.clear();
       buildQueue.length = 0;
+      simQueue.clear();
+      while (mobs.length > 0) removeMobAt(0);
+      for (const t of activeTNTs) scene.remove(t.mesh);
+      activeTNTs.length = 0;
       lastPlayerChunkX = null;
 
       player.x = 8.5;
@@ -2832,12 +3564,24 @@
 
     let currentHit = null;
 
+    function triggerPrimaryAttackOrMine() {
+      player.swingTime = 1.0;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+      const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 4.3);
+      if (hitMob) {
+        const dmg = hotbarSlots[selectedSlot] === BLOCK.TOOL_PICKAXE ? 3 : 1;
+        damageMob(hitMob, dmg, dir.x, dir.z);
+        isMiningHeld = false;
+        return;
+      }
+      isMiningHeld = true;
+    }
+
     window.addEventListener('mousedown', (e) => {
       if (!isLocked) return;
 
       if (e.button === 0) {
-        isMiningHeld = true;
-        player.swingTime = 1.0;
+        triggerPrimaryAttackOrMine();
       } else if (e.button === 2 && currentHit) {
         placeBlockAtCurrentTarget();
       } else if (e.button === 1 && currentHit) {
@@ -2998,7 +3742,7 @@
 
     bindHoldButton(
       'tbtn-mine',
-      () => { isMiningHeld = true; player.swingTime = 1.0; },
+      () => { triggerPrimaryAttackOrMine(); },
       () => { isMiningHeld = false; }
     );
     bindHoldButton(
@@ -3076,8 +3820,11 @@
 
       if (isGameActive()) {
         updatePlayerPhysics(dt);
+        updateVoxelSimulation(dt);
+        updateMobs(dt);
       }
 
+      updateDynamicSky(dt);
       updateChunkStreaming();
 
       rayDir.set(0, 0, -1).applyEuler(camera.rotation);
@@ -3117,7 +3864,7 @@
         elFps.textContent = `${fps} FPS (${avgMs} ms)`;
         elDraws.textContent = renderer.info.render.calls;
         elTris.textContent = renderer.info.render.triangles.toLocaleString();
-        elChunks.textContent = `${chunks.size} (${buildQueue.length} cola)`;
+        elChunks.textContent = `${chunks.size} | Mobs: ${mobs.length}`;
         elPos.textContent = `${player.x.toFixed(0)}, ${player.y.toFixed(0)}, ${player.z.toFixed(0)} (${biome})`;
         elLight.textContent = `Sol ${pLight >> 4} | Bloque ${pLight & 15}`;
         elMode.textContent = `${player.flying ? 'Vuelo' : 'Supervivencia'} | ${isNight ? 'Noche' : 'Día'}`;
