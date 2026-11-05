@@ -441,6 +441,54 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 11: Shaders en GPU (Viento en Vegetación, Olas 3D y Atmósfera Subacuática)
+      // =========================================================================
+      describe('11. Shaders en GPU (Viento, Olas 3D y Atmósfera Subacuática)', () => {
+        it('Compila e inyecta los Shaders GPU de viento/antorchas (sólidos) y olas/espuma (agua)', () => {
+          // Ensure at least 1 water block exists so waterMesh is rendered and compiled
+          vc.setVoxelGlobal(9, 48, 9, vc.BLOCK.WATER);
+          vc.renderer.render(vc.scene, vc.camera);
+
+          const sh = vc.getShaders();
+          assert(sh.solidShaderRef !== null, 'solidMaterial debería haber compilado su shader con onBeforeCompile');
+          assert(sh.waterShaderRef !== null, 'waterMaterial debería haber compilado su shader con onBeforeCompile');
+          assert(sh.solidShaderRef.vertexShader.includes('vTileIdx'), 'El Vertex Shader sólido debe incluir detección de tile (vTileIdx)');
+          assert(sh.solidShaderRef.vertexShader.includes('uWindStrength'), 'El Vertex Shader sólido debe incluir uWindStrength');
+          assert(sh.waterShaderRef.vertexShader.includes('vWaveH'), 'El Vertex Shader de agua debe calcular altura de ola (vWaveH)');
+          assert(sh.waterShaderRef.fragmentShader.includes('crestFoam'), 'El Fragment Shader de agua debe calcular espuma en las crestas (crestFoam)');
+          assert(sh.solidShaderRef.uniforms.uTime === vc.gpuShaderUniforms.uTime, 'uTime debe estar compartido por referencia con el shader sólido');
+          vc.setVoxelGlobal(9, 48, 9, vc.BLOCK.AIR);
+        });
+
+        it('Avanza uTime en GPU y conmuta niebla/filtro subacuático al sumergir la cámara en agua', () => {
+          const tBefore = vc.gpuShaderUniforms.uTime.value;
+          vc.updateGPUShaders(0.5);
+          assert(
+            Math.abs(vc.gpuShaderUniforms.uTime.value - (tBefore + 0.5)) < 1e-4,
+            'updateGPUShaders(0.5) debería incrementar uTime en 0.5s'
+          );
+
+          const prevCamPos = vc.camera.position.clone();
+          vc.setVoxelGlobal(10, 50, 10, vc.BLOCK.WATER);
+          vc.camera.position.set(10.5, 50.5, 10.5);
+          vc.updateGPUShaders(0.1);
+
+          assert(vc.getShaders().isCameraUnderwater === true, 'isCameraUnderwater debería ser true dentro de un bloque de agua');
+          assert(vc.gpuShaderUniforms.uUnderwater.value === 1.0, 'uUnderwater debería ser 1.0 bajo el agua');
+          assert(Math.abs(vc.scene.fog.density - 0.068) < 1e-4, 'La densidad de niebla bajo el agua debería subir a 0.068');
+          const waterOverlay = gameFrame.contentDocument.getElementById('water-overlay');
+          assert(waterOverlay.style.display === 'block', '#water-overlay debería mostrarse cuando la cámara está sumergida');
+
+          // Restore camera & air block
+          vc.setVoxelGlobal(10, 50, 10, vc.BLOCK.AIR);
+          vc.camera.position.copy(prevCamPos);
+          vc.updateGPUShaders(0.1);
+          assert(vc.getShaders().isCameraUnderwater === false, 'isCameraUnderwater debería volver a false fuera del agua');
+          assert(waterOverlay.style.display === 'none', '#water-overlay debería ocultarse al salir del agua');
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;

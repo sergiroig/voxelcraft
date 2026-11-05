@@ -64,7 +64,8 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 | **Raycasting y Minado** | `raycastVoxel`, `updateMiningAndPlacement`, `spawnBlockParticles` | Algoritmo DDA 3D rápido, rotura progresiva en 8 fases según `hardness` (con multiplicador $\times 3.5$ usando el Pico de Diamante `ID 20`) y partículas con `InstancedMesh`. |
 | **Simulación Vóxel y TNT** | `simQueue`, `enqueueSimNeighbors`, `updateVoxelSimulation`, `igniteTNT`, `explodeAt` | Cola de simulación a 10 Hz: gravedad de arena (1 bloque por tick con `movedThisTick`), expansión de agua y encendido de bloques `BLOCK.TNT` con mecha parpadeante, reacciones en cadena y onda expansiva. |
 | **Criaturas (Mobs) y Combate** | `mobs`, `spawnMob`, `updateMobs`, `raycastMob`, `damageMob` | *Ovejas, Cerdos y Zombis* construidos con geometrías compartidas (`mobGeos`). Los zombis aparecen en oscuridad (`effLight < 7`), persiguen al jugador y arden al sol. |
-| **Cielo Dinámico** | `sunMesh`, `moonMesh`, `starsPoints`, `cloudMesh`, `updateDynamicSky` | Ciclo día/noche continuo o conmutable (`N`), Sol y Luna cúbicos, estrellas nocturnas y nubes vóxel 3D fusionadas en una única llamada de dibujo. |
+| **Cielo Dinámico** | `sunMesh`, `moonMesh`, `starsPoints`, `cloudMesh`, `updateDynamicSky` | Ciclo día/noche continuo o conmutable (`T`), Sol y Luna cúbicos, estrellas nocturnas y nubes vóxel 3D fusionadas en una única llamada de dibujo. |
+| **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en flores/hierba alta (con raíz anclada `uv.y`) y hojas 3D sin grietas, baile de llama en antorchas, destello en menas de oro/diamante, olas 3D con espuma/cáusticas en el agua y atmósfera subacuática. |
 | **Controles Híbridos** | `updateJoystickFromTouch`, `setTouchPlaying`, `joyX`, `joyY` | Captura de ratón (`Pointer Lock`) en PC y joystick virtual analógico + cámara multitáctil + barra de botones en móvil/tablet. |
 | **Persistencia Delta** | `worldDeltas`, `saveWorldState`, `loadWorldState`, `exportWorldJSON` | Guarda en `localStorage` únicamente la semilla (`WORLD_SEED`) y los bloques modificados por el usuario. |
 
@@ -102,10 +103,10 @@ Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
    - Físicas vóxel por cola de eventos (`Tick Queue`): gravedad de arena y expansión de agua.
    - Bloques de **TNT** con mecha, reacciones en cadena y cráteres en 1 sola pasada de reconstrucción.
    - Cielo dinámico: Sol/Luna cúbicos, estrellas y nubes 3D en 1 *draw call*.
-2. ⏳ **Punto 2 — Shaders en GPU (`Coste 0 en CPU`):**
-   - Inyección en el *Vertex Shader* (`onBeforeCompile` o `ShaderMaterial`) para mecer hojas, flores y hierba alta con el viento usando `uTime`.
-   - Olas suaves y brillo especular en los vértices del agua.
-   - Niebla atmosférica y transición suave en los bordes de la distancia de dibujado.
+2. ✅ **Punto 2 — Shaders en GPU (`Coste 0 en CPU`, Completado):**
+   - Inyección en el *Vertex/Fragment Shader* (`onBeforeCompile`) pre-compilada al inicio (`renderer.compile`) para mecer hojas, flores y hierba alta con el viento usando `uTime`, animar llamas de antorchas y añadir destellos en menas de oro/diamante.
+   - Olas 3D de doble octava, cáusticas y espuma en las crestas del agua.
+   - Niebla y atmósfera subacuática automática al sumergir la cámara (`isCameraUnderwater`).
 3. ⏳ **Punto 3 — Jugabilidad, Drops 3D y Crafteo:**
    - **Mini-bloques 3D flotantes e imantados (*Item Drops*):** Al picar un bloque, soltar un mini-cubo rotando que es atraído hacia el jugador al acercarse.
    - **Modo Supervivencia vs. Creativo:** Cantidades reales de bloques en el inventario al jugar en Supervivencia y bloques infinitos + vuelo libre en Creativo.

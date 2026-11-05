@@ -655,7 +655,7 @@
   <div id="hud-stats">
     <div class="title">
       <span>VOXEL ENGINE v2</span>
-      <span id="stat-worker">BFS LIGHT + CAVES</span>
+      <span id="stat-worker">BFS LIGHT + GPU SHADERS</span>
     </div>
     <div class="row"><span>FPS / Frame:</span> <span class="val" id="stat-fps">60 (1.2 ms)</span></div>
     <div class="row"><span>Draw Calls:</span> <span class="val" id="stat-draws">0</span></div>
@@ -700,10 +700,10 @@
       </p>
 
       <div class="opt-list">
+        <div><span>✓ Shaders en GPU (Coste 0 en CPU):</span> Viento orgánico en hojas, flores y hierba alta, olas 3D con espuma en el agua y destello en menas/antorchas.</div>
+        <div><span>✓ Mundo Vivo y Físicas Vóxel:</span> Criaturas con geometría compartida, gravedad de arena, flujo de agua, TNT con reacciones en cadena y cielo con nubes 3D.</div>
         <div><span>✓ Iluminación Vóxel BFS (1 byte):</span> 4 bits de sol + 4 bits de luz cálida de antorchas horneados en vértices (0 luces dinámicas GPU).</div>
         <div><span>✓ Cuevas 3D (Interpolación Trilineal 4×4×4):</span> Calcula el ruido 3D 38× más rápido con vetas de Carbón, Hierro, Oro y Diamante.</div>
-        <div><span>✓ Rotura Progresiva + Pool InstancedMesh:</span> Grietas dinámicas y 120 partículas físicas en 1 sola llamada de dibujo.</div>
-        <div><span>✓ Vegetación Cross-Mesh (X-Quads):</span> Antorchas, flores y hierba alta integradas en la malla del chunk sin objetos extra.</div>
       </div>
 
       <div class="settings-grid">
@@ -870,7 +870,7 @@
       const canvas = document.createElement('canvas');
       canvas.width = ATLAS_COLS * TILE_PX;
       canvas.height = TILE_PX;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
       let tSeed = 1337;
       const rand = () => {
@@ -2074,11 +2074,92 @@
     const { texture: atlasTexture, canvas: atlasCanvas } = createProceduralAtlas();
     const crackTextures = createCrackTextures();
 
+    // Shared GPU Shader Uniforms (0 CPU overhead per vertex: animated entirely on GPU!)
+    const gpuShaderUniforms = {
+      uTime:         { value: 0.0 },
+      uWindStrength: { value: 1.0 },
+      uSunFactor:    { value: 1.0 },
+      uUnderwater:   { value: 0.0 }
+    };
+    let solidShaderRef = null;
+    let waterShaderRef = null;
+    let isCameraUnderwater = false;
+    const waterFogColorDay = new THREE.Color(0x0b4f7c);
+    const waterFogColorNight = new THREE.Color(0x052036);
+
     const solidMaterial = new THREE.MeshBasicMaterial({
       map: atlasTexture,
       vertexColors: true,
       alphaTest: 0.15
     });
+
+    solidMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = gpuShaderUniforms.uTime;
+      shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
+      shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
+      solidShaderRef = shader;
+
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          uniform float uTime;
+          uniform float uWindStrength;
+          uniform float uSunFactor;
+          varying float vTileIdx;
+          varying vec3 vWorldPos;`
+        )
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          vec4 wp = modelMatrix * vec4(transformed, 1.0);
+          vWorldPos = wp.xyz;
+          float tileIdx = floor(uv.x * 28.0 + 0.0001);
+          vTileIdx = tileIdx;
+
+          // Cross-Quad Flora Wind Sway (22: Tall Grass, 23: Red Rose, 24: Yellow Dandelion)
+          if (tileIdx >= 21.5 && tileIdx <= 24.5) {
+            float rootMask = clamp(uv.y, 0.0, 1.0);
+            float windPhase = uTime * 2.8 + wp.x * 0.75 + wp.z * 0.65;
+            transformed.x += sin(windPhase) * 0.12 * rootMask * uWindStrength;
+            transformed.z += cos(windPhase * 0.85 + 1.3) * 0.09 * rootMask * uWindStrength;
+          }
+          // Tree Leaves 3D Breeze (7: Leaves) — continuous in world-space so shared vertices never crack
+          else if (tileIdx >= 6.5 && tileIdx <= 7.5) {
+            float leafPhase = uTime * 2.1 + wp.x * 0.8 + wp.y * 0.5 + wp.z * 0.8;
+            transformed.x += sin(leafPhase) * 0.042 * uWindStrength;
+            transformed.y += cos(uTime * 1.7 + wp.x * 0.6 - wp.z * 0.6) * 0.024 * uWindStrength;
+            transformed.z += sin(uTime * 1.9 - wp.x * 0.7 + wp.z * 0.5) * 0.042 * uWindStrength;
+          }
+          // Torch Flame Micro-Dance (21: Torch)
+          else if (tileIdx >= 20.5 && tileIdx <= 21.5) {
+            float flameMask = smoothstep(0.45, 1.0, uv.y);
+            transformed.x += sin(uTime * 11.0 + wp.x * 3.1 + wp.z * 2.7) * 0.025 * flameMask;
+            transformed.z += cos(uTime * 9.5 + wp.z * 3.3 - wp.x * 2.1) * 0.025 * flameMask;
+          }`
+        );
+
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          uniform float uTime;
+          uniform float uSunFactor;
+          varying float vTileIdx;
+          varying vec3 vWorldPos;`
+        )
+        .replace(
+          '#include <fog_fragment>',
+          `if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5)) {
+            float flicker = 1.0 + 0.09 * sin(uTime * 9.5 + vWorldPos.x * 2.3 + vWorldPos.z * 2.3);
+            gl_FragColor.rgb *= vec3(flicker * 1.04, flicker, flicker * 0.92);
+          } else if (vTileIdx >= 18.5 && vTileIdx <= 20.5) {
+            float glint = max(0.0, sin(uTime * 3.2 + vWorldPos.x * 4.0 + vWorldPos.y * 4.0 + vWorldPos.z * 4.0));
+            gl_FragColor.rgb += vec3(0.08, 0.11, 0.14) * pow(glint, 6.0);
+          }
+          #include <fog_fragment>`
+        );
+    };
 
     const waterMaterial = new THREE.MeshBasicMaterial({
       map: atlasTexture,
@@ -2088,6 +2169,95 @@
       depthWrite: false,
       side: THREE.DoubleSide
     });
+
+    waterMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = gpuShaderUniforms.uTime;
+      shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
+      shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
+      waterShaderRef = shader;
+
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          uniform float uTime;
+          uniform float uWindStrength;
+          uniform float uSunFactor;
+          varying float vWaveH;
+          varying vec3 vWorldPos;`
+        )
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          vec4 wp = modelMatrix * vec4(transformed, 1.0);
+          vWorldPos = wp.xyz;
+          float w1 = sin(uTime * 2.3 + wp.x * 0.85 + wp.z * 0.65) * 0.055;
+          float w2 = cos(uTime * 1.7 - wp.x * 0.55 + wp.z * 0.90) * 0.035;
+          float wH = (w1 + w2) * uWindStrength;
+          transformed.y += wH;
+          vWaveH = wH;`
+        );
+
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          uniform float uTime;
+          uniform float uSunFactor;
+          varying float vWaveH;
+          varying vec3 vWorldPos;`
+        )
+        .replace(
+          '#include <fog_fragment>',
+          `float caustic = sin(vWorldPos.x * 2.4 + uTime * 2.8) * cos(vWorldPos.z * 2.4 - uTime * 2.2);
+          float crestFoam = smoothstep(0.032, 0.082, vWaveH + caustic * 0.024);
+          vec3 crestCol = vec3(0.76, 0.93, 1.0) * (0.35 + 0.65 * uSunFactor);
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, crestCol, crestFoam * 0.38);
+          gl_FragColor.rgb += vec3(0.03, 0.07, 0.11) * caustic * (0.4 + 0.6 * uSunFactor);
+          #include <fog_fragment>`
+        );
+    };
+
+    // Pre-compile both GPU shaders at startup to avoid any runtime shader compilation hitch
+    (() => {
+      const dummyGeo = new THREE.PlaneGeometry(1, 1);
+      const m1 = new THREE.Mesh(dummyGeo, solidMaterial);
+      const m2 = new THREE.Mesh(dummyGeo, waterMaterial);
+      scene.add(m1, m2);
+      renderer.compile(scene, camera);
+      scene.remove(m1, m2);
+      dummyGeo.dispose();
+    })();
+
+    function updateGPUShaders(dt) {
+      gpuShaderUniforms.uTime.value += dt;
+      gpuShaderUniforms.uSunFactor.value = sunFactor;
+
+      const headBlock = getVoxelGlobal(
+        Math.floor(camera.position.x),
+        Math.floor(camera.position.y),
+        Math.floor(camera.position.z)
+      );
+      const submerged = headBlock === BLOCK.WATER;
+      gpuShaderUniforms.uUnderwater.value = submerged ? 1.0 : 0.0;
+
+      if (submerged !== isCameraUnderwater) {
+        isCameraUnderwater = submerged;
+        document.getElementById('water-overlay').style.display = submerged ? 'block' : 'none';
+      }
+
+      if (submerged) {
+        const targetWaterCol = isNight ? waterFogColorNight : waterFogColorDay;
+        scene.fog.color.copy(targetWaterCol);
+        scene.background.copy(targetWaterCol);
+        scene.fog.density = 0.068;
+      } else {
+        const targetSkyCol = isNight ? skyColorNight : skyColorDay;
+        scene.fog.color.copy(targetSkyCol);
+        scene.background.copy(targetSkyCol);
+        scene.fog.density = 0.055 / renderDistance;
+      }
+    }
 
     // Wireframe target box + Crack overlay mesh
     const highlightGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.006, 1.006, 1.006));
@@ -3362,7 +3532,10 @@
           document.documentElement.requestFullscreen().catch(() => {});
         }
       } else {
-        canvasEl.requestPointerLock();
+        try {
+          const lockPromise = canvasEl.requestPointerLock();
+          if (lockPromise && typeof lockPromise.catch === 'function') lockPromise.catch(() => {});
+        } catch (_) {}
       }
     }
 
@@ -3830,6 +4003,7 @@
       }
 
       updateDynamicSky(dt);
+      updateGPUShaders(dt);
       updateChunkStreaming();
 
       rayDir.set(0, 0, -1).applyEuler(camera.rotation);
@@ -3910,6 +4084,15 @@
       moonMesh,
       starField,
       cloudMesh,
+      solidMaterial,
+      waterMaterial,
+      gpuShaderUniforms,
+      updateGPUShaders,
+      getShaders: () => ({
+        solidShaderRef,
+        waterShaderRef,
+        isCameraUnderwater
+      }),
       getChunkData,
       getVoxelGlobal,
       setVoxelGlobal,
