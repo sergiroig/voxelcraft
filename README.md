@@ -1,6 +1,6 @@
 # VoxelCraft HTML5
 
-Motor de vóxeles estilo Minecraft contenido íntegramente en un único archivo [`index.html`](index.html), optimizado para funcionar en **PC (teclado y ratón)** y **Móvil/Tablet (controles multitáctiles)** sin recursos externos.
+Motor de vóxeles estilo Minecraft en HTML5/WebGL ([`index.html`](index.html) + módulos ligeros en [`src/`](src/) sin pasos de compilación ni recursos multimedia externos), optimizado al máximo para funcionar a **60 FPS** en **PC (teclado y ratón)** y **Móvil/Tablet (controles multitáctiles)**.
 
 🎮 **Jugar ahora:** [https://sergiroig.github.io/voxelcraft/](https://sergiroig.github.io/voxelcraft/)
 

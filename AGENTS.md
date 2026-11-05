@@ -12,8 +12,18 @@ Este documento contiene las reglas de arquitectura, restricciones de rendimiento
 - **URL de la suite de tests:** [`https://sergiroig.github.io/voxelcraft/test.html`](https://sergiroig.github.io/voxelcraft/test.html)
 - **Idioma de comunicación:** Español siempre.
 - **Archivos del repositorio:**
-  - [`index.html`](index.html): Motor completo del juego (HTML + CSS + JS + WebGL/Three.js + Web Audio API).
-  - [`test.html`](test.html): Runner de tests E2E y unitarios en tiempo real sobre el motor.
+  - [`index.html`](index.html) (`177` líneas): Estructura HTML del juego, `<link rel="preload">` paralelo y carga ordenada de módulos.
+  - [`src/styles.css`](src/styles.css) (`736` líneas): Hoja de estilos CSS completa (HUD, inventario, menú y controles multitáctiles).
+  - [`src/01-config-atlas.js`](src/01-config-atlas.js) (`642` líneas): Constantes, definiciones de bloques (`BLOCK`, `BLOCK_DEFS`), recetas (`CRAFTING_RECIPES`) y generador procedural del Atlas de Texturas Pixel-Art (`createProceduralAtlas`, `createCrackTextures`).
+  - [`src/02-worldgen-lighting.js`](src/02-worldgen-lighting.js) (`520` líneas): Generador de terreno procedural, 4 biomas, cuevas 3D trilineales $4\times4\times4$, estructuras (*Pirámides, Cabañas*) y motor de iluminación vóxel *Flood-Fill BFS* en 1 byte (`computeChunkLighting` + caché de minimapa).
+  - [`src/03-mesher-audio.js`](src/03-mesher-audio.js) (`670` líneas): *Chunk Mesher* (`buildChunkMeshArrays` con *Hidden Face Culling*, *Vertex AO* y *X-Mesh*) y sintetizador `Web Audio API` + música generativa *C418* FM (`SoundFX`, `updateAmbientAudio`).
+  - [`src/04-world-renderer.js`](src/04-world-renderer.js) (`796` líneas): Estado del mundo (`chunks`, `worldDeltas`), escena `Three.js`, *Shaders GPU* (`onBeforeCompile`), pools `InstancedMesh` de partículas y *drops* 3D imantados, mano en 1ª persona y Cielo Dinámico (`updateDynamicSky`).
+  - [`src/05-simulation-entities.js`](src/05-simulation-entities.js) (`545` líneas): Cola de simulación vóxel (`updateVoxelSimulation`: arena, agua, lava/obsidiana, cultivo de trigo y crecimiento de árboles `growTreeAt`), TNT, Clima Dinámico (`updateWeather`), Flechas 3D (`shootArrow`), Comida (`eatHeldApple`) y Circuitos Redstone + Puertas (`toggleVoxelLever`, `toggleVoxelDoor`).
+  - [`src/06-mobs-worker.js`](src/06-mobs-worker.js) (`591` líneas): Motor optimizado de criaturas (`mobs`, `spawnMob`, `updateMobs`), subida de mallas (`applyArraysToMesh`) y `Web Worker` multihilo *inline* (`Blob URL` + `Transferable` *Zero-Copy*).
+  - [`src/07-physics-camera.js`](src/07-physics-camera.js) (`620` líneas): Raycaster vóxel DDA 3D (`raycastVoxel`), físicas del jugador (`updatePlayerPhysics`, rebote en Slime), minado progresivo, *Smart Frustum Culling 3D* (`updateFrustumCulling`), cámara en 3ª persona con avatar articulado (`playerAvatar`, `toggleCameraMode`), zoom (`toggleZoom`) y streaming de chunks (`updateChunkStreaming`).
+  - [`src/08-ui-minimap.js`](src/08-ui-minimap.js) (`618` líneas): Interfaz de usuario (hotbar, inventario/crafteo, selector de semillas, teletransporte a biomas) y Minimapa Radar 2D Topográfico (`updateMinimap`).
+  - [`src/09-controls-loop.js`](src/09-controls-loop.js) (`602` líneas): Eventos de teclado/ratón en PC, controlador multitáctil móvil (`joy-zone`, botones táctiles), bucle principal (`animate`), telemetría FPS y API de introspección `window.__VOXELCRAFT__`.
+  - [`test.html`](test.html): Runner de 50 tests E2E/unitarios (24 suites) y profiler de coste en FPS en tiempo real sobre el motor.
   - [`README.md`](README.md): Descripción general del repositorio.
   - [`AGENTS.md`](AGENTS.md): Este archivo de referencia.
 
@@ -21,10 +31,11 @@ Este documento contiene las reglas de arquitectura, restricciones de rendimiento
 
 ## 2. Reglas de Oro del Proyecto (Inquebrantables)
 
-### Regla 1: Archivo Único Autónomo (`index.html`)
-- **Todo el juego debe residir en un único archivo [`index.html`](index.html)** sin dependencias de archivos externos (prohibido usar imágenes `.png`/`.jpg` externas, archivos de audio `.mp3`/`.ogg`, hojas `.css` o scripts `.js` separados), con la única excepción del CDN de `Three.js r128`.
+### Regla 1: Arquitectura Modular Limpia (< 800 líneas por archivo) y Cero Dependencias Externas
+- El proyecto está organizado en [`index.html`](index.html), [`src/styles.css`](src/styles.css) y **9 módulos JS numerados en `src/01-*.js` .. `src/09-*.js`** (todos por debajo de 800 líneas para lectura completa en 1 llamada y edición en paralelo sin pasos de compilación).
+- **Prohibido usar recursos multimedia externos** (imágenes `.png`/`.jpg` externas, archivos de audio `.mp3`/`.ogg`), con la única excepción del CDN de `Three.js r128`.
 - Todas las texturas se generan proceduralmente en memoria mediante Canvas 2D (`createProceduralAtlas`, `createCrackTextures`) y todos los efectos de sonido/música se sintetizan en tiempo real con `Web Audio API` (`SoundFX`).
-- Si en el futuro se utilizan `Web Workers`, deben crearse *inline* a partir de un `Blob` (`URL.createObjectURL(new Blob([...]))`) dentro del propio `index.html`.
+- Los `Web Workers` se crean *inline* a partir de un `Blob` (`URL.createObjectURL(new Blob([...]))`) en [`src/06-mobs-worker.js`](src/06-mobs-worker.js).
 
 ### Regla 2: Optimización Extrema (Zero-GC y Mínimos Draw Calls)
 Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimiento en CPU, GPU y memoria**:
