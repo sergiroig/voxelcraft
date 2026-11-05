@@ -37,12 +37,20 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (e.code === 'KeyE') {
+    if (chestOpen) {
+      closeChestModal();
+      return;
+    }
     if (isGameActive() || invOpen) {
       toggleInventory();
     }
     return;
   }
   if (e.code === 'Escape') {
+    if (chestOpen) {
+      closeChestModal();
+      return;
+    }
     if (invOpen) {
       toggleInventory(false);
       return;
@@ -437,6 +445,180 @@ function animate(now) {
   }
 }
 
+const chestModalEl = document.getElementById('chest-modal');
+const chestItemsGridEl = document.getElementById('chest-items-grid');
+const chestPlayerGridEl = document.getElementById('chest-player-grid');
+const chestStatusBannerEl = document.getElementById('chest-status-banner');
+const chestModalTitleEl = document.getElementById('chest-modal-title');
+const btnChestCloseEl = document.getElementById('btn-chest-close');
+const btnChestTakeAllEl = document.getElementById('btn-chest-take-all');
+
+function buildChestModalUI() {
+  if (!chestModalEl || !activeChestKey) return;
+  const record = chestLootMap[activeChestKey];
+  if (!record) return;
+  if (!Array.isArray(record.items)) record.items = [];
+
+  // Combine legacy single slot (storedId/storedCount) + record.items + lastLoot preview
+  chestItemsGridEl.innerHTML = '';
+  const hasStoredSingle = record.storedCount > 0 && record.storedId > 0;
+  const totalStored = (hasStoredSingle ? 1 : 0) + record.items.length;
+
+  if (totalStored === 0 && Array.isArray(record.lastLoot) && record.lastLoot.length > 0) {
+    record.lastLoot.forEach((entry) => {
+      const def = BLOCK_DEFS[entry.id];
+      const card = document.createElement('div');
+      card.className = 'craft-item craftable';
+      const icon = document.createElement('canvas');
+      icon.width = 16; icon.height = 16;
+      drawItemIcon(icon, entry.id);
+      const info = document.createElement('div');
+      info.className = 'craft-info';
+      info.innerHTML = `<div class="craft-title">✓ ${entry.count}× ${def.name}</div><div class="craft-cost">¡Recogido en tu mochila! (Tienes ${inventoryCounts[entry.id] || 0})</div>`;
+      card.appendChild(icon);
+      card.appendChild(info);
+      chestItemsGridEl.appendChild(card);
+    });
+  } else if (totalStored === 0) {
+    chestItemsGridEl.innerHTML = `<div style="color:#94a3b8;font-size:12.5px;padding:8px;">El cofre está vacío. Haz clic en cualquier objeto de tu mochila abajo para guardarlo aquí.</div>`;
+  } else {
+    if (hasStoredSingle) {
+      const def = BLOCK_DEFS[record.storedId];
+      const card = document.createElement('div');
+      card.className = 'craft-item craftable';
+      const icon = document.createElement('canvas');
+      icon.width = 16; icon.height = 16;
+      drawItemIcon(icon, record.storedId);
+      const info = document.createElement('div');
+      info.className = 'craft-info';
+      info.innerHTML = `<div class="craft-title">${record.storedCount}× ${def.name}</div><div class="craft-cost">Haz clic para retirar a tu mochila</div>`;
+      card.appendChild(icon);
+      card.appendChild(info);
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        inventoryCounts[record.storedId] = (inventoryCounts[record.storedId] || 0) + record.storedCount;
+        record.storedId = 0; record.storedCount = 0;
+        sfx.play('chest');
+        refreshInventoryCountsUI();
+        saveWorldData();
+        buildChestModalUI();
+      });
+      chestItemsGridEl.appendChild(card);
+    }
+    record.items.forEach((slot, sIdx) => {
+      const def = BLOCK_DEFS[slot.id];
+      const card = document.createElement('div');
+      card.className = 'craft-item craftable';
+      const icon = document.createElement('canvas');
+      icon.width = 16; icon.height = 16;
+      drawItemIcon(icon, slot.id);
+      const info = document.createElement('div');
+      info.className = 'craft-info';
+      info.innerHTML = `<div class="craft-title">${slot.count}× ${def.name}</div><div class="craft-cost">Haz clic para retirar a tu mochila</div>`;
+      card.appendChild(icon);
+      card.appendChild(info);
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        inventoryCounts[slot.id] = (inventoryCounts[slot.id] || 0) + slot.count;
+        record.items.splice(sIdx, 1);
+        sfx.play('chest');
+        refreshInventoryCountsUI();
+        saveWorldData();
+        buildChestModalUI();
+      });
+      chestItemsGridEl.appendChild(card);
+    });
+  }
+
+  chestPlayerGridEl.innerHTML = '';
+  ALL_INVENTORY_ITEMS.forEach((bId) => {
+    const count = inventoryCounts[bId] || 0;
+    if (gameMode === 'survival' && count <= 0) return;
+    if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD || bId === BLOCK.TOOL_BOW) return;
+    const def = BLOCK_DEFS[bId];
+    const card = document.createElement('div');
+    card.className = 'inv-item';
+    const badge = document.createElement('div');
+    badge.className = 'count';
+    badge.textContent = formatItemCountBadge(bId);
+    const icon = document.createElement('canvas');
+    icon.width = 16; icon.height = 16;
+    drawItemIcon(icon, bId);
+    const lbl = document.createElement('span');
+    lbl.textContent = def.name;
+    card.appendChild(badge);
+    card.appendChild(icon);
+    card.appendChild(lbl);
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      const moveAmt = gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[bId] || 0);
+      if (moveAmt <= 0) return;
+      if (gameMode === 'survival') inventoryCounts[bId] -= moveAmt;
+      record.lastLoot = null;
+      const existing = record.items.find(it => it.id === bId);
+      if (existing) existing.count += moveAmt;
+      else record.items.push({ id: bId, count: moveAmt });
+      sfx.play('place');
+      refreshInventoryCountsUI();
+      saveWorldData();
+      buildChestModalUI();
+    });
+    chestPlayerGridEl.appendChild(card);
+  });
+}
+
+function openChestModalUI(wx, wy, wz, bannerMsg) {
+  if (!chestModalEl) return;
+  activeChestKey = `${wx},${wy},${wz}`;
+  chestOpen = true;
+  invOpen = false;
+  invModalEl.classList.add('hidden');
+  isMiningHeld = false;
+  if (chestModalTitleEl) chestModalTitleEl.textContent = `🎁 Cofre del Tesoro (${wx}, ${wy}, ${wz})`;
+  if (chestStatusBannerEl && bannerMsg) chestStatusBannerEl.textContent = bannerMsg;
+  buildChestModalUI();
+  chestModalEl.classList.remove('hidden');
+  if (document.pointerLockElement) {
+    try { document.exitPointerLock(); } catch (_) {}
+  }
+}
+
+function closeChestModal() {
+  chestOpen = false;
+  activeChestKey = null;
+  if (chestModalEl) chestModalEl.classList.add('hidden');
+  startGameplay();
+}
+
+if (btnChestCloseEl) {
+  btnChestCloseEl.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeChestModal();
+  });
+}
+if (btnChestTakeAllEl) {
+  btnChestTakeAllEl.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!activeChestKey || !chestLootMap[activeChestKey]) return;
+    const record = chestLootMap[activeChestKey];
+    if (record.storedCount > 0 && record.storedId > 0) {
+      inventoryCounts[record.storedId] = (inventoryCounts[record.storedId] || 0) + record.storedCount;
+      record.storedId = 0; record.storedCount = 0;
+    }
+    if (Array.isArray(record.items)) {
+      for (const it of record.items) {
+        inventoryCounts[it.id] = (inventoryCounts[it.id] || 0) + it.count;
+      }
+      record.items.length = 0;
+    }
+    record.lastLoot = null;
+    sfx.play('chest');
+    refreshInventoryCountsUI();
+    saveWorldData();
+    buildChestModalUI();
+  });
+}
+
 requestAnimationFrame(animate);
 
 // Expose zero-overhead testing & introspection hook for automated test suites
@@ -492,6 +674,9 @@ window.__VOXELCRAFT__ = {
   toggleVoxelTrapdoor,
   chestLootMap,
   openVoxelChest,
+  openChestModalUI,
+  closeChestModal,
+  isChestOpen: () => chestOpen,
   minecarts,
   getRidingCart: () => ridingCart,
   spawnMinecart,

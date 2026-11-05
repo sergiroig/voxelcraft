@@ -27,7 +27,16 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
   while (dist <= maxDist) {
     const b = getVoxelGlobal(x, y, z);
     if (b !== BLOCK.AIR && b !== BLOCK.WATER) {
-      return { x, y, z, nx, ny, nz, block: b };
+      if (b === BLOCK.TORCH) {
+        const hx = ox + dx * dist - x;
+        const hy = oy + dy * dist - y;
+        const hz = oz + dz * dist - z;
+        if (hx >= 0.28 && hx <= 0.72 && hz >= 0.28 && hz <= 0.72 && hy <= 0.75) {
+          return { x, y, z, nx, ny, nz, block: b };
+        }
+      } else {
+        return { x, y, z, nx, ny, nz, block: b };
+      }
     }
     if (tMaxX < tMaxY) {
       if (tMaxX < tMaxZ) {
@@ -112,6 +121,8 @@ let touchPlaying = false;
 let menuOpen = true;
 let lastPointerLockExitTime = 0;
 let invOpen = false;
+let chestOpen = false;
+let activeChestKey = null;
 let selectedSlot = 0;
 let renderDistance = 5;
 let isNight = false;
@@ -124,7 +135,7 @@ let joySprint = false;
 let touchJump = false;
 let touchDown = false;
 
-const isGameActive = () => (!menuOpen || isLocked || touchPlaying) && !invOpen;
+const isGameActive = () => (!menuOpen || isLocked || touchPlaying) && !invOpen && !chestOpen;
 
 // Progressive Mining state
 let isMiningHeld = false;

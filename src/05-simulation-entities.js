@@ -561,15 +561,18 @@ function openVoxelChest(wx, wy, wz) {
     for (const item of lootItems) {
       inventoryCounts[item.id] = (inventoryCounts[item.id] || 0) + item.count;
     }
-    record = { opened: true, storedId: 0, storedCount: 0, lootAwarded: lootItems.length };
+    record = { opened: true, storedId: 0, storedCount: 0, items: [], lastLoot: lootItems, lootAwarded: lootItems.length };
     chestLootMap[key] = record;
     refreshInventoryCountsUI();
     saveWorldData();
+    const msg = '🎁 ¡Cofre del Tesoro Abierto! Recibido: +2 Diamantes, +3 Oro, +2 Pan, +2 Manzanas, +8 Vías y +1 Vagoneta';
     const lbl = document.getElementById('block-label');
-    if (lbl) lbl.textContent = '🎁 Cofre del Tesoro: +2 Diamantes, +3 Oro, +2 Pan, +8 Vías y Vagoneta!';
+    if (lbl) lbl.textContent = msg;
+    if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, msg);
     return { action: 'looted', lootItems, record };
   }
 
+  if (!Array.isArray(record.items)) record.items = [];
   // Already looted: acts as interactive storage container!
   const lbl = document.getElementById('block-label');
   if (record.storedCount > 0 && record.storedId > 0) {
@@ -580,21 +583,27 @@ function openVoxelChest(wx, wy, wz) {
     record.storedCount = 0;
     refreshInventoryCountsUI();
     saveWorldData();
-    if (lbl) lbl.textContent = `📦 Cofre: Retirado ${count}× ${BLOCK_DEFS[itemId]?.name || 'Objeto'}`;
+    const msg = `📦 Cofre: Retirado ${count}× ${BLOCK_DEFS[itemId]?.name || 'Objeto'} a tu mochila`;
+    if (lbl) lbl.textContent = msg;
+    if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, msg);
     return { action: 'withdrawn', itemId, count, record };
   } else {
     const heldId = hotbarSlots[selectedSlot];
-    const avail = gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[heldId] || 0);
+    const isTool = heldId === BLOCK.TOOL_PICKAXE || heldId === BLOCK.TOOL_SWORD || heldId === BLOCK.TOOL_BOW;
+    const avail = isTool ? 0 : (gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[heldId] || 0));
     if (avail > 0) {
       if (gameMode === 'survival') inventoryCounts[heldId] -= avail;
       record.storedId = heldId;
       record.storedCount = avail;
       refreshInventoryCountsUI();
       saveWorldData();
-      if (lbl) lbl.textContent = `📦 Cofre: Guardado ${avail}× ${BLOCK_DEFS[heldId]?.name || 'Objeto'}`;
+      const msg = `📦 Cofre: Guardado ${avail}× ${BLOCK_DEFS[heldId]?.name || 'Objeto'} en el cofre`;
+      if (lbl) lbl.textContent = msg;
+      if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, msg);
       return { action: 'stored', itemId: heldId, count: avail, record };
     }
   }
+  if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, '📦 Cofre abierto: haz clic en cualquier objeto para guardarlo o retirarlo.');
   return { action: 'empty', record };
 }
 

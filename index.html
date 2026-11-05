@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js" />
+  <link rel="stylesheet" href="src/styles.css?v=4" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=4" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=4" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=4" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=4" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=4" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=4" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=4" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=4" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=4" />
 <body>
 
   <div id="water-overlay"></div>
@@ -106,6 +106,23 @@
     </div>
   </div>
 
+  <!-- Treasure Chest Modal (Right-Click on BLOCK.CHEST) -->
+  <div id="chest-modal" class="hidden">
+    <div class="inv-card" style="max-width: 640px;">
+      <div class="inv-header">
+        <h2 id="chest-modal-title">🎁 Cofre del Tesoro</h2>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="mode-switch-btn" id="btn-chest-take-all">📥 Recoger Todo</button>
+          <button class="mode-switch-btn" id="btn-chest-close">✕ Cerrar Cofre (E / Esc)</button>
+        </div>
+      </div>
+      <div class="inv-section-title" id="chest-status-banner">✨ Contenido del Cofre (Haz clic en un objeto para retirarlo a tu mochila)</div>
+      <div class="craft-grid" id="chest-items-grid" style="margin-bottom:12px;"></div>
+      <div class="inv-section-title">🎒 Tu Mochila (Haz clic en cualquier objeto para guardarlo en este cofre)</div>
+      <div class="inv-grid" id="chest-player-grid"></div>
+    </div>
+  </div>
+
   <!-- Pause & Configuration Overlay -->
   <div id="overlay">
     <div class="menu-card">
@@ -171,14 +188,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 
-  <script src="src/01-config-atlas.js"></script>
-  <script src="src/02-worldgen-lighting.js"></script>
-  <script src="src/03-mesher-audio.js"></script>
-  <script src="src/04-world-renderer.js"></script>
-  <script src="src/05-simulation-entities.js"></script>
-  <script src="src/06-mobs-worker.js"></script>
-  <script src="src/07-physics-camera.js"></script>
-  <script src="src/08-ui-minimap.js"></script>
-  <script src="src/09-controls-loop.js"></script>
+  <script src="src/01-config-atlas.js?v=4"></script>
+  <script src="src/02-worldgen-lighting.js?v=4"></script>
+  <script src="src/03-mesher-audio.js?v=4"></script>
+  <script src="src/04-world-renderer.js?v=4"></script>
+  <script src="src/05-simulation-entities.js?v=4"></script>
+  <script src="src/06-mobs-worker.js?v=4"></script>
+  <script src="src/07-physics-camera.js?v=4"></script>
+  <script src="src/08-ui-minimap.js?v=4"></script>
+  <script src="src/09-controls-loop.js?v=4"></script>
 </body>
 </html>

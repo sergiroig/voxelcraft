@@ -334,8 +334,11 @@ window.addEventListener('touchstart', () => {
 function startGameplay() {
   sfx.init();
   invOpen = false;
+  chestOpen = false;
   menuOpen = false;
   invModalEl.classList.add('hidden');
+  const cm = document.getElementById('chest-modal');
+  if (cm) cm.classList.add('hidden');
   overlayEl.classList.add('hidden');
   if (isTouchMode || !canvasEl.requestPointerLock) {
     touchPlaying = true;
@@ -357,7 +360,10 @@ function togglePauseMenu(forceOpen) {
     menuOpen = true;
     isMiningHeld = false;
     invOpen = false;
+    chestOpen = false;
     invModalEl.classList.add('hidden');
+    const cm = document.getElementById('chest-modal');
+    if (cm) cm.classList.add('hidden');
     overlayEl.classList.remove('hidden');
     if (touchPlaying) {
       touchPlaying = false;
@@ -374,6 +380,11 @@ function togglePauseMenu(forceOpen) {
 
 function toggleInventory(force) {
   invOpen = typeof force === 'boolean' ? force : !invOpen;
+  if (invOpen) {
+    chestOpen = false;
+    const cm = document.getElementById('chest-modal');
+    if (cm) cm.classList.add('hidden');
+  }
   invModalEl.classList.toggle('hidden', !invOpen);
   if (invOpen) {
     isMiningHeld = false;
@@ -402,7 +413,31 @@ function toggleFlyingMode() {
 function placeBlockAtCurrentTarget() {
   const bId = hotbarSlots[selectedSlot];
 
-  // Consumable Apple, Bread, or Bow can be used even without pointing at a nearby block
+  // 1. Always prioritize interacting with targeted interactive world blocks (Chest, Lever, Door, Trapdoor, Rail)
+  if (currentHit) {
+    if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) {
+      toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z);
+      player.swingTime = 1.0;
+      return true;
+    }
+    if (currentHit.block === BLOCK.DOOR_CLOSED || currentHit.block === BLOCK.DOOR_OPEN) {
+      toggleVoxelDoor(currentHit.x, currentHit.y, currentHit.z);
+      player.swingTime = 1.0;
+      return true;
+    }
+    if (currentHit.block === BLOCK.TRAPDOOR_CLOSED || currentHit.block === BLOCK.TRAPDOOR_OPEN) {
+      toggleVoxelTrapdoor(currentHit.x, currentHit.y, currentHit.z);
+      player.swingTime = 1.0;
+      return true;
+    }
+    if (currentHit.block === BLOCK.CHEST) {
+      openVoxelChest(currentHit.x, currentHit.y, currentHit.z);
+      player.swingTime = 1.0;
+      return true;
+    }
+  }
+
+  // 2. Consumable Apple, Bread, or Bow can be used even without pointing at a nearby block
   if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) {
     return eatHeldApple(bId);
   }
@@ -414,34 +449,6 @@ function placeBlockAtCurrentTarget() {
   }
 
   if (!currentHit) return false;
-
-  // Interacting with a placed Redstone Lever flips its state!
-  if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) {
-    toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z);
-    player.swingTime = 1.0;
-    return true;
-  }
-
-  // Interacting with a Mechanical Door opens or closes it!
-  if (currentHit.block === BLOCK.DOOR_CLOSED || currentHit.block === BLOCK.DOOR_OPEN) {
-    toggleVoxelDoor(currentHit.x, currentHit.y, currentHit.z);
-    player.swingTime = 1.0;
-    return true;
-  }
-
-  // Interacting with a Mechanical Trapdoor opens or closes it!
-  if (currentHit.block === BLOCK.TRAPDOOR_CLOSED || currentHit.block === BLOCK.TRAPDOOR_OPEN) {
-    toggleVoxelTrapdoor(currentHit.x, currentHit.y, currentHit.z);
-    player.swingTime = 1.0;
-    return true;
-  }
-
-  // Interacting with a Treasure Chest opens it (loots or stores items)!
-  if (currentHit.block === BLOCK.CHEST) {
-    openVoxelChest(currentHit.x, currentHit.y, currentHit.z);
-    player.swingTime = 1.0;
-    return true;
-  }
 
   // Placing or mounting a Minecart
   if (bId === BLOCK.ITEM_MINECART) {
@@ -553,7 +560,7 @@ document.addEventListener('pointerlockchange', () => {
   isLocked = document.pointerLockElement === canvasEl;
   if (!isLocked) {
     isMiningHeld = false;
-    if (wasLocked && !invOpen && !touchPlaying) {
+    if (wasLocked && !invOpen && !chestOpen && !touchPlaying) {
       menuOpen = true;
       lastPointerLockExitTime = performance.now();
       overlayEl.classList.remove('hidden');

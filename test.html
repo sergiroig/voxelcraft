@@ -1268,6 +1268,34 @@
           vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.AIR);
           delete vc.chestLootMap[key];
         });
+
+        it('Al hacer clic derecho en el cofre de una Cabaña de Explorador (incluso llevando Arco/Manzana) no lo bloquea la antorcha y abre la ventana visual #chest-modal', () => {
+          const ch = vc.getChunkData(2, 2);
+          const cab = vc.getGenerator().placeStructureInChunk(ch.data, null, 2, 2, 'cabin');
+          vc.rebuildChunkImmediate(2, 2);
+
+          // Stand at the doorway of the cabin (x=8.5, z=9.5 in chunk 2,2) and aim at the chest at (7.5, y+0.5, 7.5)
+          const eyeX = 2 * 16 + 8.5;
+          const eyeY = cab.y + 1.58;
+          const eyeZ = 2 * 16 + 9.5;
+          const targetX = 2 * 16 + 7.5;
+          const targetY = cab.y + 0.5;
+          const targetZ = 2 * 16 + 7.5;
+          const dx = targetX - eyeX, dy = targetY - eyeY, dz = targetZ - eyeZ;
+          const len = Math.hypot(dx, dy, dz);
+          const hit = vc.raycastVoxel(eyeX, eyeY, eyeZ, dx / len, dy / len, dz / len, 6.5);
+
+          assert(hit && hit.block === vc.BLOCK.CHEST, `Mirar al cofre desde la entrada de la cabaña debe apuntar a BLOCK.CHEST y no ser bloqueado por la antorcha (obtuvo block=${hit ? hit.block : 'null'})`);
+
+          // Select Bow slot (slot 2) and right-click the chest -> must open #chest-modal instead of shooting arrow
+          vc.updateHotbarSelection(2);
+          vc.setCurrentHit(hit);
+          vc.placeBlockAtCurrentTarget();
+
+          const chestModal = doc.getElementById('chest-modal');
+          assert(chestModal && !chestModal.classList.contains('hidden'), 'Hacer clic derecho en un cofre debe abrir la ventana visual del cofre (#chest-modal)');
+          if (vc.closeChestModal) vc.closeChestModal();
+        });
       });
 
       // =========================================================================
