@@ -141,22 +141,16 @@ function buildHotbarUI() {
 
 const WAYPOINT_COLORS = ['#f43f5e', '#a855f7', '#10b981', '#f59e0b', '#38bdf8', '#ec4899'];
 const waypointGridEl = document.getElementById('waypoint-grid');
+const waypointSectionTitleEl = document.getElementById('waypoint-section-title');
 const btnAddWaypointEl = document.getElementById('btn-add-waypoint');
+const invModalTitleEl = document.getElementById('inv-modal-title');
 
 function addWaypoint(customName) {
+  if (gameMode === 'survival') return null;
   const biome = generator.getBiomeAt(player.x, player.z);
-  const wp = {
-    name: customName || `Baliza #${waypoints.length + 1} (${biome})`,
-    x: Math.round(player.x),
-    y: Math.round(player.y),
-    z: Math.round(player.z),
-    color: WAYPOINT_COLORS[waypoints.length % WAYPOINT_COLORS.length]
-  };
+  const wp = { name: customName || `Baliza #${waypoints.length + 1} (${biome})`, x: Math.round(player.x), y: Math.round(player.y), z: Math.round(player.z), color: WAYPOINT_COLORS[waypoints.length % WAYPOINT_COLORS.length] };
   waypoints.push(wp);
-  sfx.play('waypoint');
-  saveWorldData();
-  buildWaypointsUI();
-  updateMinimap(0, true);
+  sfx.play('waypoint'); saveWorldData(); buildWaypointsUI(); updateMinimap(0, true);
   if (blockLabelEl) blockLabelEl.textContent = `📍 ${wp.name} guardada en (${wp.x}, ${wp.y}, ${wp.z})`;
   return wp;
 }
@@ -164,45 +158,43 @@ function addWaypoint(customName) {
 function removeWaypoint(idx) {
   if (idx < 0 || idx >= waypoints.length) return false;
   waypoints.splice(idx, 1);
-  saveWorldData();
-  buildWaypointsUI();
-  updateMinimap(0, true);
+  saveWorldData(); buildWaypointsUI(); updateMinimap(0, true);
   return true;
 }
 
 function teleportToWaypoint(idx) {
+  if (gameMode === 'survival') return null;
   const wp = waypoints[idx];
   if (!wp) return null;
   if (ridingCart) toggleRideMinecart();
   if (ridingBoat) toggleRideBoat();
   const cx = Math.floor(wp.x / CHUNK_SIZE), cz = Math.floor(wp.z / CHUNK_SIZE);
-  getChunkData(cx, cz);
-  rebuildChunkImmediate(cx, cz);
-  player.x = wp.x + 0.5;
-  player.z = wp.z + 0.5;
+  getChunkData(cx, cz); rebuildChunkImmediate(cx, cz);
+  player.x = wp.x + 0.5; player.z = wp.z + 0.5;
   player.y = Math.max(wp.y, findSpawnHeight(player.x, player.z));
   player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
   lastPlayerChunkX = null;
-  sfx.play('waypoint');
-  updateMinimap(0, true);
+  sfx.play('waypoint'); updateMinimap(0, true);
   if (invOpen) toggleInventory(false);
   return wp;
 }
 
 function buildWaypointsUI() {
+  const isCreative = gameMode === 'creative';
+  if (btnAddWaypointEl) btnAddWaypointEl.style.display = isCreative ? '' : 'none';
+  if (waypointSectionTitleEl) waypointSectionTitleEl.style.display = isCreative ? '' : 'none';
+  if (invModalTitleEl) invModalTitleEl.textContent = isCreative ? 'Inventario, Crafteo y Balizas' : 'Inventario y Crafteo';
+  const tbtnWp = document.getElementById('tbtn-wp');
+  if (tbtnWp) tbtnWp.style.display = isCreative ? '' : 'none';
   if (!waypointGridEl) return;
+  waypointGridEl.style.display = isCreative ? '' : 'none';
   waypointGridEl.innerHTML = '';
+  if (!isCreative) return;
   waypoints.forEach((wp, idx) => {
     const dist = Math.round(Math.hypot(wp.x - player.x, wp.z - player.z));
     const card = document.createElement('div');
     card.className = 'craft-item craftable';
-    card.innerHTML = `
-      <div style="width:18px;height:18px;border-radius:50%;background:${wp.color};border:2px solid #fff;flex-shrink:0;"></div>
-      <div class="craft-info" style="flex:1;">
-        <div class="craft-title">${wp.name}</div>
-        <div class="craft-cost">Coords: (${wp.x}, ${wp.y}, ${wp.z}) • Distancia: ${dist}m — Clic para Teletransportar</div>
-      </div>
-    `;
+    card.innerHTML = `<div style="width:18px;height:18px;border-radius:50%;background:${wp.color};border:2px solid #fff;flex-shrink:0;"></div><div class="craft-info" style="flex:1;"><div class="craft-title">${wp.name}</div><div class="craft-cost">Coords: (${wp.x}, ${wp.y}, ${wp.z}) • Distancia: ${dist}m — Clic para Teletransportar</div></div>`;
     const onTp = (e) => { e.preventDefault(); e.stopPropagation(); teleportToWaypoint(idx); };
     card.addEventListener('click', onTp);
     card.addEventListener('touchend', onTp, { passive: false });
@@ -253,6 +245,7 @@ function buildInventoryModal() {
 
 function refreshInventoryCountsUI() {
   buildHotbarUI();
+  buildWaypointsUI();
   if (invOpen) buildInventoryModal();
   const isCreative = gameMode === 'creative';
   if (btnModeToggleEl) btnModeToggleEl.textContent = `Modo: ${isCreative ? 'Creativo (∞)' : 'Supervivencia'} (G)`;
@@ -724,14 +717,16 @@ function updateMinimap(dt, forceRender = false) {
     }
   }
 
-  for (let i = 0; i < waypoints.length; i++) {
-    const wp = waypoints[i];
-    const rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x))));
-    const rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
-    minimapCtx.fillStyle = '#0f172a';
-    minimapCtx.fillRect(rx - 2, rz - 2, 5, 5);
-    minimapCtx.fillStyle = wp.color || '#f43f5e';
-    minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
+  if (gameMode === 'creative') {
+    for (let i = 0; i < waypoints.length; i++) {
+      const wp = waypoints[i];
+      const rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x))));
+      const rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
+      minimapCtx.fillStyle = '#0f172a';
+      minimapCtx.fillRect(rx - 2, rz - 2, 5, 5);
+      minimapCtx.fillStyle = wp.color || '#f43f5e';
+      minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
+    }
   }
 
   minimapCtx.strokeStyle = '#38bdf8';

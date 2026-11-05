@@ -999,6 +999,7 @@
           assert(dest !== null && dest.biome === 'Desierto', 'teleportToBiome("Desierto") debe encontrar un bioma Desierto');
           assert(vc.getGenerator().getBiomeAt(vc.player.x, vc.player.z) === 'Desierto', 'La posición actual del jugador debe estar en Desierto');
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival');
         });
       });
 
@@ -1406,6 +1407,7 @@
             vc.scene.remove(c.root);
           }
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival');
           vc.setVoxelGlobal(rx,     ry,     rz,     vc.BLOCK.AIR);
           vc.setVoxelGlobal(rx + 1, ry,     rz,     vc.BLOCK.AIR);
           vc.setVoxelGlobal(rx + 2, ry,     rz,     vc.BLOCK.AIR);
@@ -1523,6 +1525,10 @@
         it('Crea Balizas GPS con coordenadas/color, las dibuja en el Radar 2D y teletransporta al jugador', () => {
           const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
           const initialCount = vc.waypoints.length;
+          vc.toggleGameMode('survival');
+          assert(vc.addWaypoint('Prohibida en Supervivencia') === null && vc.teleportToWaypoint(0) === null, 'El sistema de balizas debe estar desactivado en modo Supervivencia');
+          assert(doc.getElementById('waypoint-grid').style.display === 'none' && doc.getElementById('btn-add-waypoint').style.display === 'none', 'La sección de balizas debe ocultarse en modo Supervivencia');
+          vc.toggleGameMode('creative');
 
           vc.player.x = 24.5; vc.player.y = 40; vc.player.z = -18.5;
           const wp = vc.addWaypoint('Mina de Diamantes');
@@ -1540,6 +1546,7 @@
           vc.removeWaypoint(vc.waypoints.length - 1);
           assert(vc.waypoints.length === initialCount, 'removeWaypoint debe eliminar la baliza');
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival');
         });
       });
 
@@ -1570,7 +1577,8 @@
             const b = vc.boats.pop();
             vc.scene.remove(b.root);
           }
-          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ; vc.player.yaw = origYaw;
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival'); vc.player.yaw = origYaw;
         });
       });
 
@@ -1617,6 +1625,7 @@
           for (const a of vc.arrows) a.active = false;
           vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival');
           vc.player.vx = 0; vc.player.vy = 0; vc.player.vz = 0;
         });
       });
@@ -1645,6 +1654,7 @@
           vc.setVoxelGlobal(42, 53, 42, vc.BLOCK.AIR);
           vc.portals.length = 0;
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival');
         });
       });
 

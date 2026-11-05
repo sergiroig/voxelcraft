@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=26" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=26" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=26" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=26" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=26" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=26" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=26" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=26" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=26" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=26" />
+  <link rel="stylesheet" href="src/styles.css?v=27" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=27" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=27" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=27" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=27" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=27" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=27" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=27" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=27" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=27" />
 </head>
 <body>
 
@@ -37,7 +37,7 @@
       <button class="t-pill-btn" id="tbtn-cam">🎥 3ªP</button>
       <button class="t-pill-btn" id="tbtn-zoom">🔭</button>
       <button class="t-pill-btn" id="tbtn-cart">🛤/⛵ Vehíc.</button>
-      <button class="t-pill-btn" id="tbtn-wp">📍 Baliza</button>
+      <button class="t-pill-btn" id="tbtn-wp" style="display:none;">📍 Baliza</button>
       <button class="t-pill-btn" id="tbtn-photo">📷 Foto</button>
       <button class="t-pill-btn toggled" id="tbtn-music">🎵</button>
       <button class="t-pill-btn" id="tbtn-hud">📊 HUD</button>
@@ -89,14 +89,14 @@
   <div id="inventory-modal" class="hidden">
     <div class="inv-card">
       <div class="inv-header">
-        <h2>Inventario, Crafteo y Balizas</h2>
+        <h2 id="inv-modal-title">Inventario y Crafteo</h2>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="mode-switch-btn" id="btn-add-waypoint">📍 Marcar Baliza Aquí (B)</button>
+          <button class="mode-switch-btn" id="btn-add-waypoint" style="display:none;">📍 Marcar Baliza Aquí (B)</button>
           <button class="mode-switch-btn" id="btn-mode-toggle">Modo: Supervivencia (G)</button>
         </div>
       </div>
-      <div class="inv-section-title">📍 Balizas GPS y Teletransporte Rápido (Aparecen en el Radar 2D)</div>
-      <div class="craft-grid" id="waypoint-grid" style="margin-bottom:10px;"></div>
+      <div class="inv-section-title" id="waypoint-section-title" style="display:none;">📍 Balizas GPS y Teletransporte Rápido (Aparecen en el Radar 2D)</div>
+      <div class="craft-grid" id="waypoint-grid" style="margin-bottom:10px;display:none;"></div>
       <div class="inv-section-title">⚒ Mesa de Crafteo Rápido (Haz clic para fabricar)</div>
       <div class="craft-grid" id="craft-grid"></div>
       <div class="inv-section-title">🎒 Mochila de Bloques y Herramientas (Haz clic para equipar en la ranura activa)</div>
@@ -188,14 +188,14 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <script src="src/01-config-atlas.js?v=26"></script>
-  <script src="src/02-worldgen-lighting.js?v=26"></script>
-  <script src="src/03-mesher-audio.js?v=26"></script>
-  <script src="src/04-world-renderer.js?v=26"></script>
-  <script src="src/05-simulation-entities.js?v=26"></script>
-  <script src="src/06-mobs-worker.js?v=26"></script>
-  <script src="src/07-physics-camera.js?v=26"></script>
-  <script src="src/08-ui-minimap.js?v=26"></script>
-  <script src="src/09-controls-loop.js?v=26"></script>
+  <script src="src/01-config-atlas.js?v=27"></script>
+  <script src="src/02-worldgen-lighting.js?v=27"></script>
+  <script src="src/03-mesher-audio.js?v=27"></script>
+  <script src="src/04-world-renderer.js?v=27"></script>
+  <script src="src/05-simulation-entities.js?v=27"></script>
+  <script src="src/06-mobs-worker.js?v=27"></script>
+  <script src="src/07-physics-camera.js?v=27"></script>
+  <script src="src/08-ui-minimap.js?v=27"></script>
+  <script src="src/09-controls-loop.js?v=27"></script>
 </body>
 </html>
