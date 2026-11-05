@@ -54,14 +54,18 @@ function explodeAt(ex, ey, ez, radius = 3.6) {
 }
 
 let simAccum = 0;
+let leafScanZ = -3;
 const leafDecayQueue = [];
 
 function isWoodTouchingLeaves(wx, wy, wz) {
+  let touchesLeaves = false, horizWood = 0;
   for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
     const nb = getVoxelGlobal(wx + ox, wy + oy, wz + oz);
-    if (nb === BLOCK.LEAVES || nb === BLOCK.SNOW_LEAVES) return true;
+    if (nb === BLOCK.PLANKS || nb === BLOCK.COBBLE || nb === BLOCK.GLASS) return false;
+    if (oy === 0 && nb === BLOCK.WOOD) horizWood++;
+    if (nb === BLOCK.LEAVES || nb === BLOCK.SNOW_LEAVES) touchesLeaves = true;
   }
-  return false;
+  return touchesLeaves && horizWood < 2;
 }
 
 function hasNearbyWood(lx, ly, lz) {
@@ -85,7 +89,7 @@ function enqueueLeafDecayAround(wx, wy, wz) {
       for (let dx = -3; dx <= 3; dx++) {
         const lx = wx + dx, lz = wz + dz;
         const b = getVoxelGlobal(lx, ly, lz);
-        if (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) {
+        if ((b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) && !hasNearbyWood(lx, ly, lz)) {
           const key = `${lx},${ly},${lz}`;
           if (!leafDecayQueue.includes(key)) leafDecayQueue.push(key);
         }
@@ -94,22 +98,41 @@ function enqueueLeafDecayAround(wx, wy, wz) {
   }
 }
 
-function growTreeAt(wx, wy, wz, dirtySet) {
-  const targetSet = dirtySet || new Set();
-  const trunkH = 4;
-  for (let ty = 0; ty < trunkH; ty++) {
-    if (wy + ty < CHUNK_HEIGHT) setVoxelRawNoRebuild(wx, wy + ty, wz, BLOCK.WOOD, targetSet);
+function scanNearbyFloatingLeaves() {
+  if (typeof player === 'undefined' || !player) return;
+  const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
+  for (let s = 0; s < 3; s++) {
+    const dz = leafScanZ++;
+    if (leafScanZ > 24) leafScanZ = -24;
+    const lz = pz + dz;
+    for (let dx = -24; dx <= 24; dx++) {
+      const lx = px + dx;
+      for (let dy = -3; dy <= 8; dy++) {
+        const ly = py + dy;
+        if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
+        const b = getVoxelGlobal(lx, ly, lz);
+        if (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) {
+          if (!hasNearbyWood(lx, ly, lz)) {
+            enqueueLeafDecayAround(lx, ly, lz);
+            if (leafDecayQueue.length >= 24) return;
+          }
+          break;
+        }
+      }
+    }
   }
-  const canopyBase = wy + trunkH - 1;
+}
+
+function growTreeAt(wx, wy, wz, dirtySet) {
+  const targetSet = dirtySet || new Set(), trunkH = 4, canopyBase = wy + trunkH - 1;
+  for (let ty = 0; ty < trunkH; ty++) if (wy + ty < CHUNK_HEIGHT) setVoxelRawNoRebuild(wx, wy + ty, wz, BLOCK.WOOD, targetSet);
   for (let dy = 0; dy <= 2; dy++) {
     const rad = dy === 2 ? 1 : 2;
     for (let dz = -rad; dz <= rad; dz++) {
       for (let dx = -rad; dx <= rad; dx++) {
         if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && dy > 0) continue;
         const py = canopyBase + dy;
-        if (py < CHUNK_HEIGHT && getVoxelGlobal(wx + dx, py, wz + dz) === BLOCK.AIR) {
-          setVoxelRawNoRebuild(wx + dx, py, wz + dz, BLOCK.LEAVES, targetSet);
-        }
+        if (py < CHUNK_HEIGHT && getVoxelGlobal(wx + dx, py, wz + dz) === BLOCK.AIR) setVoxelRawNoRebuild(wx + dx, py, wz + dz, BLOCK.LEAVES, targetSet);
       }
     }
   }
@@ -120,31 +143,26 @@ function growTreeAt(wx, wy, wz, dirtySet) {
 function updateVoxelSimulation(dt) {
   for (let i = activeTNTs.length - 1; i >= 0; i--) {
     const t = activeTNTs[i];
-    t.fuse -= dt;
-    t.vy -= 18.0 * dt;
+    t.fuse -= dt; t.vy -= 18.0 * dt;
     const nextY = t.y + t.vy * dt;
     if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(t.x), Math.floor(nextY - 0.48), Math.floor(t.z))].solid) t.y = nextY;
     else t.vy = 0;
     t.mesh.position.set(t.x, t.y, t.z);
-    const blink = Math.floor(t.fuse * (t.fuse < 0.8 ? 16 : 7)) % 2 === 0;
-    t.mesh.material = blink ? tntMatWhite : tntMatRed;
+    t.mesh.material = (Math.floor(t.fuse * (t.fuse < 0.8 ? 16 : 7)) % 2 === 0) ? tntMatWhite : tntMatRed;
     t.mesh.scale.setScalar(t.fuse < 0.35 ? 1.0 + (0.35 - t.fuse) * 0.65 : 1.0);
-    if (t.fuse <= 0) {
-      scene.remove(t.mesh);
-      activeTNTs.splice(i, 1);
-      explodeAt(t.x, t.y, t.z, 3.6);
-    }
+    if (t.fuse <= 0) { scene.remove(t.mesh); activeTNTs.splice(i, 1); explodeAt(t.x, t.y, t.z, 3.6); }
   }
 
   simAccum += dt;
-  if (simAccum < 0.16 || (simQueue.size === 0 && leafDecayQueue.length === 0)) return;
+  if (simAccum < 0.16) return;
   simAccum = 0;
+  if (leafDecayQueue.length < 24) scanNearbyFloatingLeaves();
+  if (simQueue.size === 0 && leafDecayQueue.length === 0) return;
 
   const batch = Array.from(simQueue).slice(0, 256);
   for (const key of batch) simQueue.delete(key);
 
-  const dirtySet = new Set();
-  const movedThisTick = new Set();
+  const dirtySet = new Set(), movedThisTick = new Set();
   for (let i = 0; i < batch.length; i++) {
     if (movedThisTick.has(batch[i])) continue;
     const [wx, wy, wz] = batch[i].split(',').map(Number);
@@ -161,24 +179,18 @@ function updateVoxelSimulation(dt) {
     } else if (b === BLOCK.WATER) {
       const below = getVoxelGlobal(wx, wy - 1, wz);
       if (below === BLOCK.LAVA) {
-        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.OBSIDIAN, dirtySet);
-        sfx.play('hiss');
-        spawnBlockParticles(wx, wy - 1, wz, BLOCK.OBSIDIAN, 10);
+        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx, wy - 1, wz, BLOCK.OBSIDIAN, 10);
       } else if (below === BLOCK.AIR && wy - 1 > 1) {
-        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet);
-        movedThisTick.add(`${wx},${wy - 1},${wz}`);
+        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
       } else {
         for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
           const sideB = getVoxelGlobal(wx + dx, wy, wz + dz);
           if (sideB === BLOCK.LAVA) {
-            setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet);
-            sfx.play('hiss');
-            spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
+            setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
           } else if (wy <= SEA_LEVEL && sideB === BLOCK.AIR) {
             const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
             if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER) {
-              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet);
-              movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
+              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
             }
           }
         }
@@ -187,32 +199,24 @@ function updateVoxelSimulation(dt) {
       let turnedToObsidian = false;
       for (const [dx, dy, dz] of [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]]) {
         if (getVoxelGlobal(wx + dx, wy + dy, wz + dz) === BLOCK.WATER) {
-          setVoxelRawNoRebuild(wx, wy, wz, BLOCK.OBSIDIAN, dirtySet);
-          sfx.play('hiss');
-          spawnBlockParticles(wx, wy, wz, BLOCK.OBSIDIAN, 10);
-          turnedToObsidian = true;
-          break;
+          setVoxelRawNoRebuild(wx, wy, wz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx, wy, wz, BLOCK.OBSIDIAN, 10);
+          turnedToObsidian = true; break;
         }
       }
       if (!turnedToObsidian && getVoxelGlobal(wx, wy - 1, wz) === BLOCK.AIR && wy - 1 > 1) {
-        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.LAVA, dirtySet);
-        movedThisTick.add(`${wx},${wy - 1},${wz}`);
+        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.LAVA, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
       }
     } else if (b === BLOCK.SAPLING) {
       const soil = getVoxelGlobal(wx, wy - 1, wz);
       if ((soil === BLOCK.GRASS || soil === BLOCK.DIRT) && (getLightGlobal(wx, wy, wz) >> 4) >= 9) growTreeAt(wx, wy, wz, dirtySet);
     } else if (b === BLOCK.WHEAT_1 && (getLightGlobal(wx, wy, wz) >> 4) >= 7) {
-      setVoxelRawNoRebuild(wx, wy, wz, BLOCK.WHEAT_2, dirtySet);
-      simQueue.add(`${wx},${wy},${wz}`);
-      movedThisTick.add(`${wx},${wy},${wz}`);
+      setVoxelRawNoRebuild(wx, wy, wz, BLOCK.WHEAT_2, dirtySet); simQueue.add(`${wx},${wy},${wz}`); movedThisTick.add(`${wx},${wy},${wz}`);
     } else if (b === BLOCK.WHEAT_2 && (getLightGlobal(wx, wy, wz) >> 4) >= 7) {
-      setVoxelRawNoRebuild(wx, wy, wz, BLOCK.WHEAT_3, dirtySet);
-      movedThisTick.add(`${wx},${wy},${wz}`);
+      setVoxelRawNoRebuild(wx, wy, wz, BLOCK.WHEAT_3, dirtySet); movedThisTick.add(`${wx},${wy},${wz}`);
     }
   }
   if (leafDecayQueue.length > 0) {
-    let decayedCount = 0;
-    let checks = Math.min(leafDecayQueue.length, 16);
+    let decayedCount = 0, checks = Math.min(leafDecayQueue.length, 16);
     while (checks-- > 0 && leafDecayQueue.length > 0 && decayedCount < 3) {
       const rIdx = (Math.random() * leafDecayQueue.length) | 0;
       const lKey = leafDecayQueue[rIdx];
@@ -220,8 +224,7 @@ function updateVoxelSimulation(dt) {
       leafDecayQueue.pop();
       const [lx, ly, lz] = lKey.split(',').map(Number);
       const lb = getVoxelGlobal(lx, ly, lz);
-      if (lb !== BLOCK.LEAVES && lb !== BLOCK.SNOW_LEAVES) continue;
-      if (hasNearbyWood(lx, ly, lz)) continue;
+      if ((lb !== BLOCK.LEAVES && lb !== BLOCK.SNOW_LEAVES) || hasNearbyWood(lx, ly, lz)) continue;
       setVoxelRawNoRebuild(lx, ly, lz, BLOCK.AIR, dirtySet);
       spawnBlockParticles(lx, ly, lz, lb, 4);
       const r = Math.random();

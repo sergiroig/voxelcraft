@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=17"></iframe>
+    <iframe id="game-frame" src="./index.html?v=18"></iframe>
   </div>
 
   <script>
@@ -1129,10 +1129,15 @@
             leavesAfterOneTick > 0 && leavesAfterOneTick < leavesInitial,
             `Al romper solo la madera en contacto con las hojas, estas deben ir desapareciendo aunque quede tronco abajo (inicial=${leavesInitial}, tras 1 tick=${leavesAfterOneTick})`
           );
-          for (let step = 0; step < 30 && countCanopyLeaves() > 0; step++) {
+          // Incluso si el árbol ya estaba sin tronco antes (cola vacía al cargar la partida), el escaneo cercano debe detectarlo y hacer caer sus hojas
+          vc.leafDecayQueue.length = 0;
+          const origPy = vc.player.y;
+          vc.player.y = ty;
+          for (let step = 0; step < 35 && countCanopyLeaves() > 0; step++) {
             vc.updateVoxelSimulation(0.20);
           }
-          assert(countCanopyLeaves() === 0, 'Todas las hojas sin tronco en contacto deben acabar desapareciendo');
+          vc.player.y = origPy;
+          assert(countCanopyLeaves() === 0, 'Todas las hojas sin tronco en contacto (incluso en árboles ya talados previamente) deben acabar desapareciendo');
 
           // Clean up tree
           for (let dy = -1; dy <= 7; dy++) {
