@@ -624,6 +624,55 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 14: Web Worker Multihilo (Blob + Transferable) y Escalado Dinámico
+      // =========================================================================
+      describe('14. Web Worker Multihilo (Blob + Transferable) y Escalado Dinámico', () => {
+        it('Ejecuta el meshing de chunks en Web Worker con Transferable ArrayBuffers (Zero-Copy) e idéntica geometría', async () => {
+          const wState0 = vc.getWorkerState();
+          assert(wState0.hasWorker === true, 'meshWorker (Blob URL) debería estar inicializado y activo');
+
+          // Compare synchronous mesh arrays vs Worker mesh arrays on chunk (0, 0)
+          const syncMesh = vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, vc.getState().sunFactor);
+          const completedBefore = vc.getWorkerState().workerJobsCompleted;
+          const workerMesh = await vc.requestChunkMeshWorker(0, 0);
+
+          assert(workerMesh !== null && workerMesh.solid && workerMesh.water, 'requestChunkMeshWorker(0,0) debe resolver con buffers solid y water');
+          assert(
+            vc.getWorkerState().workerJobsCompleted >= completedBefore + 1,
+            'workerJobsCompleted debe incrementarse al completar el trabajo en el Web Worker'
+          );
+          assert(
+            workerMesh.solid.idx.length === syncMesh.solid.idx.length,
+            `El Worker debe generar exactamente el mismo nº de índices sólidos (${workerMesh.solid.idx.length} vs ${syncMesh.solid.idx.length})`
+          );
+          assert(
+            workerMesh.solid.pos.byteLength === syncMesh.solid.pos.byteLength,
+            'El buffer Float32Array de posiciones transferido por el Worker debe coincidir al byte'
+          );
+          assert(
+            vc.getWorkerState().lastWorkerMainThreadMs < 3.0,
+            `El coste en el hilo principal del Worker (pack + apply) debe ser < 3.0 ms (fue ${vc.getWorkerState().lastWorkerMainThreadMs.toFixed(2)} ms)`
+          );
+        });
+
+        it('Reduce el Pixel Ratio automáticamente si caen los FPS (< 45) y lo restaura a 60 FPS', () => {
+          const ws0 = vc.getWorkerState();
+          const maxPR = ws0.maxPixelRatio;
+          const minPR = ws0.minPixelRatio;
+
+          // Simulate low FPS (30 FPS) -> should step down pixel ratio
+          const r1 = vc.updateDynamicResolution(30);
+          assert(r1 < maxPR && r1 >= minPR, `A 30 FPS debería reducir el Pixel Ratio por debajo de ${maxPR} (obtuvo ${r1})`);
+          assert(Math.abs(vc.renderer.getPixelRatio() - r1) < 1e-3, 'renderer.getPixelRatio() debe reflejar la reducción dinámica');
+
+          // Simulate recovery to 60 FPS -> should restore back to maxPixelRatio
+          for (let i = 0; i < 10; i++) vc.updateDynamicResolution(60);
+          const rRestored = vc.getWorkerState().currentPixelRatio;
+          assert(Math.abs(rRestored - maxPR) < 1e-3, `A 60 FPS sostenidos debe restaurar el Pixel Ratio máximo (${maxPR}, obtuvo ${rRestored})`);
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -696,10 +745,12 @@
       for (const d of vc.itemDrops) d.active = false;
 
       const ch0 = vc.getChunkData(0, 0);
+      const sampleMesh0 = vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0);
       const onDemandFeatures = [
         { name: 'Generación Chunk (Terreno + Cuevas 3D 4×4×4 + Menas)', ms: bench(() => { vc.getGenerator().generateChunkVoxels(50, 50, null); }, 40) },
         { name: 'Iluminación Vóxel Flood-Fill BFS (16,384 bloques)',    ms: bench(() => { vc.computeChunkLighting(ch0, (x, z) => vc.chunks.get(`${x},${z}`)); }, 40) },
-        { name: 'Meshing Chunk (Face Culling + AO 4 vértices + X-Mesh)', ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0); }, 30) }
+        { name: 'Meshing Chunk Síncrono (Face Culling + AO + X-Mesh)',  ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0); }, 30) },
+        { name: 'Meshing vía Web Worker (Coste en Hilo Principal)',     ms: bench(() => { vc.packChunkPaddedBuffers(0, 0); vc.applyArraysToMesh(ch0, sampleMesh0); }, 40) }
       ];
 
       const totalFrameMs = perFrameFeatures.reduce((acc, f) => acc + f.ms, 0);

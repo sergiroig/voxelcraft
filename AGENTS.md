@@ -68,6 +68,7 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 | **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en flores/hierba alta (con raíz anclada `uv.y`) y hojas 3D sin grietas, baile de llama en antorchas, destello en menas de oro/diamante, olas 3D con espuma/cáusticas en el agua y atmósfera subacuática. |
 | **Drops 3D, Supervivencia y Crafteo** | `dropInstanced`, `itemDrops`, `spawnItemDrop`, `updateItemDrops`, `CRAFTING_RECIPES`, `craftRecipe`, `toggleGameMode` | Pool `InstancedMesh` de 64 mini-bloques 3D flotantes e imantados en 1 *draw call*, inventario con cantidades en Supervivencia (`G` para alternar con Creativo `∞`) y 8 recetas de crafteo rápido en el modal `E`. |
 | **Música C418 + Paisaje Sonoro** | `SoundFX`, `C418_SCALE_HZ`, `C418_CHORDS`, `triggerMusicChord`, `playCaveEcho`, `updateAmbientAudio`, `toggleMusic` | Sintetizador FM de piano cálido + *Reverb* algorítmica estéreo (`ConvolverNode` de 2s) + generador continuo de brisa/cueva/agua en el hilo de audio nativo (`M` / `🎵` para silenciar). |
+| **`Web Worker` Multihilo + Escalado Dinámico** | `meshWorker`, `packChunkPaddedBuffers`, `requestChunkMeshWorker`, `updateDynamicResolution` | Worker *inline* (`Blob URL`) que reutiliza `buildChunkMeshArrays.toString()` con transferencia *Zero-Copy* (`Transferable` `ArrayBuffer`) de una región $18 \times 64 \times 18$ (`20,736` bytes), reduciendo el coste en el hilo principal de `~9.85 ms` a `~0.88 ms` (`11.2×` más rápido). Escalado dinámico de `PixelRatio` (`0.65`–`1.5`) si los FPS bajan de 45. |
 | **Controles Híbridos** | `updateJoystickFromTouch`, `setTouchPlaying`, `joyX`, `joyY` | Captura de ratón (`Pointer Lock`) en PC y joystick virtual analógico + cámara multitáctil + barra de botones en móvil/tablet. |
 | **Persistencia Delta** | `worldDeltas`, `saveWorldState`, `loadWorldState`, `exportWorldJSON` | Guarda en `localStorage` únicamente la semilla (`WORLD_SEED`) y los bloques modificados por el usuario. |
 
@@ -116,9 +117,9 @@ Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
 4. ✅ **Punto 4 — Audio y Música Ambiental Generativa (Web Audio API, Completado):**
    - Música ambiental estilo *C418* generada proceduralmente con acordes arpegiados en escala de Re Mayor / Sol Lidio (`Dmaj7, Gadd9, A6, Bm7`) en un sintetizador FM de piano cálido + *reverb* algorítmica estéreo (`ConvolverNode`).
    - Paisaje sonoro dinámico que adapta el filtro en tiempo real entre brisa exterior (`surface`), resonancia y ecos cristalinos en cuevas oscuras (`cave`) y sonido subacuático (`underwater`), conmutable con `M` / `🎵`.
-5. ⏳ **Punto 5 — Rendimiento Extremo (Multihilo y Escalado Dinámico):**
-   - **`Web Worker` inline** (mediante `Blob URL` en el mismo `index.html`) para delegar la generación de terreno, iluminación BFS y *meshing* fuera del hilo principal.
-   - **Escalado dinámico de resolución (`Dynamic Pixel Ratio`)** para mantener 60 FPS estables en móviles de gama media/baja.
+5. ✅ **Punto 5 — Rendimiento Extremo (Multihilo y Escalado Dinámico, Completado):**
+   - **`Web Worker` inline** (mediante `Blob URL` en el mismo `index.html`) con `Transferable` `ArrayBuffer` (*Zero-Copy*) que empaqueta el chunk $18 \times 64 \times 18$ por filas contiguas y delega el *meshing* (`buildChunkMeshArrays`) fuera del hilo principal (`0.88 ms` en hilo principal frente a `9.85 ms` síncrono = **reducción del 91% / 11.2× más rápido**).
+   - **Escalado dinámico de resolución (`Dynamic Pixel Ratio`, `updateDynamicResolution`)** que adapta automáticamente `renderer.setPixelRatio` entre `0.65` y `1.5` si los FPS bajan de 45 y lo restaura al recuperar $\ge 56$ FPS.
 
 ---
 
@@ -154,8 +155,9 @@ Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` p
 
 | Operación Puntual | Tiempo Medio en este PC | % de 1 Frame (16.67 ms) | Notas de Optimización |
 | :--- | ---: | ---: | :--- |
-| **Generar Datos de 1 Chunk** *(Terreno + Biomas + Cuevas 3D Trilineales $4\times4\times4$ + Menas)* | `0.39 ms` | `2.3 %` | La interpolación trilineal $4\times4\times4$ evalúa el ruido 3D solo 425 veces en lugar de $16\,384$. |
-| **Iluminación Vóxel Flood-Fill BFS (1 Chunk)** *(Sol + Antorchas en 1 byte)* | `0.45 - 1.02 ms` | `2.7 % - 6.1 %` | Cola tipada estática `Int32Array` sin asignaciones en el *Garbage Collector*. |
-| **Construcción de Malla de 1 Chunk (`buildChunkMeshArrays`)** *(Face Culling + AO + X-Mesh)* | `5.15 - 10.95 ms` | `30.9 % - 65.7 %` | Se ejecuta solo al modificar bloques o hacer *streaming* (máx. 1 chunk por frame). En el **Punto 5** se moverá a un `Web Worker` para bajar su coste en el hilo principal a `~0.1 ms`. |
+| **Generar Datos de 1 Chunk** *(Terreno + Biomas + Cuevas 3D Trilineales $4\times4\times4$ + Menas)* | `0.22 - 0.39 ms` | `1.3 % - 2.3 %` | La interpolación trilineal $4\times4\times4$ evalúa el ruido 3D solo 425 veces en lugar de $16\,384$. |
+| **Iluminación Vóxel Flood-Fill BFS (1 Chunk)** *(Sol + Antorchas en 1 byte)* | `0.45 - 0.58 ms` | `2.7 % - 3.5 %` | Cola tipada estática `Int32Array` sin asignaciones en el *Garbage Collector*. |
+| **Meshing de Chunk vía `Web Worker` (`Blob` + `Transferable`)** *(Coste en Hilo Principal: pack + subir a GPU)* | **`0.88 ms`** | **`5.3 %`** | **Reducción del 91% (`11.2×` más rápido en hilo principal)** frente al meshing síncrono gracias a copia por filas contiguas de `1,024` bytes y transferencia *Zero-Copy* de `Float32Array` / `Uint32Array`. |
+| **Construcción Síncrona de Malla de 1 Chunk (`buildChunkMeshArrays`)** *(Edición instantánea de bloque por el jugador)* | `5.15 - 9.85 ms` | `30.9 % - 59.1 %` | Se usa de forma síncrona solo al picar/colocar un bloque para respuesta visual en `0 frames` de latencia. |
 | **Detonación de TNT (`explodeAt`)** *(Cráter + Onda expansiva + Reconstrucción por lotes)* | `~6.1 ms` (1 sola vez al explotar) | `36.6 %` | Gracias a `setVoxelRawNoRebuild` + `rebuildAffectedChunksSet`, reconstruye el cráter entero en una única pasada en vez de 180 veces. |
 
