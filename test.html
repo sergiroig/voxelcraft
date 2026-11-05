@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=14"></iframe>
+    <iframe id="game-frame" src="./index.html?v=15"></iframe>
   </div>
 
   <script>
@@ -1099,6 +1099,38 @@
             trisWithWoodTrunk > trisAllLeaves,
             `Las caras entre WOOD y LEAVES no deben descartarse por culling al mecerse las hojas con el viento (trisWood=${trisWithWoodTrunk}, trisLeaves=${trisAllLeaves})`
           );
+
+          // Verificar caída progresiva de hojas (Leaf Decay) al eliminar todos los bloques del tronco (WOOD)
+          const countCanopyLeaves = () => {
+            let cnt = 0;
+            for (let dy = 2; dy <= 6; dy++) {
+              for (let dz = -2; dz <= 2; dz++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                  if (vc.getVoxelGlobal(tx + dx, ty + dy, tz + dz) === vc.BLOCK.LEAVES) cnt++;
+                }
+              }
+            }
+            return cnt;
+          };
+          const leavesInitial = countCanopyLeaves();
+          assert(leavesInitial > 20, `El árbol debe tener más de 20 hojas antes de talar el tronco (actual=${leavesInitial})`);
+          // Mientras quede al menos 1 bloque de tronco (en ty+2), las hojas no deben desaparecer
+          vc.updateVoxelSimulation(0.20);
+          assert(countCanopyLeaves() === leavesInitial, 'Mientras quede algún bloque de tronco (WOOD) las hojas no deben desaparecer');
+          // Eliminar todos los bloques restantes del tronco (ty, ty+1, ty+2)
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(tx, ty + 1, tz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(tx, ty + 2, tz, vc.BLOCK.AIR);
+          vc.updateVoxelSimulation(0.20);
+          const leavesAfterOneTick = countCanopyLeaves();
+          assert(
+            leavesAfterOneTick > 0 && leavesAfterOneTick < leavesInitial,
+            `Al quitar todo el tronco las hojas deben ir desapareciendo poco a poco (inicial=${leavesInitial}, tras 1 tick=${leavesAfterOneTick})`
+          );
+          for (let step = 0; step < 30 && countCanopyLeaves() > 0; step++) {
+            vc.updateVoxelSimulation(0.20);
+          }
+          assert(countCanopyLeaves() === 0, 'Todas las hojas huérfanas del árbol talado deben acabar desapareciendo');
 
           // Clean up tree
           for (let dy = -1; dy <= 7; dy++) {

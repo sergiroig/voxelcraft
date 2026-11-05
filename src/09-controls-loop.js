@@ -530,7 +530,7 @@ window.__VOXELCRAFT__ = {
   getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
   updateFrustumCulling,
   getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
-  chunks, buildQueue, simQueue, mobs, activeTNTs,
+  chunks, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, activeTNTs,
   particles, particleInstanced, itemDrops, dropInstanced,
   arrows, arrowInstanced, shootArrow, shootGrappleHook, grapplePullPlayerTo, updateArrows,
   eatHeldApple, growTreeAt, toggleVoxelDoor, toggleVoxelTrapdoor,

@@ -97,15 +97,11 @@ function enqueueSimNeighbors(wx, wy, wz) {
 
 function setVoxelRawNoRebuild(wx, wy, wz, blockId, dirtyChunksSet) {
   if (wy <= 0 || wy >= CHUNK_HEIGHT) return false;
-  const cx = Math.floor(wx / CHUNK_SIZE);
-  const cz = Math.floor(wz / CHUNK_SIZE);
-  const lx = wx - cx * CHUNK_SIZE;
-  const lz = wz - cz * CHUNK_SIZE;
-  const key = chunkKey(cx, cz);
-  const ch = getChunkData(cx, cz);
-  const idx = voxelIndex(lx, wy, lz);
-
-  if (ch.data[idx] === blockId) return false;
+  const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
+  const lx = wx - cx * CHUNK_SIZE, lz = wz - cz * CHUNK_SIZE;
+  const key = chunkKey(cx, cz), ch = getChunkData(cx, cz), idx = voxelIndex(lx, wy, lz);
+  const prevId = ch.data[idx];
+  if (prevId === blockId) return false;
   ch.data[idx] = blockId;
 
   if (!worldDeltas[key]) worldDeltas[key] = [];
@@ -123,7 +119,9 @@ function setVoxelRawNoRebuild(wx, wy, wz, blockId, dirtyChunksSet) {
       dArr.push(idx + 1, BLOCK.AIR);
     }
   }
-
+  if (prevId === BLOCK.WOOD && blockId === BLOCK.AIR && typeof enqueueLeafDecayAround === 'function') {
+    enqueueLeafDecayAround(wx, wy, wz);
+  }
   enqueueSimNeighbors(wx, wy, wz);
   if (dirtyChunksSet) {
     dirtyChunksSet.add(key);
@@ -148,52 +146,21 @@ function rebuildAffectedChunksSet(dirtyChunksSet) {
 }
 
 function setVoxelGlobal(wx, wy, wz, blockId) {
-  if (wy <= 0 || wy >= CHUNK_HEIGHT) return false;
-  const cx = Math.floor(wx / CHUNK_SIZE);
-  const cz = Math.floor(wz / CHUNK_SIZE);
-  const lx = wx - cx * CHUNK_SIZE;
-  const lz = wz - cz * CHUNK_SIZE;
-  const key = chunkKey(cx, cz);
+  if (!setVoxelRawNoRebuild(wx, wy, wz, blockId, null)) return false;
+  const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
   const ch = getChunkData(cx, cz);
-  const idx = voxelIndex(lx, wy, lz);
-
-  if (ch.data[idx] === blockId) return false;
-  ch.data[idx] = blockId;
-
-  if (!worldDeltas[key]) worldDeltas[key] = [];
-  const dArr = worldDeltas[key];
-  let found = false;
-  for (let i = 0; i < dArr.length; i += 2) {
-    if (dArr[i] === idx) { dArr[i + 1] = blockId; found = true; break; }
-  }
-  if (!found) dArr.push(idx, blockId);
-
-  if (blockId === BLOCK.AIR && wy + 1 < CHUNK_HEIGHT) {
-    const above = ch.data[idx + 1];
-    if (BLOCK_DEFS[above].shape === 'cross') {
-      ch.data[idx + 1] = BLOCK.AIR;
-      dArr.push(idx + 1, BLOCK.AIR);
-    }
-  }
-
-  enqueueSimNeighbors(wx, wy, wz);
   saveWorldData();
-
   computeChunkLighting(ch, getChunkIfLoaded);
   for (const [dx, dz] of [[-1,0],[1,0],[0,-1],[0,1]]) {
     const nCh = getChunkIfLoaded(cx + dx, cz + dz);
     if (nCh) computeChunkLighting(nCh, getChunkIfLoaded);
   }
   computeChunkLighting(ch, getChunkIfLoaded);
-
   rebuildChunkImmediate(cx, cz);
-  const isLightChange = BLOCK_DEFS[blockId].light > 0 || true;
-  if (lx <= 14 || isLightChange) {
-    if (lx < 4 || isLightChange) rebuildChunkImmediate(cx - 1, cz);
-    if (lx > CHUNK_SIZE - 5 || isLightChange) rebuildChunkImmediate(cx + 1, cz);
-    if (lz < 4 || isLightChange) rebuildChunkImmediate(cx, cz - 1);
-    if (lz > CHUNK_SIZE - 5 || isLightChange) rebuildChunkImmediate(cx, cz + 1);
-  }
+  rebuildChunkImmediate(cx - 1, cz);
+  rebuildChunkImmediate(cx + 1, cz);
+  rebuildChunkImmediate(cx, cz - 1);
+  rebuildChunkImmediate(cx, cz + 1);
   return true;
 }
 

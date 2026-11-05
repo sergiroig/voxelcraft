@@ -60,6 +60,41 @@ function explodeAt(ex, ey, ez, radius = 3.6) {
 }
 
 let simAccum = 0;
+const leafDecayQueue = [];
+const leafDecaySet = new Set();
+
+function hasNearbyWood(lx, ly, lz) {
+  for (let dy = -4; dy <= 1; dy++) {
+    const wy = ly + dy;
+    if (wy <= 0 || wy >= CHUNK_HEIGHT) continue;
+    for (let dz = -2; dz <= 2; dz++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (getVoxelGlobal(lx + dx, wy, lz + dz) === BLOCK.WOOD) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function enqueueLeafDecayAround(wx, wy, wz) {
+  for (let dy = -2; dy <= 5; dy++) {
+    const ly = wy + dy;
+    if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
+    for (let dz = -3; dz <= 3; dz++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        const lx = wx + dx, lz = wz + dz;
+        const b = getVoxelGlobal(lx, ly, lz);
+        if (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) {
+          const key = `${lx},${ly},${lz}`;
+          if (!leafDecaySet.has(key)) {
+            leafDecaySet.add(key);
+            leafDecayQueue.push(key);
+          }
+        }
+      }
+    }
+  }
+}
 
 function growTreeAt(wx, wy, wz, dirtySet) {
   const targetSet = dirtySet || new Set();
@@ -104,7 +139,7 @@ function updateVoxelSimulation(dt) {
   }
 
   simAccum += dt;
-  if (simAccum < 0.16 || simQueue.size === 0) return;
+  if (simAccum < 0.16 || (simQueue.size === 0 && leafDecayQueue.length === 0)) return;
   simAccum = 0;
 
   const batch = Array.from(simQueue).slice(0, 256);
@@ -175,6 +210,27 @@ function updateVoxelSimulation(dt) {
     } else if (b === BLOCK.WHEAT_2 && (getLightGlobal(wx, wy, wz) >> 4) >= 7) {
       setVoxelRawNoRebuild(wx, wy, wz, BLOCK.WHEAT_3, dirtySet);
       movedThisTick.add(`${wx},${wy},${wz}`);
+    }
+  }
+  if (leafDecayQueue.length > 0) {
+    let decayedCount = 0;
+    let checks = Math.min(leafDecayQueue.length, 16);
+    while (checks-- > 0 && leafDecayQueue.length > 0 && decayedCount < 3) {
+      const rIdx = (Math.random() * leafDecayQueue.length) | 0;
+      const lKey = leafDecayQueue[rIdx];
+      leafDecayQueue[rIdx] = leafDecayQueue[leafDecayQueue.length - 1];
+      leafDecayQueue.pop();
+      leafDecaySet.delete(lKey);
+      const [lx, ly, lz] = lKey.split(',').map(Number);
+      const lb = getVoxelGlobal(lx, ly, lz);
+      if (lb !== BLOCK.LEAVES && lb !== BLOCK.SNOW_LEAVES) continue;
+      if (hasNearbyWood(lx, ly, lz)) continue;
+      setVoxelRawNoRebuild(lx, ly, lz, BLOCK.AIR, dirtySet);
+      spawnBlockParticles(lx, ly, lz, lb, 4);
+      const r = Math.random();
+      if (r < 0.06) spawnItemDrop(lx + 0.5, ly + 0.5, lz + 0.5, BLOCK.ITEM_APPLE, 1, 0.25);
+      else if (r < 0.18) spawnItemDrop(lx + 0.5, ly + 0.5, lz + 0.5, BLOCK.SAPLING, 1, 0.25);
+      decayedCount++;
     }
   }
   rebuildAffectedChunksSet(dirtySet);
