@@ -193,9 +193,9 @@ const skyColorGolden   = new THREE.Color(0xf4845f);
 const skyColorTwilight = new THREE.Color(0x4a3560);
 const skyColorNight    = new THREE.Color(0x070b16);
 const currentSkyColor  = skyColorDay.clone();
-const sunColHorizon    = new THREE.Color(0xff4d1a);
-const sunColGolden     = new THREE.Color(0xffa62b);
-const sunColNoon       = new THREE.Color(0xfff9d6);
+const sunColHorizon    = new THREE.Color(0xff5e2b);
+const sunColGolden     = new THREE.Color(0xffe8cc);
+const sunColNoon       = new THREE.Color(0xffffff);
 const cloudColDay      = new THREE.Color(0xf8fafc);
 const cloudColSunset   = new THREE.Color(0xfdba8c);
 const cloudColNight    = new THREE.Color(0x263147);
@@ -222,11 +222,7 @@ let isCameraUnderwater = false;
 const waterFogColorDay = new THREE.Color(0x0b4f7c);
 const waterFogColorNight = new THREE.Color(0x052036);
 
-const solidMaterial = new THREE.MeshBasicMaterial({
-  map: atlasTexture,
-  vertexColors: true,
-  alphaTest: 0.15
-});
+const solidMaterial = new THREE.MeshBasicMaterial({ map: atlasTexture, vertexColors: true, alphaTest: 0.15 });
 
 solidMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uTime = gpuShaderUniforms.uTime;
@@ -236,15 +232,7 @@ solidMaterial.onBeforeCompile = (shader) => {
   solidShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
-    .replace(
-      '#include <common>',
-      `#include <common>
-      uniform float uTime;
-      uniform float uWindStrength;
-      uniform float uSunFactor;
-      varying float vTileIdx;
-      varying vec3 vWorldPos;`
-    )
+    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uWindStrength;\nuniform float uSunFactor;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
@@ -254,23 +242,17 @@ solidMaterial.onBeforeCompile = (shader) => {
       vColor.r = abs(vColor.r);
       float tileIdx = floor(uv.x * ${ATLAS_COLS}.0 + 0.0001);
       vTileIdx = tileIdx;
-
-      // Cross-Quad Flora & Crop Wind Sway (22-24: Grass/Flowers, 34-37: Sapling/Wheat, 39: Glow Mushroom, 47: Lily Pad)
       if ((tileIdx >= 21.5 && tileIdx <= 24.5) || (tileIdx >= 33.5 && tileIdx <= 37.5) || (tileIdx >= 38.5 && tileIdx <= 39.5) || (tileIdx >= 46.5 && tileIdx <= 47.5)) {
         float rootMask = clamp(uv.y, 0.0, 1.0);
         float windPhase = uTime * 2.8 + wp.x * 0.75 + wp.z * 0.65;
         transformed.x += sin(windPhase) * 0.12 * rootMask * uWindStrength;
         transformed.z += cos(windPhase * 0.85 + 1.3) * 0.09 * rootMask * uWindStrength;
-      }
-      // Tree Leaves 3D Breeze (7: Leaves) — continuous in world-space & anchored at trunk corners so shared vertices never crack
-      else if (tileIdx >= 6.5 && tileIdx <= 7.5 && leafWindMask > 0.5) {
+      } else if (tileIdx >= 6.5 && tileIdx <= 7.5 && leafWindMask > 0.5) {
         float leafPhase = uTime * 2.1 + wp.x * 0.8 + wp.y * 0.5 + wp.z * 0.8;
         transformed.x += sin(leafPhase) * 0.042 * uWindStrength;
         transformed.y += cos(uTime * 1.7 + wp.x * 0.6 - wp.z * 0.6) * 0.024 * uWindStrength;
         transformed.z += sin(uTime * 1.9 - wp.x * 0.7 + wp.z * 0.5) * 0.042 * uWindStrength;
-      }
-      // Torch Flame Micro-Dance (21: Torch)
-      else if (tileIdx >= 20.5 && tileIdx <= 21.5) {
+      } else if (tileIdx >= 20.5 && tileIdx <= 21.5) {
         float flameMask = smoothstep(0.45, 1.0, uv.y);
         transformed.x += sin(uTime * 11.0 + wp.x * 3.1 + wp.z * 2.7) * 0.025 * flameMask;
         transformed.z += cos(uTime * 9.5 + wp.z * 3.3 - wp.x * 2.1) * 0.025 * flameMask;
@@ -278,15 +260,7 @@ solidMaterial.onBeforeCompile = (shader) => {
     );
 
   shader.fragmentShader = shader.fragmentShader
-    .replace(
-      '#include <common>',
-      `#include <common>
-      uniform float uTime;
-      uniform float uSunFactor;
-      uniform vec3 uSunLightColor;
-      varying float vTileIdx;
-      varying vec3 vWorldPos;`
-    )
+    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
       `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
@@ -318,14 +292,7 @@ solidMaterial.onBeforeCompile = (shader) => {
     );
 };
 
-const waterMaterial = new THREE.MeshBasicMaterial({
-  map: atlasTexture,
-  vertexColors: true,
-  transparent: true,
-  opacity: 0.76,
-  depthWrite: false,
-  side: THREE.DoubleSide
-});
+const waterMaterial = new THREE.MeshBasicMaterial({ map: atlasTexture, vertexColors: true, transparent: true, opacity: 0.76, depthWrite: false, side: THREE.DoubleSide });
 
 waterMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uTime = gpuShaderUniforms.uTime;
@@ -335,15 +302,7 @@ waterMaterial.onBeforeCompile = (shader) => {
   waterShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
-    .replace(
-      '#include <common>',
-      `#include <common>
-      uniform float uTime;
-      uniform float uWindStrength;
-      uniform float uSunFactor;
-      varying float vWaveH;
-      varying vec3 vWorldPos;`
-    )
+    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uWindStrength;\nuniform float uSunFactor;\nvarying float vWaveH;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
@@ -357,15 +316,7 @@ waterMaterial.onBeforeCompile = (shader) => {
     );
 
   shader.fragmentShader = shader.fragmentShader
-    .replace(
-      '#include <common>',
-      `#include <common>
-      uniform float uTime;
-      uniform float uSunFactor;
-      uniform vec3 uSunLightColor;
-      varying float vWaveH;
-      varying vec3 vWorldPos;`
-    )
+    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nvarying float vWaveH;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
       `gl_FragColor.rgb *= uSunLightColor;
@@ -646,46 +597,70 @@ function updateItemDrops(dt) {
 }
 
 // ============================================================================
-// 8B. DYNAMIC SKY: ROUND SUN & MOON, ORBITAL CYCLE, STARS & 3D VOXEL CLOUDS
+// 8B. DYNAMIC SKY: INDEPENDENT GLOWING SUN & MOON, SLOW CYCLE, STARS & CLOUDS
 // ============================================================================
 const skyGroup = new THREE.Group();
 scene.add(skyGroup);
-
 const celestialOrbit = new THREE.Group();
 skyGroup.add(celestialOrbit);
 
-const sunMesh = new THREE.Mesh(
-  new THREE.SphereGeometry(11.5, 28, 20),
-  new THREE.MeshBasicMaterial({ color: 0xfff9d6, fog: false })
-);
-sunMesh.position.set(0, 150, -65);
-celestialOrbit.add(sunMesh);
+const celestialGlowTex = (() => {
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 64;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
+  g.addColorStop(0.0, 'rgba(255,255,255,1.0)');
+  g.addColorStop(0.24, 'rgba(255,253,248,0.82)');
+  g.addColorStop(0.52, 'rgba(255,244,225,0.28)');
+  g.addColorStop(0.80, 'rgba(255,235,205,0.06)');
+  g.addColorStop(1.0, 'rgba(255,230,200,0.0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(cv);
+})();
 
-const moonGeo = new THREE.SphereGeometry(8.8, 28, 20);
+const sunGeo = new THREE.SphereGeometry(10.5, 28, 20);
 (() => {
-  const pos = moonGeo.attributes.position;
-  const col = new Float32Array(pos.count * 3);
+  const pos = sunGeo.attributes.position, col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const ny = pos.getY(i) / 10.5, nz = pos.getZ(i) / 10.5;
+    const core = 0.92 + 0.08 * Math.max(0, ( nz + ny * 0.5));
+    col[i * 3] = 1.0; col[i * 3 + 1] = core; col[i * 3 + 2] = core * 0.98;
+  }
+  sunGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+})();
+const sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, fog: false }));
+const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: celestialGlowTex, color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+}));
+sunGlow.scale.set(58, 58, 1);
+sunMesh.add(sunGlow);
+skyGroup.add(sunMesh);
+
+const moonGeo = new THREE.SphereGeometry(8.5, 28, 20);
+(() => {
+  const pos = moonGeo.attributes.position, col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
     const nx = pos.getX(i), ny = pos.getY(i), nz = pos.getZ(i);
     const crater = Math.sin(nx * 0.45 + ny * 0.35) * Math.cos(nz * 0.42 - nx * 0.28);
-    const c = crater > 0.2 ? 0.84 : (crater < -0.25 ? 0.92 : 1.0);
-    col[i * 3] = c * 0.96; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = c;
+    const sphereLit = 0.78 + 0.22 * Math.max(0, (nz + ny * 0.6) / 10.0);
+    const c = (crater > 0.2 ? 0.80 : (crater < -0.25 ? 0.90 : 1.0)) * sphereLit;
+    col[i * 3] = c * 0.95; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = Math.min(1, c * 1.04);
   }
   moonGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 })();
-const moonMesh = new THREE.Mesh(
-  moonGeo,
-  new THREE.MeshBasicMaterial({ color: 0xe2e8f0, vertexColors: true, fog: false })
-);
-moonMesh.position.set(0, -150, -65);
-celestialOrbit.add(moonMesh);
+const moonMesh = new THREE.Mesh(moonGeo, new THREE.MeshBasicMaterial({ color: 0xf1f5f9, vertexColors: true, transparent: true, opacity: 1.0, fog: false }));
+const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: celestialGlowTex, color: 0xdbeafe, transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+}));
+moonGlow.scale.set(34, 34, 1);
+moonMesh.add(moonGlow);
+skyGroup.add(moonMesh);
 
 const starPositions = new Float32Array(220 * 3);
 for (let i = 0; i < 220; i++) {
-  const theta = Math.random() * Math.PI * 2;
-  const phi = Math.acos(2 * Math.random() - 1);
-  const r = 165;
-  starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+  const theta = Math.random() * Math.PI * 2, phi = Math.acos(2 * Math.random() - 1), r = 165;
+  starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
   starPositions[i * 3 + 1] = r * Math.cos(phi);
   starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
 }
@@ -701,25 +676,16 @@ const cloudMesh = (() => {
   let cSeed = 9001;
   const cRand = () => { cSeed = (cSeed * 1664525 + 1013904223) >>> 0; return (cSeed & 0xffff) / 0x10000; };
   for (let i = 0; i < 26; i++) {
-    const cx = (cRand() - 0.5) * 220, cz = (cRand() - 0.5) * 220;
-    const w = 8 + Math.floor(cRand() * 14), d = 6 + Math.floor(cRand() * 12);
-    boxes.push({ x: cx, z: cz, w, d });
+    boxes.push({ x: (cRand() - 0.5) * 220, z: (cRand() - 0.5) * 220, w: 8 + Math.floor(cRand() * 14), d: 6 + Math.floor(cRand() * 12) });
   }
   const pos = [], idx = [];
   let vOff = 0;
-  const pushQuad = (p0, p1, p2, p3) => {
-    pos.push(...p0, ...p1, ...p2, ...p3);
-    idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3);
-    vOff += 4;
-  };
+  const pushQuad = (p0, p1, p2, p3) => { pos.push(...p0, ...p1, ...p2, ...p3); idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3); vOff += 4; };
   for (const b of boxes) {
     const x0 = b.x, x1 = b.x + b.w, y0 = 65, y1 = 67.2, z0 = b.z, z1 = b.z + b.d;
-    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]);
-    pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]);
-    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]);
-    pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]);
-    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]);
-    pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]);
+    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]); pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]);
+    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]); pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]);
+    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]); pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -730,11 +696,20 @@ const cloudMesh = (() => {
 })();
 
 let cloudDrift = 0;
-let celestialAngle = 0.45; // 0 = Noon, PI/2 = Sunset, PI = Midnight, 3*PI/2 = Sunrise
-const DAY_CYCLE_SPEED = (Math.PI * 2) / 140; // Full 24h cycle every 140s
+let celestialAngle = 5.82; // Morning (~10:00 AM); 0 = Noon, PI/2 = Sunset, PI = Midnight, 3*PI/2 = Sunrise
+let moonAngle = 2.15;      // Independent lunar orbit (own inclination, phase & orbital speed)
+const DAY_CYCLE_SPEED = (Math.PI * 2) / 1200; // Full 24h solar cycle every 20 minutes (1200s)
+const MOON_CYCLE_SPEED = DAY_CYCLE_SPEED * 0.915;
 
-function setTimeOfDay(angle) {
+function setTimeOfDay(angle, customMoonAngle) {
   celestialAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  if (typeof customMoonAngle === 'number') {
+    moonAngle = ((customMoonAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  } else if (Math.cos(celestialAngle) < -0.5) {
+    moonAngle = 0.38; // Visible in the night sky when jumping to night (T), independent of sunset
+  } else {
+    moonAngle = (celestialAngle * 0.915 + 2.15) % (Math.PI * 2);
+  }
   updateDynamicSky(0);
   updateGPUShaders(0);
 }
@@ -742,23 +717,33 @@ function setTimeOfDay(angle) {
 function updateDynamicSky(dt) {
   skyGroup.position.set(player.x, 0, player.z);
   celestialAngle = (celestialAngle + dt * DAY_CYCLE_SPEED) % (Math.PI * 2);
-  celestialOrbit.rotation.z = celestialAngle;
-  celestialOrbit.rotation.x = Math.sin(celestialAngle) * 0.12;
+  moonAngle = (moonAngle + dt * MOON_CYCLE_SPEED) % (Math.PI * 2);
+  celestialOrbit.rotation.z = celestialAngle * 0.5;
+
+  // Independent 3D orbital trajectories for Sun & Moon
+  sunMesh.position.set(-152 * Math.sin(celestialAngle), 152 * Math.cos(celestialAngle), -64 - 18 * Math.cos(celestialAngle));
+  moonMesh.position.set(-146 * Math.sin(moonAngle), 146 * Math.cos(moonAngle), -38 + 42 * Math.sin(moonAngle * 0.7 + 0.6));
 
   const sunElev = Math.cos(celestialAngle); // +1 at zenith, 0 at horizon, -1 at midnight
+  const moonElev = Math.cos(moonAngle);
   isNight = sunElev < -0.05;
   sunFactor = THREE.MathUtils.clamp(0.16 + (sunElev + 0.15) * 0.88, 0.16, 1.0);
 
-  // Realistic Sun color & horizon atmospheric magnification
-  if (sunElev <= 0.28) {
-    const t = THREE.MathUtils.clamp((sunElev + 0.12) / 0.40, 0, 1);
+  // Realistic pure white daytime Sun, shifting to warm gold/coral only near the horizon
+  if (sunElev <= 0.10) {
+    const t = THREE.MathUtils.clamp(sunElev / 0.10, 0, 1);
     sunMesh.material.color.copy(sunColHorizon).lerp(sunColGolden, t);
   } else {
-    const t = THREE.MathUtils.clamp((sunElev - 0.28) / 0.52, 0, 1);
+    const t = THREE.MathUtils.clamp((sunElev - 0.10) / 0.14, 0, 1);
     sunMesh.material.color.copy(sunColGolden).lerp(sunColNoon, t);
   }
-  const horizonScale = 1.0 + Math.max(0, 1.0 - Math.abs(sunElev) / 0.38) * 0.24;
+  const horizonScale = 1.0 + Math.max(0, 1.0 - Math.abs(sunElev) / 0.35) * 0.22;
   sunMesh.scale.setScalar(horizonScale);
+  sunGlow.material.color.copy(sunMesh.material.color);
+  sunGlow.material.opacity = THREE.MathUtils.clamp((sunElev + 0.18) * 3.2, 0.0, 0.95);
+  const moonVis = THREE.MathUtils.clamp((moonElev + 0.12) * 3.0, 0.0, 1.0) * (1.0 - Math.max(0, sunElev) * 0.62);
+  moonMesh.material.opacity = moonVis;
+  moonGlow.material.opacity = moonVis * (isNight ? 0.68 : 0.22);
 
   // Realistic Sky, Fog, Cloud & GPU Terrain Sunlight color across Noon -> Golden Sunset/Sunrise -> Twilight -> Night
   if (sunElev >= 0.0) {
