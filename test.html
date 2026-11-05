@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=9"></iframe>
+    <iframe id="game-frame" src="./index.html?v=10"></iframe>
   </div>
 
   <script>
@@ -1027,6 +1027,17 @@
           assert(vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.WOOD, 'La base del brote debe convertirse en Tronco de Roble (WOOD)');
           assert(vc.getVoxelGlobal(tx, ty + 2, tz) === vc.BLOCK.WOOD, 'El tronco debe crecer verticalmente');
           assert(vc.getVoxelGlobal(tx, ty + 4, tz) === vc.BLOCK.LEAVES, 'La copa del árbol debe generar Hojas (LEAVES)');
+
+          // Verificar que las caras entre el tronco (WOOD) y las hojas (LEAVES) NO se descartan por culling
+          // para que al moverse las hojas con el viento en el Vertex Shader nunca falte el cuadro inferior ni se vea hueco
+          const chTree = vc.getChunkData(0, 0);
+          const trisWithWoodTrunk = chTree.solidMesh.geometry.index.count / 3;
+          vc.setVoxelGlobal(tx, ty + 3, tz, vc.BLOCK.LEAVES);
+          const trisAllLeaves = chTree.solidMesh.geometry.index.count / 3;
+          assert(
+            trisWithWoodTrunk > trisAllLeaves,
+            `Las caras entre WOOD y LEAVES no deben descartarse por culling al mecerse las hojas con el viento (trisWood=${trisWithWoodTrunk}, trisLeaves=${trisAllLeaves})`
+          );
 
           // Clean up tree
           for (let dy = -1; dy <= 7; dy++) {
