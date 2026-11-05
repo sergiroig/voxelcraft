@@ -79,7 +79,7 @@ const TILE_PX = 16;
 // light: 0..15 emitted block light
 // hardness: seconds to break by hand (pickaxe mines stone/ores 3.2x faster)
 const BLOCK_DEFS = {
-  [BLOCK.AIR]:                 { name: 'Mano',                     solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xf1c27d, tiles: [0,0,0,0,0,0] },
+  [BLOCK.AIR]:                 { name: 'Aire',                     solid: false, opaque: false, shape: 'air',   light: 0,  hardness: 0,    stoneLike: false, color: 0xf1c27d, tiles: [0,0,0,0,0,0] },
   [BLOCK.GRASS]:               { name: 'Césped',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x58a83a, tiles: [0, 2, 1, 1, 1, 1] },
   [BLOCK.DIRT]:                { name: 'Tierra',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.38, stoneLike: false, color: 0x866043, tiles: [2, 2, 2, 2, 2, 2] },
   [BLOCK.STONE]:               { name: 'Piedra',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.05, stoneLike: true,  color: 0x7d8084, tiles: [3, 3, 3, 3, 3, 3] },
@@ -233,6 +233,7 @@ let gameMode = 'survival'; // 'survival' or 'creative'
 let inventoryCounts = createInitialInventoryCounts();
 
 function getActiveHeldItem() {
+  if (selectedSlot < 0 || selectedSlot >= hotbarSlots.length) return BLOCK.AIR;
   const bId = hotbarSlots[selectedSlot] || BLOCK.AIR;
   if (bId === BLOCK.AIR) return BLOCK.AIR;
   if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return BLOCK.AIR;

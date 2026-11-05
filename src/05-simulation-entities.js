@@ -416,13 +416,13 @@ function updateArrows(dt) {
 }
 
 function eatHeldApple(foodItemOverride) {
-  const heldId = foodItemOverride || (hotbarSlots[selectedSlot] === BLOCK.ITEM_BREAD ? BLOCK.ITEM_BREAD : BLOCK.ITEM_APPLE);
+  const heldId = foodItemOverride || (getActiveHeldItem() === BLOCK.ITEM_BREAD ? BLOCK.ITEM_BREAD : BLOCK.ITEM_APPLE);
   const healAmount = heldId === BLOCK.ITEM_BREAD ? 5 : 4;
   if (gameMode === 'survival' && (inventoryCounts[heldId] || 0) <= 0) return false;
   if (player.health >= player.maxHealth && gameMode === 'survival') return false;
   if (gameMode === 'survival') {
     inventoryCounts[heldId] = Math.max(0, (inventoryCounts[heldId] || 1) - 1);
-    if (inventoryCounts[heldId] <= 0 && hotbarSlots[selectedSlot] === heldId) hotbarSlots[selectedSlot] = BLOCK.AIR;
+    if (inventoryCounts[heldId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId) hotbarSlots[selectedSlot] = BLOCK.AIR;
   }
   player.health = Math.min(player.maxHealth, player.health + healAmount);
   renderHeartsUI();
@@ -604,7 +604,7 @@ function openVoxelChest(wx, wy, wz) {
     if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, msg);
     return { action: 'withdrawn', itemId, count, record };
   } else {
-    const heldId = hotbarSlots[selectedSlot];
+    const heldId = getActiveHeldItem();
     const isTool = (heldId >= 100 && heldId <= 102) || heldId === BLOCK.TOOL_GRAPPLING_HOOK;
     const avail = isTool ? 0 : (gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[heldId] || 0));
     if (avail > 0) {

@@ -45,7 +45,9 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.code.startsWith('Digit')) {
     const num = parseInt(e.code.slice(5), 10);
-    if (num >= 1 && num <= hotbarSlots.length) updateHotbarSelection(num - 1);
+    if (num >= 1 && num <= hotbarSlots.length) {
+      updateHotbarSelection(selectedSlot === num - 1 ? -1 : num - 1);
+    }
   } else if (e.code === 'KeyF') toggleFlyingMode();
   else if (e.code === 'KeyG') toggleGameMode();
   else if (e.code === 'KeyC') toggleCameraMode();
@@ -67,7 +69,8 @@ window.addEventListener('keyup', (e) => {
 
 window.addEventListener('wheel', (e) => {
   if (!isLocked) return;
-  updateHotbarSelection(selectedSlot + (e.deltaY > 0 ? 1 : -1));
+  if (selectedSlot < 0) updateHotbarSelection(e.deltaY > 0 ? 0 : hotbarSlots.length - 1);
+  else updateHotbarSelection(selectedSlot + (e.deltaY > 0 ? 1 : -1));
 });
 
 window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -123,6 +126,7 @@ window.addEventListener('mousedown', (e) => {
     const idx = hotbarSlots.indexOf(currentHit.block);
     if (idx !== -1) updateHotbarSelection(idx);
     else {
+      if (selectedSlot < 0) selectedSlot = 0;
       hotbarSlots[selectedSlot] = currentHit.block;
       buildHotbarUI();
     }

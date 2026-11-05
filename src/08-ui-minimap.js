@@ -15,10 +15,8 @@ const tbtnModeEl = document.getElementById('tbtn-mode');
 function drawItemIcon(canvas, itemId) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 16, 16);
-  if (!itemId || itemId === BLOCK.AIR) {
-    ctx.fillStyle = '#0284c7'; ctx.fillRect(5, 11, 6, 4);
-    ctx.fillStyle = '#f1c27d'; ctx.fillRect(5, 5, 6, 6); ctx.fillRect(4, 6, 1, 3);
-  } else if (itemId === BLOCK.TOOL_PICKAXE) {
+  if (!itemId || itemId === BLOCK.AIR) return;
+  if (itemId === BLOCK.TOOL_PICKAXE) {
     ctx.fillStyle = '#7a542e'; for (let i = 2; i <= 12; i++) ctx.fillRect(i, 15 - i, 2, 2);
     ctx.fillStyle = '#5decf5'; ctx.fillRect(8, 2, 6, 2); ctx.fillRect(12, 4, 2, 4); ctx.fillRect(7, 3, 2, 2);
   } else if (itemId === BLOCK.TOOL_SWORD) {
@@ -120,7 +118,8 @@ function buildCraftingUI() {
 
 function buildHotbarUI() {
   hotbarEl.innerHTML = '';
-  hotbarSlots.forEach((bId, idx) => {
+  hotbarSlots.forEach((rawId, idx) => {
+    const bId = (gameMode === 'survival' && (inventoryCounts[rawId] || 0) <= 0) ? BLOCK.AIR : (rawId || BLOCK.AIR);
     const slot = document.createElement('div');
     slot.className = 'slot' + (idx === selectedSlot ? ' active' : '');
     slot.innerHTML = `<span class="key">${idx + 1}</span><span class="count">${formatItemCountBadge(bId)}</span>`;
@@ -130,10 +129,10 @@ function buildHotbarUI() {
     drawItemIcon(icon, bId);
 
     slot.appendChild(icon);
-    slot.addEventListener('click', () => updateHotbarSelection(idx));
+    slot.addEventListener('click', () => updateHotbarSelection(selectedSlot === idx ? -1 : idx));
     slot.addEventListener('touchstart', (e) => {
       e.preventDefault(); e.stopPropagation();
-      updateHotbarSelection(idx);
+      updateHotbarSelection(selectedSlot === idx ? -1 : idx);
     }, { passive: false });
     hotbarEl.appendChild(slot);
   });
@@ -217,9 +216,9 @@ if (btnAddWaypointEl) {
 
 function buildInventoryModal() {
   invGridEl.innerHTML = '';
-  [BLOCK.AIR, ...ALL_INVENTORY_ITEMS].forEach((bId) => {
+  ALL_INVENTORY_ITEMS.forEach((bId) => {
     const def = BLOCK_DEFS[bId];
-    const hasItem = bId === BLOCK.AIR || gameMode === 'creative' || (inventoryCounts[bId] || 0) > 0;
+    const hasItem = gameMode === 'creative' || (inventoryCounts[bId] || 0) > 0;
     const card = document.createElement('div');
     card.className = 'inv-item';
     if (!hasItem) card.style.opacity = '0.42';
@@ -238,7 +237,8 @@ function buildInventoryModal() {
 
     const selectItem = (e) => {
       e.preventDefault();
-      hotbarSlots[selectedSlot] = hasItem ? bId : BLOCK.AIR;
+      if (selectedSlot < 0) selectedSlot = 0;
+      hotbarSlots[selectedSlot] = (hasItem && hotbarSlots[selectedSlot] !== bId) ? bId : BLOCK.AIR;
       saveWorldData();
       buildHotbarUI();
       toggleInventory(false);
@@ -523,7 +523,7 @@ function placeBlockAtCurrentTarget() {
     if (setVoxelGlobal(px, py, pz, actualPlaceId)) {
       if (gameMode === 'survival') {
         inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
-        if (inventoryCounts[bId] <= 0 && hotbarSlots[selectedSlot] === bId) hotbarSlots[selectedSlot] = BLOCK.AIR;
+        if (inventoryCounts[bId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId) hotbarSlots[selectedSlot] = BLOCK.AIR;
         saveWorldData();
         refreshInventoryCountsUI();
       }
@@ -538,12 +538,23 @@ function placeBlockAtCurrentTarget() {
 }
 
 function updateHotbarSelection(idx) {
-  selectedSlot = (idx + hotbarSlots.length) % hotbarSlots.length;
+  if (idx === null || idx === -1) {
+    selectedSlot = -1;
+  } else {
+    selectedSlot = ((idx % hotbarSlots.length) + hotbarSlots.length) % hotbarSlots.length;
+  }
   const slots = hotbarEl.querySelectorAll('.slot');
-  slots.forEach((s, i) => s.classList.toggle('active', i === selectedSlot));
+  slots.forEach((s, i) => {
+    s.classList.toggle('active', i === selectedSlot);
+    const slotItem = (gameMode === 'survival' && (inventoryCounts[hotbarSlots[i]] || 0) <= 0) ? BLOCK.AIR : (hotbarSlots[i] || BLOCK.AIR);
+    const cntEl = s.querySelector('.count');
+    if (cntEl) cntEl.textContent = formatItemCountBadge(slotItem);
+    const cv = s.querySelector('canvas');
+    if (cv) drawItemIcon(cv, slotItem);
+  });
   const bId = getActiveHeldItem();
   const badge = formatItemCountBadge(bId);
-  blockLabelEl.textContent = bId === BLOCK.AIR ? `${selectedSlot + 1}. Mano` : `${selectedSlot + 1}. ${BLOCK_DEFS[bId].name} (${badge})`;
+  blockLabelEl.textContent = bId === BLOCK.AIR ? 'Mano' : `${selectedSlot + 1}. ${BLOCK_DEFS[bId].name} (${badge})`;
   updateHeldItemVisual();
 }
 
