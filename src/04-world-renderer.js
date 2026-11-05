@@ -606,56 +606,60 @@ skyGroup.add(celestialOrbit);
 
 const celestialGlowTex = (() => {
   const cv = document.createElement('canvas');
-  cv.width = 64; cv.height = 64;
+  cv.width = 128; cv.height = 128;
   const ctx = cv.getContext('2d');
-  const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
-  g.addColorStop(0.0, 'rgba(255,255,255,1.0)');
-  g.addColorStop(0.24, 'rgba(255,253,248,0.82)');
-  g.addColorStop(0.52, 'rgba(255,244,225,0.28)');
-  g.addColorStop(0.80, 'rgba(255,235,205,0.06)');
-  g.addColorStop(1.0, 'rgba(255,230,200,0.0)');
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0.0, 'rgba(255,255,255,0.95)');
+  g.addColorStop(0.22, 'rgba(255,254,248,0.75)');
+  g.addColorStop(0.36, 'rgba(255,248,230,0.42)');
+  g.addColorStop(0.58, 'rgba(255,240,210,0.14)');
+  g.addColorStop(0.82, 'rgba(255,232,195,0.03)');
+  g.addColorStop(1.0, 'rgba(255,230,190,0.0)');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 64);
+  ctx.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(cv);
 })();
 
-const sunGeo = new THREE.SphereGeometry(10.5, 28, 20);
+const sunGeo = new THREE.SphereGeometry(10.0, 36, 24);
 (() => {
   const pos = sunGeo.attributes.position, col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    const ny = pos.getY(i) / 10.5, nz = pos.getZ(i) / 10.5;
-    const core = 0.92 + 0.08 * Math.max(0, ( nz + ny * 0.5));
-    col[i * 3] = 1.0; col[i * 3 + 1] = core; col[i * 3 + 2] = core * 0.98;
+    const mu = Math.max(0, Math.abs(pos.getZ(i)) / 10.0);
+    const limb = Math.pow(mu, 0.42);
+    col[i * 3] = 1.0; col[i * 3 + 1] = 0.90 + 0.10 * limb; col[i * 3 + 2] = 0.78 + 0.22 * limb;
   }
   sunGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 })();
-const sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, fog: false }));
+const sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+sunMesh.renderOrder = -2;
 const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
   map: celestialGlowTex, color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
 }));
-sunGlow.scale.set(58, 58, 1);
-sunMesh.add(sunGlow);
-skyGroup.add(sunMesh);
+sunGlow.renderOrder = -1;
+sunGlow.scale.set(50, 50, 1);
+skyGroup.add(sunMesh, sunGlow);
 
-const moonGeo = new THREE.SphereGeometry(8.5, 28, 20);
+const moonGeo = new THREE.SphereGeometry(8.5, 36, 24);
 (() => {
   const pos = moonGeo.attributes.position, col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
     const nx = pos.getX(i), ny = pos.getY(i), nz = pos.getZ(i);
-    const crater = Math.sin(nx * 0.45 + ny * 0.35) * Math.cos(nz * 0.42 - nx * 0.28);
-    const sphereLit = 0.78 + 0.22 * Math.max(0, (nz + ny * 0.6) / 10.0);
-    const c = (crater > 0.2 ? 0.80 : (crater < -0.25 ? 0.90 : 1.0)) * sphereLit;
+    const mu = Math.max(0, Math.abs(nz) / 8.5);
+    const crater = Math.sin(nx * 0.45 + ny * 0.35) * Math.cos(nx * 0.28 - ny * 0.42);
+    const sphereLit = 0.58 + 0.42 * Math.pow(mu, 0.48);
+    const c = (crater > 0.2 ? 0.82 : (crater < -0.25 ? 0.91 : 1.0)) * sphereLit;
     col[i * 3] = c * 0.95; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = Math.min(1, c * 1.04);
   }
   moonGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 })();
-const moonMesh = new THREE.Mesh(moonGeo, new THREE.MeshBasicMaterial({ color: 0xf1f5f9, vertexColors: true, transparent: true, opacity: 1.0, fog: false }));
+const moonMesh = new THREE.Mesh(moonGeo, new THREE.MeshBasicMaterial({ color: 0xf8fafc, vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, fog: false }));
+moonMesh.renderOrder = -3;
 const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: celestialGlowTex, color: 0xdbeafe, transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+  map: celestialGlowTex, color: 0xdbeafe, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
 }));
-moonGlow.scale.set(34, 34, 1);
-moonMesh.add(moonGlow);
-skyGroup.add(moonMesh);
+moonGlow.renderOrder = -2;
+moonGlow.scale.set(32, 32, 1);
+skyGroup.add(moonMesh, moonGlow);
 
 const starPositions = new Float32Array(220 * 3);
 for (let i = 0; i < 220; i++) {
@@ -666,8 +670,9 @@ for (let i = 0; i < 220; i++) {
 }
 const starGeo = new THREE.BufferGeometry();
 starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.8, fog: false, transparent: true, opacity: 0.0 });
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.8, fog: false, transparent: true, opacity: 0.0, depthWrite: false });
 const starField = new THREE.Points(starGeo, starMat);
+starField.renderOrder = -4;
 celestialOrbit.add(starField);
 
 // Merged 3D Voxel Clouds (Single BufferGeometry = 1 Draw Call!)
@@ -722,7 +727,9 @@ function updateDynamicSky(dt) {
 
   // Independent 3D orbital trajectories for Sun & Moon
   sunMesh.position.set(-152 * Math.sin(celestialAngle), 152 * Math.cos(celestialAngle), -64 - 18 * Math.cos(celestialAngle));
+  sunGlow.position.copy(sunMesh.position);
   moonMesh.position.set(-146 * Math.sin(moonAngle), 146 * Math.cos(moonAngle), -38 + 42 * Math.sin(moonAngle * 0.7 + 0.6));
+  moonGlow.position.copy(moonMesh.position);
 
   const sunElev = Math.cos(celestialAngle); // +1 at zenith, 0 at horizon, -1 at midnight
   const moonElev = Math.cos(moonAngle);
@@ -738,9 +745,14 @@ function updateDynamicSky(dt) {
     sunMesh.material.color.copy(sunColGolden).lerp(sunColNoon, t);
   }
   const horizonScale = 1.0 + Math.max(0, 1.0 - Math.abs(sunElev) / 0.35) * 0.22;
-  sunMesh.scale.setScalar(horizonScale);
+  sunMesh.quaternion.copy(camera.quaternion);
+  sunMesh.scale.set(horizonScale, horizonScale, 0.04);
+  sunGlow.scale.set(50 * horizonScale, 50 * horizonScale, 1);
+  moonMesh.quaternion.copy(camera.quaternion);
+  moonMesh.scale.set(1, 1, 0.04);
   sunGlow.material.color.copy(sunMesh.material.color);
   sunGlow.material.opacity = THREE.MathUtils.clamp((sunElev + 0.18) * 3.2, 0.0, 0.95);
+  sunMesh.material.opacity = THREE.MathUtils.clamp((sunElev + 0.15) * 4.0, 0.0, 1.0);
   const moonVis = THREE.MathUtils.clamp((moonElev + 0.12) * 3.0, 0.0, 1.0) * (1.0 - Math.max(0, sunElev) * 0.62);
   moonMesh.material.opacity = moonVis;
   moonGlow.material.opacity = moonVis * (isNight ? 0.68 : 0.22);

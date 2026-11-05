@@ -465,6 +465,7 @@
           assert(vc.sunMesh && vc.moonMesh && vc.sunGlow && vc.moonGlow && vc.cloudMesh, 'Faltan mallas o halos celestes');
           assert(vc.sunMesh.geometry.type === 'SphereGeometry' && vc.moonMesh.geometry.type === 'SphereGeometry', 'El Sol y la Luna deben ser redondos (SphereGeometry)');
           assert(vc.sunGlow.isSprite && vc.moonGlow.isSprite && vc.sunMesh.geometry.attributes.color && vc.moonMesh.geometry.attributes.color, 'El Sol y la Luna deben tener corona/halo brillante y sombreado esférico 3D');
+          assert(vc.sunMesh.material.depthWrite === false && vc.sunGlow.renderOrder > vc.sunMesh.renderOrder, 'El halo del Sol debe renderizarse sobre el Sol sin quedar ocluido detrás en el depth buffer');
           const angle0 = vc.getCelestialAngle(), moon0 = vc.getMoonAngle();
           vc.updateDynamicSky(10.0);
           const dSun = (vc.getCelestialAngle() - angle0 + Math.PI * 2) % (Math.PI * 2);
