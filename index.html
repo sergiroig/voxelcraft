@@ -237,6 +237,16 @@
       color: var(--text-muted);
       font-family: monospace;
     }
+    .slot .count {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #f8fafc;
+      text-shadow: 0 1px 2px #000, 0 0 3px #000;
+      font-family: monospace;
+    }
 
     /* Inventory Modal (Key E) */
     #inventory-modal {
@@ -253,48 +263,129 @@
       display: none;
     }
     .inv-card {
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(15, 23, 42, 0.96);
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 14px;
-      padding: 22px 26px;
-      max-width: 560px;
-      width: 92%;
+      padding: 18px 22px;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 94%;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
     }
     .inv-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     .inv-header h2 {
-      font-size: 18px;
+      font-size: 17px;
       color: #fff;
     }
     .inv-header span {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-muted);
+    }
+    .mode-switch-btn {
+      background: rgba(56, 189, 248, 0.16);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .inv-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 10px 0 6px;
     }
     .inv-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      gap: 8px;
+      gap: 7px;
     }
     .inv-item {
       background: rgba(0, 0, 0, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
-      padding: 8px 4px;
+      padding: 7px 4px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       cursor: pointer;
+      position: relative;
       transition: border-color 0.12s, background 0.12s;
     }
     .inv-item:hover {
       border-color: var(--accent);
       background: rgba(74, 222, 128, 0.12);
+    }
+    .inv-item .count {
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #4ade80;
+      font-family: monospace;
+    }
+    .craft-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+      margin-top: 4px;
+    }
+    .craft-item {
+      background: rgba(0, 0, 0, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, opacity 0.12s;
+    }
+    .craft-item.craftable {
+      border-color: rgba(74, 222, 128, 0.45);
+      background: rgba(74, 222, 128, 0.08);
+    }
+    .craft-item.craftable:hover {
+      border-color: var(--accent);
+      background: rgba(74, 222, 128, 0.18);
+    }
+    .craft-item.locked {
+      opacity: 0.48;
+    }
+    .craft-item canvas {
+      width: 28px;
+      height: 28px;
+      image-rendering: pixelated;
+      flex-shrink: 0;
+    }
+    .craft-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .craft-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .craft-cost {
+      font-size: 10.5px;
+      color: #94a3b8;
     }
     .inv-item canvas {
       width: 34px;
@@ -614,8 +705,9 @@
       }
       .inv-grid {
         grid-template-columns: repeat(4, 1fr);
-        max-height: 62vh;
-        overflow-y: auto;
+      }
+      .craft-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -630,7 +722,8 @@
   <!-- Mobile / Tablet Multi-Touch Controls -->
   <div id="touch-controls">
     <div id="touch-top-bar">
-      <button class="t-pill-btn" id="tbtn-inv">🎒 Inv</button>
+      <button class="t-pill-btn" id="tbtn-inv">🎒 Inv/Craft</button>
+      <button class="t-pill-btn" id="tbtn-mode">⚒ Superv.</button>
       <button class="t-pill-btn" id="tbtn-fly">🕊 Volar</button>
       <button class="t-pill-btn" id="tbtn-time">☀/🌙</button>
       <button class="t-pill-btn" id="tbtn-hud">📊 HUD</button>
@@ -667,7 +760,7 @@
   </div>
 
   <div id="hud-controls-pill">
-    <kbd>E</kbd> Inventario &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>H</kbd> HUD &nbsp;|&nbsp; <kbd>ESC</kbd> Menú
+    <kbd>E</kbd> Inv + Crafteo &nbsp;|&nbsp; <kbd>G</kbd> Supervivencia/Creativo &nbsp;|&nbsp; <kbd>F</kbd> Volar &nbsp;|&nbsp; <kbd>T</kbd> Sol/Noche &nbsp;|&nbsp; <kbd>H</kbd> HUD
   </div>
 
   <div id="status-bar">
@@ -677,13 +770,16 @@
 
   <div id="hotbar"></div>
 
-  <!-- Inventory Modal (E Key) -->
+  <!-- Inventory & Crafting Modal (E Key) -->
   <div id="inventory-modal" class="hidden">
     <div class="inv-card">
       <div class="inv-header">
-        <h2>Inventario de Bloques y Herramientas</h2>
-        <span>Haz clic para equipar en la ranura activa (o pulsa <kbd>E</kbd> / <kbd>ESC</kbd>)</span>
+        <h2>Inventario y Mesa de Crafteo</h2>
+        <button class="mode-switch-btn" id="btn-mode-toggle">Modo: Supervivencia (G)</button>
       </div>
+      <div class="inv-section-title">⚒ Mesa de Crafteo Rápido (Haz clic para fabricar)</div>
+      <div class="craft-grid" id="craft-grid"></div>
+      <div class="inv-section-title">🎒 Mochila de Bloques y Herramientas (Haz clic para equipar en la ranura activa)</div>
       <div class="inv-grid" id="inv-grid"></div>
     </div>
   </div>
@@ -862,6 +958,85 @@
       BLOCK.GLASS,
       BLOCK.GLOWSTONE
     ];
+
+    // Fast Crafting Recipes (1-click / 1-tap in Inventory Modal E)
+    const CRAFTING_RECIPES = [
+      {
+        name: '4× Madera (Tablones)',
+        outId: BLOCK.PLANKS,
+        outCount: 4,
+        ingredients: [{ id: BLOCK.WOOD, count: 1 }]
+      },
+      {
+        name: '4× Antorchas',
+        outId: BLOCK.TORCH,
+        outCount: 4,
+        ingredients: [{ id: BLOCK.COAL_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }]
+      },
+      {
+        name: '2× Ladrillos',
+        outId: BLOCK.BRICK,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.DIRT, count: 2 }, { id: BLOCK.SAND, count: 1 }]
+      },
+      {
+        name: '2× Cristal',
+        outId: BLOCK.GLASS,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.SAND, count: 2 }, { id: BLOCK.COAL_ORE, count: 1 }]
+      },
+      {
+        name: '2× Piedra Luminosa',
+        outId: BLOCK.GLOWSTONE,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.TORCH, count: 1 }, { id: BLOCK.GOLD_ORE, count: 1 }]
+      },
+      {
+        name: '2× TNT (Explosivo)',
+        outId: BLOCK.TNT,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.SAND, count: 2 }, { id: BLOCK.COAL_ORE, count: 1 }]
+      },
+      {
+        name: '2× Piedra Lisa',
+        outId: BLOCK.STONE,
+        outCount: 2,
+        ingredients: [{ id: BLOCK.COBBLE, count: 2 }]
+      },
+      {
+        name: '1× Pico de Diamante',
+        outId: BLOCK.TOOL_PICKAXE,
+        outCount: 1,
+        ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 2 }, { id: BLOCK.PLANKS, count: 1 }]
+      }
+    ];
+
+    function createInitialInventoryCounts() {
+      const counts = {};
+      for (const bId of ALL_INVENTORY_ITEMS) counts[bId] = 8;
+      counts[BLOCK.TOOL_PICKAXE] = 1;
+      counts[BLOCK.TORCH] = 24;
+      counts[BLOCK.TNT] = 10;
+      counts[BLOCK.COBBLE] = 48;
+      counts[BLOCK.PLANKS] = 48;
+      counts[BLOCK.SAND] = 24;
+      counts[BLOCK.BRICK] = 24;
+      counts[BLOCK.GLASS] = 24;
+      counts[BLOCK.GLOWSTONE] = 16;
+      counts[BLOCK.WOOD] = 12;
+      counts[BLOCK.COAL_ORE] = 12;
+      counts[BLOCK.GOLD_ORE] = 6;
+      counts[BLOCK.DIAMOND_ORE] = 4;
+      return counts;
+    }
+
+    let gameMode = 'survival'; // 'survival' or 'creative'
+    let inventoryCounts = createInitialInventoryCounts();
+
+    function getDropItemForBlock(blockId) {
+      if (blockId === BLOCK.STONE) return BLOCK.COBBLE;
+      return blockId;
+    }
 
     // ============================================================================
     // 2. PROCEDURAL PIXEL-ART TEXTURE ATLAS + CRACK TEXTURES
@@ -1850,6 +2025,20 @@
           gain.gain.setValueAtTime(0.13, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
           osc.start(now); osc.stop(now + 0.24);
+        } else if (type === 'pickup') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(980, now + 0.075);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+          osc.start(now); osc.stop(now + 0.075);
+        } else if (type === 'craft') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(340, now);
+          osc.frequency.exponentialRampToValueAtTime(680, now + 0.12);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+          osc.start(now); osc.stop(now + 0.12);
         }
       }
     }
@@ -2365,6 +2554,152 @@
       if (anyUpdated) particleInstanced.instanceMatrix.needsUpdate = true;
     }
 
+    // Object-Pooled InstancedMesh 3D Magnetized Item Drops (64 drops = 1 Draw Call!)
+    const MAX_DROPS = 64;
+    const dropGeo = new THREE.BoxGeometry(0.28, 0.28, 0.28);
+    const dropMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const dropInstanced = new THREE.InstancedMesh(dropGeo, dropMat, MAX_DROPS);
+    dropInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(dropInstanced);
+
+    const itemDrops = [];
+    const dropPosVec = new THREE.Vector3();
+    const dropQuat = new THREE.Quaternion();
+    const dropEuler = new THREE.Euler();
+    const dropScaleVec = new THREE.Vector3(1, 1, 1);
+
+    for (let i = 0; i < MAX_DROPS; i++) {
+      itemDrops.push({
+        active: false,
+        x: 0, y: -999, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        itemId: BLOCK.COBBLE,
+        count: 1,
+        age: 0,
+        pickupDelay: 0
+      });
+      dummyMatrix.makeTranslation(0, -999, 0);
+      dropInstanced.setMatrixAt(i, dummyMatrix);
+      dropInstanced.setColorAt(i, dummyColor.setHex(0xffffff));
+    }
+    let dropCursor = 0;
+
+    function spawnItemDrop(wx, wy, wz, blockOrItemId, count = 1, pickupDelay = 0.22) {
+      const itemId = getDropItemForBlock(blockOrItemId);
+      if (itemId === BLOCK.AIR || itemId === BLOCK.WATER || itemId === BLOCK.BEDROCK) return null;
+
+      const d = itemDrops[dropCursor];
+      const idx = dropCursor;
+      dropCursor = (dropCursor + 1) % MAX_DROPS;
+
+      d.active = true;
+      d.x = wx + 0.35 + Math.random() * 0.3;
+      d.y = wy + 0.35;
+      d.z = wz + 0.35 + Math.random() * 0.3;
+      d.vx = (Math.random() - 0.5) * 2.2;
+      d.vy = 2.6 + Math.random() * 1.4;
+      d.vz = (Math.random() - 0.5) * 2.2;
+      d.itemId = itemId;
+      d.count = count;
+      d.age = Math.random() * 3.0;
+      d.pickupDelay = pickupDelay;
+
+      const colHex = BLOCK_DEFS[itemId]?.color || 0xffffff;
+      dummyColor.setHex(colHex);
+      dropInstanced.setColorAt(idx, dummyColor);
+      dropInstanced.instanceColor.needsUpdate = true;
+
+      dropPosVec.set(d.x, d.y, d.z);
+      dropEuler.set(0.2, d.age * 2.4, 0.15);
+      dropQuat.setFromEuler(dropEuler);
+      dummyMatrix.compose(dropPosVec, dropQuat, dropScaleVec);
+      dropInstanced.setMatrixAt(idx, dummyMatrix);
+      dropInstanced.instanceMatrix.needsUpdate = true;
+      return d;
+    }
+
+    function addInventoryItem(itemId, count = 1) {
+      if (!ALL_INVENTORY_ITEMS.includes(itemId)) return;
+      inventoryCounts[itemId] = (inventoryCounts[itemId] || 0) + count;
+      if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
+    }
+
+    function updateItemDrops(dt) {
+      let anyUpdated = false;
+      const px = player.x;
+      const py = player.y + 0.9;
+      const pz = player.z;
+
+      for (let i = 0; i < MAX_DROPS; i++) {
+        const d = itemDrops[i];
+        if (!d.active) continue;
+        anyUpdated = true;
+
+        d.age += dt;
+        if (d.pickupDelay > 0) d.pickupDelay = Math.max(0, d.pickupDelay - dt);
+
+        // Despawn after 90 seconds to keep world clean
+        if (d.age > 90) {
+          d.active = false;
+          dummyMatrix.makeTranslation(0, -999, 0);
+          dropInstanced.setMatrixAt(i, dummyMatrix);
+          continue;
+        }
+
+        const dx = px - d.x;
+        const dy = py - d.y;
+        const dz = pz - d.z;
+        const dist = Math.hypot(dx, dy, dz);
+
+        // Magnetize toward player within 2.8 blocks once pickupDelay expires
+        if (d.pickupDelay <= 0 && dist < 2.8) {
+          if (dist < 0.88) {
+            // Collect item drop!
+            d.active = false;
+            dummyMatrix.makeTranslation(0, -999, 0);
+            dropInstanced.setMatrixAt(i, dummyMatrix);
+            addInventoryItem(d.itemId, d.count);
+            sfx.play('pickup');
+            continue;
+          }
+          const pull = Math.min(1.0, (1.0 - dist / 2.8) * 14.0 * dt + 0.12);
+          d.x += dx * pull;
+          d.y += dy * pull;
+          d.z += dz * pull;
+          d.vy = 0;
+        } else {
+          // Gravity & ground resting
+          d.vy -= 16.0 * dt;
+          if (d.vy < -20) d.vy = -20;
+
+          const nx = d.x + d.vx * dt;
+          const nz = d.z + d.vz * dt;
+          if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(nx), Math.floor(d.y), Math.floor(d.z))].solid) d.x = nx;
+          if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(d.x), Math.floor(d.y), Math.floor(nz))].solid) d.z = nz;
+          d.vx *= 0.86;
+          d.vz *= 0.86;
+
+          const ny = d.y + d.vy * dt;
+          const groundSolid = BLOCK_DEFS[getVoxelGlobal(Math.floor(d.x), Math.floor(ny - 0.16), Math.floor(d.z))].solid;
+          if (!groundSolid) {
+            d.y = ny;
+          } else {
+            if (d.vy < 0) d.y = Math.floor(ny - 0.16) + 1.18;
+            d.vy = 0;
+          }
+        }
+
+        const bob = Math.sin(d.age * 3.8) * 0.065;
+        dropPosVec.set(d.x, d.y + bob, d.z);
+        dropEuler.set(0.22, d.age * 2.5, 0.18);
+        dropQuat.setFromEuler(dropEuler);
+        dummyMatrix.compose(dropPosVec, dropQuat, dropScaleVec);
+        dropInstanced.setMatrixAt(i, dummyMatrix);
+      }
+
+      if (anyUpdated) dropInstanced.instanceMatrix.needsUpdate = true;
+    }
+
     // ============================================================================
     // 8B. DYNAMIC SKY: CUBIC SUN, CUBIC MOON, STARS & 1-DRAW-CALL 3D VOXEL CLOUDS
     // ============================================================================
@@ -2754,7 +3089,9 @@
 
       if (mob.hp <= 0) {
         const pBlock = mob.type === 'zombie' ? BLOCK.LEAVES : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK);
+        const lootId = mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.DIRT);
         spawnBlockParticles(mob.x - 0.5, mob.y + 0.4, mob.z - 0.5, pBlock, 22);
+        spawnItemDrop(mob.x - 0.5, mob.y + 0.2, mob.z - 0.5, lootId, 2);
         const idx = mobs.indexOf(mob);
         if (idx !== -1) removeMobAt(idx);
       }
@@ -3362,6 +3699,7 @@
         if (setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR)) {
           sfx.play('break');
           spawnBlockParticles(currentHit.x, currentHit.y, currentHit.z, brokenId, 18);
+          spawnItemDrop(currentHit.x, currentHit.y, currentHit.z, brokenId, 1);
         }
         mineProgress = 0;
         mineTargetKey = '';
@@ -3441,6 +3779,9 @@
     const blockLabelEl = document.getElementById('block-label');
     const invModalEl = document.getElementById('inventory-modal');
     const invGridEl = document.getElementById('inv-grid');
+    const craftGridEl = document.getElementById('craft-grid');
+    const btnModeToggleEl = document.getElementById('btn-mode-toggle');
+    const tbtnModeEl = document.getElementById('tbtn-mode');
 
     function drawItemIcon(canvas, itemId) {
       const ctx = canvas.getContext('2d');
@@ -3460,12 +3801,78 @@
       }
     }
 
+    function formatItemCountBadge(itemId) {
+      if (itemId === BLOCK.TOOL_PICKAXE || gameMode === 'creative') return '∞';
+      return `${inventoryCounts[itemId] || 0}`;
+    }
+
+    function canCraftRecipe(recipeIdx) {
+      const rec = CRAFTING_RECIPES[recipeIdx];
+      if (!rec) return false;
+      if (gameMode === 'creative') return true;
+      for (const ing of rec.ingredients) {
+        if ((inventoryCounts[ing.id] || 0) < ing.count) return false;
+      }
+      return true;
+    }
+
+    function craftRecipe(recipeIdx) {
+      const rec = CRAFTING_RECIPES[recipeIdx];
+      if (!rec || !canCraftRecipe(recipeIdx)) return false;
+      if (gameMode === 'survival') {
+        for (const ing of rec.ingredients) {
+          inventoryCounts[ing.id] -= ing.count;
+        }
+      }
+      inventoryCounts[rec.outId] = (inventoryCounts[rec.outId] || 0) + rec.outCount;
+      sfx.play('craft');
+      refreshInventoryCountsUI();
+      return true;
+    }
+
+    function buildCraftingUI() {
+      if (!craftGridEl) return;
+      craftGridEl.innerHTML = '';
+      CRAFTING_RECIPES.forEach((rec, idx) => {
+        const craftable = canCraftRecipe(idx);
+        const card = document.createElement('div');
+        card.className = 'craft-item ' + (craftable ? 'craftable' : 'locked');
+
+        const icon = document.createElement('canvas');
+        icon.width = 16;
+        icon.height = 16;
+        drawItemIcon(icon, rec.outId);
+
+        const info = document.createElement('div');
+        info.className = 'craft-info';
+        const costStr = rec.ingredients
+          .map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (tienes ${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`)
+          .join(' + ');
+        info.innerHTML = `
+          <div class="craft-title">${rec.name}</div>
+          <div class="craft-cost">Requiere: ${costStr}</div>
+        `;
+
+        card.appendChild(icon);
+        card.appendChild(info);
+
+        const onCraft = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          craftRecipe(idx);
+        };
+        card.addEventListener('click', onCraft);
+        card.addEventListener('touchend', onCraft, { passive: false });
+        craftGridEl.appendChild(card);
+      });
+    }
+
     function buildHotbarUI() {
       hotbarEl.innerHTML = '';
       hotbarSlots.forEach((bId, idx) => {
         const slot = document.createElement('div');
         slot.className = 'slot' + (idx === selectedSlot ? ' active' : '');
-        slot.innerHTML = `<span class="key">${idx + 1}</span>`;
+        slot.innerHTML = `<span class="key">${idx + 1}</span><span class="count">${formatItemCountBadge(bId)}</span>`;
 
         const icon = document.createElement('canvas');
         icon.width = 16;
@@ -3490,12 +3897,17 @@
         const def = BLOCK_DEFS[bId];
         const card = document.createElement('div');
         card.className = 'inv-item';
+        const badge = document.createElement('div');
+        badge.className = 'count';
+        badge.textContent = formatItemCountBadge(bId);
+
         const icon = document.createElement('canvas');
         icon.width = 16;
         icon.height = 16;
         drawItemIcon(icon, bId);
         const lbl = document.createElement('span');
         lbl.textContent = def.name;
+        card.appendChild(badge);
         card.appendChild(icon);
         card.appendChild(lbl);
 
@@ -3508,6 +3920,38 @@
         card.addEventListener('click', selectItem);
         card.addEventListener('touchend', selectItem, { passive: false });
         invGridEl.appendChild(card);
+      });
+      buildCraftingUI();
+    }
+
+    function refreshInventoryCountsUI() {
+      buildHotbarUI();
+      if (invOpen) {
+        buildInventoryModal();
+      }
+      const isCreative = gameMode === 'creative';
+      if (btnModeToggleEl) {
+        btnModeToggleEl.textContent = `Modo: ${isCreative ? 'Creativo (∞)' : 'Supervivencia'} (G)`;
+      }
+      if (tbtnModeEl) {
+        tbtnModeEl.textContent = isCreative ? '⚒ Creat.' : '⚒ Superv.';
+        tbtnModeEl.classList.toggle('toggled', isCreative);
+      }
+    }
+
+    function toggleGameMode(forceMode) {
+      if (forceMode === 'survival' || forceMode === 'creative') {
+        gameMode = forceMode;
+      } else {
+        gameMode = gameMode === 'survival' ? 'creative' : 'survival';
+      }
+      refreshInventoryCountsUI();
+    }
+
+    if (btnModeToggleEl) {
+      btnModeToggleEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleGameMode();
       });
     }
 
@@ -3544,6 +3988,7 @@
       invModalEl.classList.toggle('hidden', !invOpen);
       if (invOpen) {
         isMiningHeld = false;
+        buildInventoryModal();
         if (document.pointerLockElement) document.exitPointerLock();
       } else {
         startGameplay();
@@ -3566,9 +4011,10 @@
     }
 
     function placeBlockAtCurrentTarget() {
-      if (!currentHit) return;
+      if (!currentHit) return false;
       const bId = hotbarSlots[selectedSlot];
-      if (bId === BLOCK.TOOL_PICKAXE) return;
+      if (bId === BLOCK.TOOL_PICKAXE) return false;
+      if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
 
       const isReplaceable = currentHit.block === BLOCK.TALL_GRASS;
       const px = isReplaceable ? currentHit.x : currentHit.x + currentHit.nx;
@@ -3591,10 +4037,16 @@
 
       if (!overlapsPlayer) {
         if (setVoxelGlobal(px, py, pz, bId)) {
+          if (gameMode === 'survival') {
+            inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
+            refreshInventoryCountsUI();
+          }
           player.swingTime = 1.0;
           sfx.play('place');
+          return true;
         }
       }
+      return false;
     }
 
     function updateHotbarSelection(idx) {
@@ -3602,7 +4054,8 @@
       const slots = hotbarEl.querySelectorAll('.slot');
       slots.forEach((s, i) => s.classList.toggle('active', i === selectedSlot));
       const bId = hotbarSlots[selectedSlot];
-      blockLabelEl.textContent = `${selectedSlot + 1}. ${BLOCK_DEFS[bId].name}`;
+      const badge = formatItemCountBadge(bId);
+      blockLabelEl.textContent = `${selectedSlot + 1}. ${BLOCK_DEFS[bId].name} (${badge})`;
       updateHeldItemVisual();
     }
 
@@ -3721,6 +4174,8 @@
         }
       } else if (e.code === 'KeyF') {
         toggleFlyingMode();
+      } else if (e.code === 'KeyG') {
+        toggleGameMode();
       } else if (e.code === 'KeyT') {
         toggleDayNight();
       } else if (e.code === 'KeyH') {
@@ -3951,6 +4406,7 @@
     };
 
     bindTap('tbtn-inv',  () => toggleInventory());
+    bindTap('tbtn-mode', () => toggleGameMode());
     bindTap('tbtn-fly',  () => toggleFlyingMode());
     bindTap('tbtn-time', () => toggleDayNight());
     bindTap('tbtn-hud',  () => {
@@ -4026,6 +4482,7 @@
 
       updateMining(dt, currentHit);
       updateParticles(dt);
+      updateItemDrops(dt);
 
       renderer.render(scene, camera);
 
@@ -4048,7 +4505,7 @@
         elChunks.textContent = `${chunks.size} | Mobs: ${mobs.length}`;
         elPos.textContent = `${player.x.toFixed(0)}, ${player.y.toFixed(0)}, ${player.z.toFixed(0)} (${biome})`;
         elLight.textContent = `Sol ${pLight >> 4} | Bloque ${pLight & 15}`;
-        elMode.textContent = `${player.flying ? 'Vuelo' : 'Supervivencia'} | ${isNight ? 'Noche' : 'Día'}`;
+        elMode.textContent = `${gameMode === 'creative' ? 'Creativo' : 'Supervivencia'}${player.flying ? ' (Vuelo)' : ''} | ${isNight ? 'Noche' : 'Día'}`;
 
         frames = 0;
         fpsAccum = 0;
@@ -4061,7 +4518,9 @@
       BLOCK,
       BLOCK_DEFS,
       ALL_INVENTORY_ITEMS,
+      CRAFTING_RECIPES,
       hotbarSlots,
+      inventoryCounts,
       CHUNK_SIZE,
       CHUNK_HEIGHT,
       CHUNK_VOLUME,
@@ -4081,6 +4540,8 @@
       activeTNTs,
       particles,
       particleInstanced,
+      itemDrops,
+      dropInstanced,
       skyGroup,
       sunMesh,
       moonMesh,
@@ -4116,6 +4577,14 @@
       damagePlayer,
       updateMining,
       updateParticles,
+      spawnItemDrop,
+      updateItemDrops,
+      getDropItemForBlock,
+      addInventoryItem,
+      canCraftRecipe,
+      craftRecipe,
+      toggleGameMode,
+      refreshInventoryCountsUI,
       updateDynamicSky,
       getGenerator: () => generator,
       updateChunkStreaming,
@@ -4142,7 +4611,8 @@
         currentHit,
         joyX,
         joyY,
-        joySprint
+        joySprint,
+        gameMode
       }),
       setMiningHeld: (v) => { isMiningHeld = v; },
       setCurrentHit: (h) => { currentHit = h; },

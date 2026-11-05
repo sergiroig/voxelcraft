@@ -66,6 +66,7 @@ Cada funcionalidad nueva debe diseñarse bajo la premisa de **máximo rendimient
 | **Criaturas (Mobs) y Combate** | `mobs`, `spawnMob`, `updateMobs`, `raycastMob`, `damageMob` | *Ovejas, Cerdos y Zombis* construidos con geometrías compartidas (`mobGeos`). Los zombis aparecen en oscuridad (`effLight < 7`), persiguen al jugador y arden al sol. |
 | **Cielo Dinámico** | `sunMesh`, `moonMesh`, `starsPoints`, `cloudMesh`, `updateDynamicSky` | Ciclo día/noche continuo o conmutable (`T`), Sol y Luna cúbicos, estrellas nocturnas y nubes vóxel 3D fusionadas en una única llamada de dibujo. |
 | **Shaders en GPU (Coste 0 CPU)** | `gpuShaderUniforms`, `solidMaterial.onBeforeCompile`, `waterMaterial.onBeforeCompile`, `updateGPUShaders` | Viento orgánico en flores/hierba alta (con raíz anclada `uv.y`) y hojas 3D sin grietas, baile de llama en antorchas, destello en menas de oro/diamante, olas 3D con espuma/cáusticas en el agua y atmósfera subacuática. |
+| **Drops 3D, Supervivencia y Crafteo** | `dropInstanced`, `itemDrops`, `spawnItemDrop`, `updateItemDrops`, `CRAFTING_RECIPES`, `craftRecipe`, `toggleGameMode` | Pool `InstancedMesh` de 64 mini-bloques 3D flotantes e imantados en 1 *draw call*, inventario con cantidades en Supervivencia (`G` para alternar con Creativo `∞`) y 8 recetas de crafteo rápido en el modal `E`. |
 | **Controles Híbridos** | `updateJoystickFromTouch`, `setTouchPlaying`, `joyX`, `joyY` | Captura de ratón (`Pointer Lock`) en PC y joystick virtual analógico + cámara multitáctil + barra de botones en móvil/tablet. |
 | **Persistencia Delta** | `worldDeltas`, `saveWorldState`, `loadWorldState`, `exportWorldJSON` | Guarda en `localStorage` únicamente la semilla (`WORLD_SEED`) y los bloques modificados por el usuario. |
 
@@ -107,10 +108,10 @@ Para validar cambios con el navegador Chrome mediante `chrome_devtools`:
    - Inyección en el *Vertex/Fragment Shader* (`onBeforeCompile`) pre-compilada al inicio (`renderer.compile`) para mecer hojas, flores y hierba alta con el viento usando `uTime`, animar llamas de antorchas y añadir destellos en menas de oro/diamante.
    - Olas 3D de doble octava, cáusticas y espuma en las crestas del agua.
    - Niebla y atmósfera subacuática automática al sumergir la cámara (`isCameraUnderwater`).
-3. ⏳ **Punto 3 — Jugabilidad, Drops 3D y Crafteo:**
-   - **Mini-bloques 3D flotantes e imantados (*Item Drops*):** Al picar un bloque, soltar un mini-cubo rotando que es atraído hacia el jugador al acercarse.
-   - **Modo Supervivencia vs. Creativo:** Cantidades reales de bloques en el inventario al jugar en Supervivencia y bloques infinitos + vuelo libre en Creativo.
-   - **Sistema de Crafteo Rápido:** Recetas directas en el inventario (`E`) para fabricar tablones, antorchas, picos, espada, TNT, etc. a partir de los recursos recolectados.
+3. ✅ **Punto 3 — Jugabilidad, Drops 3D y Crafteo (Completado):**
+   - **Mini-bloques 3D flotantes e imantados (*Item Drops*):** Al picar un bloque o derrotar un mob, suelta un mini-cubo rotando (`InstancedMesh` de 64 instancias = 1 *draw call*) que es atraído magnéticamente hacia el jugador a `< 2.8m`.
+   - **Modo Supervivencia vs. Creativo (`G` / `⚒`):** Cantidades reales de bloques en el inventario al jugar en Supervivencia y bloques infinitos (`∞`) en Creativo.
+   - **Sistema de Crafteo Rápido:** 8 recetas directas en el inventario (`E`) para fabricar Madera, Antorchas, Ladrillos, Cristal, Piedra Luminosa, TNT, Piedra Lisa y Pico de Diamante.
 4. ⏳ **Punto 4 — Audio y Música Ambiental Generativa (Web Audio API):**
    - Música ambiental estilo *C418* generada proceduralmente con acordes pentatónicos suaves en un sintetizador FM + *reverb* algorítmica.
    - Sonido ambiental dinámico: brisa en exteriores y eco en cuevas profundas.
@@ -138,6 +139,7 @@ Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` p
 | :--- | :--- | ---: | ---: | ---: | :--- |
 | **Render WebGL + Shaders GPU** *(Viento en vegetación, olas 3D, espuma, menas)* | Base + Punto 2 | `141.7 µs` (`0.142 ms`) | **`-0.510 FPS`** (de 60) | `0.85 %` | **0 FPS** (60 FPS clavados) |
 | **Criaturas (Mobs)** *(IA, colisión AABB, iluminación y animación de 6-10 mobs)* | Punto 1 | `35.0 µs` (`0.035 ms`) | **`-0.126 FPS`** (de 60) | `0.21 %` | **0 FPS** (60 FPS clavados) |
+| **Drops 3D Flotantes e Imantados (`InstancedMesh`)** *(Gravedad, giro, bobbing e imán de 8-64 drops)* | Punto 3 | `16.0 µs` (`0.016 ms`) | **`-0.058 FPS`** (de 60) | `0.10 %` | **0 FPS** (60 FPS clavados) |
 | **Físicas del Jugador + Colisión AABB** | Base | `4.8 µs` (`0.005 ms`) | **`-0.017 FPS`** (de 60) | `0.03 %` | **0 FPS** (60 FPS clavados) |
 | **Pool de Partículas `InstancedMesh`** *(120 instancias en 1 draw call)* | Base | `2.6 µs` (`0.003 ms`) | **`-0.009 FPS`** (de 60) | `0.02 %` | **0 FPS** (60 FPS clavados) |
 | **Raycast Vóxel 3D (DDA)** *(Selección de bloque a 6.5m)* | Base | `2.0 µs` (`0.002 ms`) | **`-0.007 FPS`** (de 60) | `0.01 %` | **0 FPS** (60 FPS clavados) |

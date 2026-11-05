@@ -520,6 +520,58 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 12: Drops 3D Imantados, Modo Supervivencia/Creativo y Crafteo
+      // =========================================================================
+      describe('12. Drops 3D Imantados (InstancedMesh), Supervivencia y Crafteo', () => {
+        it('Genera mini-bloques 3D flotantes (1 Draw Call) y los imanta/recolecta hacia el jugador', () => {
+          assert(vc.dropInstanced && vc.dropInstanced.count === 64, 'dropInstanced debe ser un InstancedMesh de 64 instancias');
+          assert(vc.getDropItemForBlock(vc.BLOCK.STONE) === vc.BLOCK.COBBLE, 'Picar Piedra (STONE) debe soltar Adoquín (COBBLE)');
+
+          const beforeDiamonds = vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] || 0;
+          const drop = vc.spawnItemDrop(vc.player.x + 1.4, vc.player.y + 0.9, vc.player.z, vc.BLOCK.DIAMOND_ORE, 2, 0.0);
+          assert(drop && drop.active === true, 'spawnItemDrop debería activar un drop en el pool');
+
+          const initialDist = Math.hypot(vc.player.x - drop.x, (vc.player.y + 0.9) - drop.y, vc.player.z - drop.z);
+          vc.updateItemDrops(0.05);
+          const afterDist = Math.hypot(vc.player.x - drop.x, (vc.player.y + 0.9) - drop.y, vc.player.z - drop.z);
+          assert(afterDist < initialDist || !drop.active, 'El drop dentro del radio magnético (2.8m) debe acercarse al jugador');
+
+          // Step until collected
+          for (let i = 0; i < 20 && drop.active; i++) {
+            vc.updateItemDrops(0.05);
+          }
+          assert(drop.active === false, 'El drop debería haberse recolectado al llegar al jugador');
+          assert(
+            vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] === beforeDiamonds + 2,
+            `Recolectar el drop debería sumar +2 Mena de Diamante al inventario (${vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE]} vs ${beforeDiamonds + 2})`
+          );
+        });
+
+        it('Fabrica recetas en la Mesa de Crafteo y alterna entre modo Supervivencia y Creativo', () => {
+          vc.toggleGameMode('survival');
+          assert(vc.getState().gameMode === 'survival', 'El modo debería ser survival');
+
+          // Ensure enough wood for recipe 0 (1x WOOD -> 4x PLANKS)
+          vc.inventoryCounts[vc.BLOCK.WOOD] = 5;
+          const planksBefore = vc.inventoryCounts[vc.BLOCK.PLANKS] || 0;
+          assert(vc.canCraftRecipe(0) === true, 'Debería poder fabricar la receta 0 (Madera) con 5 troncos');
+          const crafted = vc.craftRecipe(0);
+          assert(crafted === true, 'craftRecipe(0) debería devolver true');
+          assert(vc.inventoryCounts[vc.BLOCK.WOOD] === 4, 'Debería descontar 1 Tronco de Roble en modo Supervivencia');
+          assert(vc.inventoryCounts[vc.BLOCK.PLANKS] === planksBefore + 4, 'Debería añadir +4 de Madera (Tablones) al inventario');
+
+          // Test Creative Mode (infinite ingredients)
+          vc.inventoryCounts[vc.BLOCK.WOOD] = 0;
+          assert(vc.canCraftRecipe(0) === false, 'Con 0 troncos en Supervivencia no debería poder fabricar tablones');
+          vc.toggleGameMode('creative');
+          assert(vc.getState().gameMode === 'creative', 'El modo debería cambiar a creative');
+          assert(vc.canCraftRecipe(0) === true, 'En modo Creativo siempre se puede fabricar cualquier receta');
+          vc.toggleGameMode('survival');
+          vc.inventoryCounts[vc.BLOCK.WOOD] = 12;
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -567,14 +619,18 @@
         return (performance.now() - t0) / iters;
       };
 
-      // Ensure 6 mobs exist for realistic per-frame AI benchmark
+      // Ensure 6 mobs and 8 active 3D item drops exist for realistic per-frame benchmark
       while (vc.mobs.length < 6) {
         vc.spawnMob(vc.mobs.length % 2 === 0 ? 'sheep' : 'zombie', vc.player.x + 3, vc.player.y + 2, vc.player.z + 3);
+      }
+      for (let i = 0; i < 8; i++) {
+        vc.spawnItemDrop(vc.player.x + 6, vc.player.y + 2, vc.player.z + 6, vc.BLOCK.COBBLE, 1, 5.0);
       }
 
       const perFrameFeatures = [
         { name: 'Render WebGL + Shaders GPU (Viento/Olas/Espuma)', ms: bench(() => { vc.renderer.render(vc.scene, vc.camera); }, 120) },
         { name: 'Criaturas (Mobs: IA, Físicas AABB y Animación)',  ms: bench(() => { vc.updateMobs(0.016); }, 400) },
+        { name: 'Drops 3D Flotantes e Imantados (InstancedMesh)',  ms: bench(() => { vc.updateItemDrops(0.016); }, 500) },
         { name: 'Físicas del Jugador + Colisión AABB',             ms: bench(() => { vc.updatePlayerPhysics(0.016); }, 500) },
         { name: 'Pool Partículas InstancedMesh (120 instancias)',  ms: bench(() => { vc.updateParticles(0.016); }, 500) },
         { name: 'Raycast Vóxel 3D (DDA)',                          ms: bench(() => { vc.raycastVoxel(vc.camera.position.x, vc.camera.position.y, vc.camera.position.z, 0, -0.3, -0.95, 6.5); }, 600) },
@@ -584,6 +640,7 @@
       ];
 
       while (vc.mobs.length > 0) vc.removeMobAt(0);
+      for (const d of vc.itemDrops) d.active = false;
 
       const ch0 = vc.getChunkData(0, 0);
       const onDemandFeatures = [
