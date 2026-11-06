@@ -107,7 +107,6 @@ function createWorldGenerator(seed) {
     if (treeType === 'jungle') {
       const trunkH = 7 + ((r * 1000) & 1), topY = sy + trunkH;
       for (let ty = 1; ty <= trunkH; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
-      setT(lx + 1, sy + 1, lz, BLOCK.WOOD, true); setT(lx - 1, sy + 1, lz, BLOCK.WOOD, true);
       for (let dy = -1; dy <= 1; dy++) {
         const rad = dy === 1 ? 1 : 2;
         for (let dz = -rad; dz <= rad; dz++) for (let dx = -rad; dx <= rad; dx++) {
@@ -412,8 +411,8 @@ function createWorldGenerator(seed) {
             data[colOffset + sy + 1] = BLOCK.DEAD_BUSH || BLOCK.TALL_GRASS;
           }
         } else if (biome === 'Cumbres Heladas') {
-          if (r > 0.982 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
-        } else if (topBlock === BLOCK.GRASS || topBlock === BLOCK.SNOW) {
+          if (r > 0.982 && (topBlock === BLOCK.SNOW || topBlock === BLOCK.STONE) && data[colOffset + sy - 1] !== BLOCK.AIR && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
+        } else if ((topBlock === BLOCK.GRASS || topBlock === BLOCK.SNOW) && data[colOffset + sy - 1] !== BLOCK.AIR) {
           const treeThr = biome === 'Jungla' ? 0.962 : (biome === 'Bosque' ? 0.974 : (biome === 'Taiga Nevada' ? 0.978 : (biome === 'Pantano' ? 0.980 : 0.988)));
           const treeType = (biome === 'Taiga Nevada') ? 'pine' : (biome === 'Jungla' ? 'jungle' : (biome === 'Sabana' ? 'acacia' : (biome === 'Pantano' ? 'swamp' : 'oak')));
           if (r > treeThr && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {

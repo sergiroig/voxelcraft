@@ -2316,10 +2316,10 @@
           const pInfo = gen.placeTreeInChunk(dPine, 8, 25, 8, 'pine', 0.5);
           assert(pInfo.type === 'pine' && dPine[idx(8, 26, 8)] === vc.BLOCK.WOOD && dPine[idx(8, 25 + pInfo.trunkH + 1, 8)] === vc.BLOCK.LEAVES && dPine[idx(8, 25 + pInfo.trunkH + 2, 8)] === vc.BLOCK.AIR, 'El Abeto (pine) debe tener tronco de madera y coronar su punta con Hojas (BLOCK.LEAVES), sin bloque de tierra nevada encima');
 
-          // 2) Árbol Gigante de Jungla ('jungle'): raíces en base + lianas colgantes (BLOCK.VINE)
+          // 2) Árbol Gigante de Jungla ('jungle'): tronco recto sin bloques laterales flotantes + lianas colgantes (BLOCK.VINE)
           const dJun = new Uint8Array(vc.CHUNK_VOLUME);
           const jInfo = gen.placeTreeInChunk(dJun, 8, 25, 8, 'jungle', 0.5);
-          assert(jInfo.type === 'jungle' && dJun[idx(9, 26, 8)] === vc.BLOCK.WOOD && dJun[idx(6, 25 + jInfo.trunkH - 3, 8)] === vc.BLOCK.VINE, 'El Árbol de Jungla debe incluir contrafuertes en la base y lianas colgantes reales (BLOCK.VINE)');
+          assert(jInfo.type === 'jungle' && dJun[idx(8, 26, 8)] === vc.BLOCK.WOOD && dJun[idx(9, 26, 8)] === vc.BLOCK.AIR && dJun[idx(6, 25 + jInfo.trunkH - 3, 8)] === vc.BLOCK.VINE, 'El Árbol de Jungla no debe generar bloques de tronco laterales flotantes y debe incluir lianas colgantes (BLOCK.VINE)');
 
           // 3) Acacia de Sabana ('acacia'): tronco inclinado en diagonal + dosel plano
           const dAca = new Uint8Array(vc.CHUNK_VOLUME);
