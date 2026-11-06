@@ -709,7 +709,7 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
         }
         if (def.opaque) sun = 0;
         else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(0, sun - 2);
-        const emit = def.light;
+        const emit = b === BLOCK.AMETHYST ? 0 : def.light;
         light[idx] = (sun << 4) | emit;
         if (!surfaceOnly && (sun > 0 || emit > 0)) bfsQueue[qTail++] = idx;
         else if (surfaceOnly && topFound && sun === 0 && emit === 0) break;
@@ -772,12 +772,10 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
     // 6 neighbors inside chunk
     const tryProp = (nIdx) => {
       if (BLOCK_DEFS[data[nIdx]].opaque) return;
-      const nVal = light[nIdx];
-      let ns = nVal >> 4;
-      let nb = nVal & 15;
-      let changed = false;
-      if (sL - 1 > ns) { ns = sL - 1; changed = true; }
-      if (bL - 1 > nb) { nb = bL - 1; changed = true; }
+      const nVal = light[nIdx], att = data[nIdx] === BLOCK.WATER ? 2 : 1;
+      let ns = nVal >> 4, nb = nVal & 15, changed = false;
+      if (sL - att > ns) { ns = sL - att; changed = true; }
+      if (bL - att > nb) { nb = bL - att; changed = true; }
       if (changed) {
         light[nIdx] = (ns << 4) | nb;
         bfsQueue[qTail++] = nIdx;

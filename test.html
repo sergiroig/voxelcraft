@@ -2482,7 +2482,13 @@
           for (let t = 0; t < 20; t++) vc.updateVoxelSimulation(0.2);
           assert(vc.getVoxelGlobal(wx + 1, syM, wz) === vc.BLOCK.WATER && vc.getVoxelGlobal(wx + 1, syM + 1, wz) === vc.BLOCK.WATER, 'En mapas ya creados (simQueue vacía), el agua adyacente debe inundar las setas y su columna de aire');
           for (let dy = -1; dy <= 1; dy++) { vc.setVoxelGlobal(wx, syM + dy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, syM + dy, wz, vc.BLOCK.AIR); }
-          vc.simQueue.clear(); vc.player.y = prevPy;
+          vc.simQueue.clear();
+          // En completa oscuridad (bajo tierra sin antorchas), el brazo debe oscurecerse y el shader de agua debe modular brillos por vLit
+          vc.player.x = wx + 0.5; vc.player.y = 6; vc.player.z = wz + 0.5;
+          vc.updateGPUShaders(0.016);
+          assert(vc.handArmMesh.material.color.r <= 0.25, `El brazo debe oscurecerse en cuevas sin luz (r=${vc.handArmMesh.material.color.r.toFixed(2)})`);
+          assert(vc.getShaders().waterShaderRef && vc.getShaders().waterShaderRef.fragmentShader.includes('vSunLit'), 'El shader del agua debe escalar reflejos y espuma por la luz local (vLit / vSunLit)');
+          vc.player.y = prevPy;
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ; vc.player.vy = 0; vc.player.wasInFluid = false;
           vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.AIR);
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;

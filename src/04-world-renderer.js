@@ -280,7 +280,7 @@ solidMaterial.onBeforeCompile = (shader) => {
     .replace('#include <common>', `#include <common>\n#include <packing>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nuniform float uUseShadowMap;\nuniform sampler2D uShadowMap;\nuniform mat4 uShadowMatrix;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
-      `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
+      `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 38.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
       float torchMask = clamp((vColor.r - vColor.b) * 3.8, 0.0, 1.0);
       vec3 faceN = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
       float ndotl = dot(faceN, uLightDir);
@@ -368,18 +368,21 @@ waterMaterial.onBeforeCompile = (shader) => {
     .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nvarying float vWaveH;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
-      `gl_FragColor.rgb *= uSunLightColor;
+      `float vLuma = max(vColor.r, max(vColor.g, vColor.b));
+      float vLit = clamp((vLuma - 0.085) / 0.915, 0.0, 1.0);
+      float vSunLit = clamp((vColor.b - 0.085) / 0.85, 0.0, 1.0) * uSunFactor;
+      gl_FragColor.rgb *= uSunLightColor * mix(0.22, 1.0, vLit);
       float caustic = sin(vWorldPos.x * 2.4 + uTime * 2.8) * cos(vWorldPos.z * 2.4 - uTime * 2.2);
       float crestFoam = smoothstep(0.032, 0.082, vWaveH + caustic * 0.024);
       vec3 crestCol = vec3(0.76, 0.93, 1.0) * (0.35 + 0.65 * uSunFactor);
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, crestCol, crestFoam * 0.38);
-      gl_FragColor.rgb += vec3(0.03, 0.07, 0.11) * caustic * (0.4 + 0.6 * uSunFactor);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, crestCol, crestFoam * 0.38 * vLit);
+      gl_FragColor.rgb += vec3(0.03, 0.07, 0.11) * caustic * (0.4 + 0.6 * uSunFactor) * vLit;
       vec3 waveN = normalize(vec3(-cos(uTime * 2.3 + vWorldPos.x * 0.85 + vWorldPos.z * 0.65) * 0.15, 1.0, sin(uTime * 1.7 - vWorldPos.x * 0.55 + vWorldPos.z * 0.90) * 0.12));
       vec3 viewDir = normalize(cameraPosition - vWorldPos);
       vec3 halfVec = normalize(uLightDir + viewDir);
       float spec = pow(max(dot(waveN, halfVec), 0.0), 42.0);
       float fresnel = pow(1.0 - max(dot(waveN, viewDir), 0.0), 3.0) * 0.32;
-      gl_FragColor.rgb += uSunLightColor * (spec * 0.85 + fresnel * 0.24);
+      gl_FragColor.rgb += uSunLightColor * (spec * 0.85 + fresnel * 0.24) * vSunLit;
       #include <fog_fragment>`
     );
 };
@@ -398,6 +401,12 @@ waterMaterial.onBeforeCompile = (shader) => {
 function updateGPUShaders(dt) {
   gpuShaderUniforms.uTime.value += dt;
   gpuShaderUniforms.uSunFactor.value = sunFactor;
+  if (typeof player !== 'undefined' && player) {
+    const pL1 = getLightGlobal(Math.floor(player.x), Math.floor(player.y + 1.4), Math.floor(player.z)), pL2 = getLightGlobal(Math.floor(player.x), Math.floor(player.y + 0.5), Math.floor(player.z));
+    const armSun = (Math.max(pL1 >> 4, pL2 >> 4) / 15) * sunFactor, armBlk = Math.max(pL1 & 15, pL2 & 15) / 15, armLit = Math.min(1.0, Math.max(0.05, Math.max(armSun, armBlk))), sc = gpuShaderUniforms.uSunLightColor.value;
+    handArmMat.color.setRGB(armLit * sc.x, armLit * (1 - armBlk * 0.08) * sc.y, armLit * (1 - armBlk * 0.24) * sc.z);
+    if (handMesh.visible) { const hEmit = (BLOCK_DEFS[getActiveHeldItem()]?.light || 0) > 5; handMat.color.setRGB(hEmit ? 1 : handArmMat.color.r, hEmit ? 1 : handArmMat.color.g, hEmit ? 1 : handArmMat.color.b); }
+  }
 
   const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
   const submerged = headBlock === BLOCK.WATER, inLavaCam = headBlock === BLOCK.LAVA;
