@@ -442,250 +442,220 @@ function useCartographyMap() {
   return mapState.zoomScale;
 }
 
-function drawPaperOrMapIcon(ctx, itemId) {
-  if (itemId === BLOCK.ITEM_PAPER) {
-    ctx.fillStyle = '#64748b'; ctx.fillRect(2, 1, 12, 14);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(3, 2, 10, 12);
-    ctx.fillStyle = '#f8fafc'; ctx.fillRect(3, 2, 9, 11);
-    ctx.fillStyle = '#94a3b8'; ctx.fillRect(4, 4, 7, 1); ctx.fillRect(4, 7, 6, 1); ctx.fillRect(4, 10, 5, 1);
-    return;
-  }
-  if (itemId === BLOCK.ITEM_EMPTY_MAP) {
-    ctx.fillStyle = '#8b693e'; ctx.fillRect(1, 1, 14, 14);
-    ctx.fillStyle = '#e6d2a8'; ctx.fillRect(2, 2, 12, 12);
-    ctx.fillStyle = '#c4a472'; ctx.fillRect(4, 5, 8, 1); ctx.fillRect(4, 8, 8, 1); ctx.fillRect(4, 11, 6, 1);
-    ctx.fillStyle = '#b45309'; ctx.fillRect(7, 6, 2, 4); ctx.fillRect(6, 7, 4, 2);
-    return;
-  }
-  ctx.fillStyle = '#451a03'; ctx.fillRect(1, 1, 14, 14);
-  ctx.fillStyle = '#e6d2a8'; ctx.fillRect(2, 2, 12, 12);
-  const px = typeof player !== 'undefined' ? Math.floor(player.x) : 8;
-  const pz = typeof player !== 'undefined' ? Math.floor(player.z) : 8;
+function drawExploredMapOverlay(ctx) {
+  const px = typeof player !== 'undefined' ? Math.floor(player.x) : 8, pz = typeof player !== 'undefined' ? Math.floor(player.z) : 8;
   const step = 4 * (mapState.zoomScale || 1);
   for (let my = 0; my < 12; my++) {
     for (let mx = 0; mx < 12; mx++) {
       const wx = px + (mx - 6) * step, wz = pz + (my - 6) * step;
-      if (!isMapCellExplored(wx, wz)) {
-        if ((mx + my) % 3 === 0) { ctx.fillStyle = '#d8c194'; ctx.fillRect(2 + mx, 2 + my, 1, 1); }
-        continue;
-      }
+      if (!isMapCellExplored(wx, wz)) continue;
       const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
       const ch = typeof chunks !== 'undefined' ? chunks.get(`${cx},${cz}`) : null;
       if (ch && ch.mapColors) {
         const col32 = ch.mapColors[(wz - cz * CHUNK_SIZE) * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)];
         ctx.fillStyle = `rgb(${col32 & 255},${(col32 >> 8) & 255},${(col32 >> 16) & 255})`;
-      } else {
-        ctx.fillStyle = '#4ade80';
-      }
+      } else { ctx.fillStyle = '#4ade80'; }
       ctx.fillRect(2 + mx, 2 + my, 1, 1);
     }
   }
   ctx.fillStyle = '#ef4444'; ctx.fillRect(7, 7, 2, 2);
 }
 
+function drawPaperOrMapIcon(ctx, itemId) {
+  if (itemId === BLOCK.ITEM_PAPER) {
+    ctx.fillStyle = '#64748b'; ctx.fillRect(2, 1, 12, 14); ctx.fillStyle = '#f8fafc'; ctx.fillRect(3, 2, 10, 12);
+    ctx.fillStyle = '#94a3b8'; ctx.fillRect(4, 4, 7, 1); ctx.fillRect(4, 7, 6, 1); ctx.fillRect(4, 10, 5, 1);
+    return;
+  }
+  ctx.fillStyle = '#8b693e'; ctx.fillRect(1, 1, 14, 14); ctx.fillStyle = '#e6d2a8'; ctx.fillRect(2, 2, 12, 12);
+  if (itemId === BLOCK.ITEM_EMPTY_MAP) {
+    ctx.fillStyle = '#c4a472'; ctx.fillRect(4, 5, 8, 1); ctx.fillRect(4, 8, 8, 1); ctx.fillStyle = '#b45309'; ctx.fillRect(7, 6, 2, 4);
+    return;
+  }
+  drawExploredMapOverlay(ctx);
+}
+
 // ============================================================================
-// 11M. MINECRAFT DEFAULT PACK 16x16 ITEM SPRITE RENDERER (ALL 52 ITEMS 100..151)
+// 11M. MINECRAFT DEFAULT PACK ASSETS LOADER (mc-reference/) & 16x16 ITEM RENDERER
 // ============================================================================
+const mcItemCanvases = new Map();
+let mcClockNightCanvas = null;
+
+const MC_BLOCK_TILE_FILES = [
+  'block/grass_block_top.png', 'block/grass_block_side.png', 'block/dirt.png', 'block/stone.png',
+  'block/sand.png', 'block/oak_log.png', 'block/oak_log_top.png', 'block/oak_leaves.png',
+  'block/oak_planks.png', 'block/cobblestone.png', 'block/bricks.png', 'block/glass.png',
+  'block/water_still.png', 'block/snow.png', 'block/grass_block_snow.png', 'block/glowstone.png',
+  'block/bedrock.png', 'block/coal_ore.png', 'block/iron_ore.png', 'block/gold_ore.png',
+  'block/diamond_ore.png', 'block/torch.png', 'block/short_grass.png', 'block/poppy.png',
+  'block/dandelion.png', 'block/cactus_side.png', 'block/tnt_side.png', 'block/tnt_top.png',
+  'block/lava_still.png', 'block/obsidian.png', 'block/lever.png', 'block/redstone_torch.png',
+  'block/redstone_lamp.png', 'block/redstone_lamp_on.png', 'block/oak_sapling.png', 'block/wheat_stage1.png',
+  'block/wheat_stage4.png', 'block/wheat_stage7.png', 'block/amethyst_block.png', 'block/warped_fungus.png',
+  'block/slime_block.png', 'block/oak_door_top.png', 'block/ladder.png', 'block/oak_trapdoor.png',
+  'block/rail.png', 'entity/chest/normal.png', 'entity/chest/normal.png', 'block/lily_pad.png',
+  'block/piston_side.png', 'block/nether_portal.png', 'block/ice.png', 'block/crafting_table_top.png',
+  'block/crafting_table_front.png', 'block/furnace_top.png', 'block/furnace_front_on.png', 'block/iron_block.png',
+  'block/gold_block.png', 'block/diamond_block.png', 'block/bookshelf.png', 'block/cake_top.png',
+  'block/cake_side.png', 'block/red_bed_head_up.png', 'block/red_bed_foot_east.png', 'block/anvil.png',
+  'block/enchanting_table_top.png', 'block/enchanting_table_side.png', 'block/gravel.png', 'block/clay.png',
+  'block/white_wool.png', 'block/netherrack.png', 'block/end_stone.png', 'block/emerald_block.png',
+  'block/cactus_top.png', 'block/cactus_bottom.png', 'block/tnt_bottom.png', 'entity/chest/normal.png',
+  'block/crafting_table_side.png', 'block/furnace_side.png', 'block/piston_top.png', 'block/piston_bottom.png',
+  'block/cake_bottom.png', 'block/anvil_top.png'
+];
+
+const MC_ITEM_SPRITE_FILES = [
+  [BLOCK.TOOL_PICKAXE, 'item/diamond_pickaxe.png'], [BLOCK.TOOL_SWORD, 'item/diamond_sword.png'], [BLOCK.TOOL_BOW, 'item/bow.png'],
+  [BLOCK.ITEM_APPLE, 'item/apple.png'], [BLOCK.ITEM_BREAD, 'item/bread.png'], [BLOCK.ITEM_MINECART, 'item/minecart.png'],
+  [BLOCK.ITEM_BOAT, 'item/oak_boat.png'], [BLOCK.TOOL_GRAPPLING_HOOK, 'item/lead.png'], [BLOCK.ITEM_STICK, 'item/stick.png'],
+  [BLOCK.ITEM_COAL, 'item/coal.png'], [BLOCK.ITEM_IRON_INGOT, 'item/iron_ingot.png'], [BLOCK.ITEM_GOLD_INGOT, 'item/gold_ingot.png'],
+  [BLOCK.ITEM_DIAMOND, 'item/diamond.png'], [BLOCK.TOOL_WOOD_PICKAXE, 'item/wooden_pickaxe.png'], [BLOCK.TOOL_STONE_PICKAXE, 'item/stone_pickaxe.png'],
+  [BLOCK.TOOL_IRON_PICKAXE, 'item/iron_pickaxe.png'], [BLOCK.TOOL_GOLD_PICKAXE, 'item/golden_pickaxe.png'], [BLOCK.TOOL_WOOD_SWORD, 'item/wooden_sword.png'],
+  [BLOCK.TOOL_STONE_SWORD, 'item/stone_sword.png'], [BLOCK.TOOL_IRON_SWORD, 'item/iron_sword.png'], [BLOCK.TOOL_GOLD_SWORD, 'item/golden_sword.png'],
+  [BLOCK.TOOL_AXE, 'item/diamond_axe.png'], [BLOCK.TOOL_SHOVEL, 'item/diamond_shovel.png'], [BLOCK.TOOL_HOE, 'item/diamond_hoe.png'],
+  [BLOCK.TOOL_SHEARS, 'item/shears.png'], [BLOCK.TOOL_FLINT_AND_STEEL, 'item/flint_and_steel.png'], [BLOCK.ITEM_BUCKET, 'item/bucket.png'],
+  [BLOCK.ITEM_WATER_BUCKET, 'item/water_bucket.png'], [BLOCK.ITEM_LAVA_BUCKET, 'item/lava_bucket.png'], [BLOCK.ARMOR_IRON_HELMET, 'item/iron_helmet.png'],
+  [BLOCK.ARMOR_IRON_CHESTPLATE, 'item/iron_chestplate.png'], [BLOCK.ARMOR_IRON_LEGGINGS, 'item/iron_leggings.png'], [BLOCK.ARMOR_IRON_BOOTS, 'item/iron_boots.png'],
+  [BLOCK.ARMOR_DIAMOND_HELMET, 'item/diamond_helmet.png'], [BLOCK.ARMOR_DIAMOND_CHESTPLATE, 'item/diamond_chestplate.png'], [BLOCK.ARMOR_DIAMOND_LEGGINGS, 'item/diamond_leggings.png'],
+  [BLOCK.ARMOR_DIAMOND_BOOTS, 'item/diamond_boots.png'], [BLOCK.TOOL_FISHING_ROD, 'item/fishing_rod.png'], [BLOCK.ITEM_BONE, 'item/bone.png'],
+  [BLOCK.ITEM_BONE_MEAL, 'item/bone_meal.png'], [BLOCK.ITEM_RAW_PORKCHOP, 'item/porkchop.png'], [BLOCK.ITEM_COOKED_PORKCHOP, 'item/cooked_porkchop.png'],
+  [BLOCK.ITEM_RAW_FISH, 'item/cod.png'], [BLOCK.ITEM_COOKED_FISH, 'item/cooked_cod.png'], [BLOCK.ITEM_GOLDEN_APPLE, 'item/golden_apple.png'],
+  [BLOCK.ITEM_EMERALD, 'item/emerald.png'], [BLOCK.ITEM_ENDER_PEARL, 'item/ender_pearl.png'], [BLOCK.ITEM_COMPASS, 'item/compass_16.png'],
+  [BLOCK.ITEM_CLOCK, 'item/clock_00.png'], [BLOCK.ITEM_PAPER, 'item/paper.png'], [BLOCK.ITEM_EMPTY_MAP, 'item/map.png'],
+  [BLOCK.ITEM_MAP, 'item/filled_map.png']
+];
+
+const MC_MOB_TILE_CROPS = [
+  ['entity/zombie/zombie.png', 8, 8, 8, 8, 0, 0], ['entity/zombie/zombie.png', 0, 8, 8, 8, 0, 0],
+  ['entity/zombie/zombie.png', 44, 20, 8, 8, 0, 0], ['entity/zombie/zombie.png', 8, 0, 8, 8, 0, 0],
+  ['entity/zombie/zombie.png', 20, 20, 8, 8, 0, 0], ['entity/zombie/zombie.png', 4, 20, 8, 8, 0, 0],
+  ['entity/skeleton/skeleton.png', 8, 8, 8, 8, 0, 0], ['entity/skeleton/skeleton.png', 20, 20, 8, 8, 0, 0],
+  ['entity/skeleton/skeleton.png', 0, 8, 8, 8, 0, 0], ['item/bow.png', 4, 4, 8, 8, 0, 0],
+  ['entity/creeper/creeper.png', 8, 8, 8, 8, 0, 0], ['entity/creeper/creeper.png', 20, 20, 8, 8, 0, 0],
+  ['entity/creeper/creeper.png', 4, 20, 8, 6, 0, 1], ['entity/iron_golem/iron_golem.png', 8, 8, 8, 8, 0, 0],
+  ['entity/iron_golem/iron_golem.png', 20, 42, 8, 8, 0, 0], ['entity/iron_golem/iron_golem.png', 8, 0, 8, 8, 0, 0],
+  ['entity/sheep/sheep.png', 6, 6, 8, 8, 0, 0], ['entity/sheep/sheep_wool.png', 28, 14, 8, 8, 0, 0],
+  ['entity/sheep/sheep.png', 0, 16, 8, 8, 0, 0], ['entity/pig/pig_temperate.png', 8, 8, 8, 8, 0, 0],
+  ['entity/pig/pig_temperate.png', 16, 16, 4, 3, 2, 2], ['entity/pig/pig_temperate.png', 28, 16, 8, 8, 0, 0],
+  ['entity/pig/pig_temperate.png', 0, 16, 8, 8, 0, 0], ['entity/cow/cow_temperate.png', 6, 6, 8, 8, 0, 0],
+  ['entity/cow/cow_temperate.png', 20, 20, 8, 8, 0, 0], ['entity/cow/cow_temperate.png', 0, 16, 8, 8, 0, 0],
+  ['entity/chicken/chicken_temperate.png', 2, 2, 8, 6, 0, 1], ['entity/chicken/chicken_temperate.png', 6, 12, 8, 8, 0, 0],
+  ['entity/spider/spider.png', 40, 12, 8, 8, 0, 0], ['entity/spider/spider.png', 12, 12, 8, 8, 0, 0],
+  ['entity/enderman/enderman.png', 8, 8, 8, 8, 0, 0], ['entity/enderman/enderman.png', 32, 16, 8, 8, 0, 0],
+  ['entity/wolf/wolf.png', 4, 4, 8, 8, 0, 0], ['entity/wolf/wolf.png', 24, 20, 8, 8, 0, 0],
+  ['entity/slime/slime.png', 8, 8, 8, 8, 0, 0]
+];
+
+const MC_CUTOUT_TILES = new Set([11, 21, 22, 23, 24, 30, 31, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 47, 49, 50]);
+const MC_BIOME_TINTS = { 0: [121, 192, 90], 7: [72, 181, 24], 12: [63, 118, 228], 22: [121, 192, 90], 47: [32, 128, 48] };
+
+async function loadMcReferenceTextures() {
+  const uniquePaths = new Set([...MC_BLOCK_TILE_FILES, 'block/grass_block_side_overlay.png', 'item/clock_32.png', 'entity/spider/spider_eyes.png', 'entity/enderman/enderman_eyes.png']);
+  for (const [, p] of MC_ITEM_SPRITE_FILES) uniquePaths.add(p);
+  for (const [p] of MC_MOB_TILE_CROPS) uniquePaths.add(p);
+  const imgMap = new Map();
+  await Promise.all(Array.from(uniquePaths).map(rel => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => { imgMap.set(rel, img); resolve(); };
+    img.onerror = () => resolve();
+    img.src = `./mc-reference/assets/minecraft/textures/${rel}`;
+  })));
+  if (imgMap.size === 0) return false;
+
+  const aCtx = atlasCanvas.getContext('2d');
+  for (let t = 0; t < ATLAS_COLS; t++) {
+    const ox = t * 16, rel = MC_BLOCK_TILE_FILES[t], img = imgMap.get(rel);
+    if (!img) continue;
+    if (t === 45 || t === 46 || t === 75) {
+      aCtx.fillStyle = '#2d2014'; aCtx.fillRect(ox, 0, 16, 16);
+      if (t === 45) aCtx.drawImage(img, 28, 0, 14, 14, ox + 1, 1, 14, 14);
+      else if (t === 46) {
+        aCtx.drawImage(img, 42, 14, 14, 5, ox + 1, 1, 14, 5);
+        aCtx.drawImage(img, 42, 33, 14, 9, ox + 1, 6, 14, 9);
+        aCtx.drawImage(img, 1, 1, 2, 4, ox + 7, 4, 2, 4);
+      } else {
+        aCtx.drawImage(img, 0, 14, 14, 5, ox + 1, 1, 14, 5);
+        aCtx.drawImage(img, 0, 33, 14, 9, ox + 1, 6, 14, 9);
+      }
+    } else if (t === 1) {
+      aCtx.drawImage(img, 0, 0, 16, 16, ox, 0, 16, 16);
+      const ov = imgMap.get('block/grass_block_side_overlay.png');
+      if (ov) {
+        const tmp = document.createElement('canvas'); tmp.width = 16; tmp.height = 16;
+        const tCtx = tmp.getContext('2d'); tCtx.drawImage(ov, 0, 0, 16, 16, 0, 0, 16, 16);
+        const od = tCtx.getImageData(0, 0, 16, 16).data, bd = aCtx.getImageData(ox, 0, 16, 16);
+        for (let i = 0; i < 1024; i += 4) {
+          if (od[i + 3] > 0) { bd.data[i] = (od[i] * 121 / 255) | 0; bd.data[i + 1] = (od[i + 1] * 192 / 255) | 0; bd.data[i + 2] = (od[i + 2] * 90 / 255) | 0; bd.data[i + 3] = 255; }
+        }
+        aCtx.putImageData(bd, ox, 0);
+      }
+    } else if (MC_BIOME_TINTS[t]) {
+      const tint = MC_BIOME_TINTS[t];
+      aCtx.clearRect(ox, 0, 16, 16);
+      aCtx.drawImage(img, 0, 0, 16, 16, ox, 0, 16, 16);
+      const bd = aCtx.getImageData(ox, 0, 16, 16), d = bd.data;
+      for (let i = 0; i < 1024; i += 4) {
+        if (d[i + 3] > 0) { d[i] = (d[i] * tint[0] / 255) | 0; d[i + 1] = (d[i + 1] * tint[1] / 255) | 0; d[i + 2] = (d[i + 2] * tint[2] / 255) | 0; }
+        else if (t === 7) { d[i] = 24; d[i + 1] = 56; d[i + 2] = 18; d[i + 3] = 255; }
+      }
+      aCtx.putImageData(bd, ox, 0);
+    } else {
+      if (MC_CUTOUT_TILES.has(t)) aCtx.clearRect(ox, 0, 16, 16);
+      aCtx.drawImage(img, 0, 0, 16, 16, ox, 0, 16, 16);
+    }
+  }
+  atlasTexture.needsUpdate = true;
+
+  for (const [id, rel] of MC_ITEM_SPRITE_FILES) {
+    const img = imgMap.get(rel);
+    if (!img) continue;
+    const cv = document.createElement('canvas'); cv.width = 16; cv.height = 16;
+    cv.getContext('2d').drawImage(img, 0, 0, 16, 16, 0, 0, 16, 16);
+    mcItemCanvases.set(id, cv);
+  }
+  const clkNightImg = imgMap.get('item/clock_32.png');
+  if (clkNightImg) {
+    mcClockNightCanvas = document.createElement('canvas'); mcClockNightCanvas.width = 16; mcClockNightCanvas.height = 16;
+    mcClockNightCanvas.getContext('2d').drawImage(clkNightImg, 0, 0, 16, 16, 0, 0, 16, 16);
+  }
+
+  const mCtx = mobAtlasCanvas.getContext('2d');
+  for (let t = 0; t < MC_MOB_TILE_CROPS.length; t++) {
+    const [rel, sx, sy, sw, sh, dx, dy] = MC_MOB_TILE_CROPS[t], img = imgMap.get(rel);
+    if (!img) continue;
+    const x0 = t * 8;
+    if (dx === 0 && dy === 0) mCtx.clearRect(x0, 0, 8, 8);
+    mCtx.drawImage(img, sx, sy, sw, sh, x0 + dx, dy, sw, sh);
+    if (t === 28 && imgMap.get('entity/spider/spider_eyes.png')) mCtx.drawImage(imgMap.get('entity/spider/spider_eyes.png'), 40, 12, 8, 8, x0, 0, 8, 8);
+    if (t === 30 && imgMap.get('entity/enderman/enderman_eyes.png')) mCtx.drawImage(imgMap.get('entity/enderman/enderman_eyes.png'), 8, 8, 8, 8, x0, 0, 8, 8);
+  }
+  mobAtlasTexture.needsUpdate = true;
+  if (typeof buildHotbarDOM === 'function') buildHotbarDOM();
+  if (typeof updateHeldItemVisual === 'function') updateHeldItemVisual();
+  return true;
+}
+const mcTexturesReady = loadMcReferenceTextures();
+
 const PICKAXE_COLORS = { [BLOCK.TOOL_PICKAXE]: '#5decf5', [BLOCK.TOOL_WOOD_PICKAXE]: '#a16207', [BLOCK.TOOL_STONE_PICKAXE]: '#94a3b8', [BLOCK.TOOL_IRON_PICKAXE]: '#e2e8f0', [BLOCK.TOOL_GOLD_PICKAXE]: '#facc15' };
 const SWORD_COLORS = { [BLOCK.TOOL_SWORD]: '#38bdf8', [BLOCK.TOOL_WOOD_SWORD]: '#a16207', [BLOCK.TOOL_STONE_SWORD]: '#94a3b8', [BLOCK.TOOL_IRON_SWORD]: '#e2e8f0', [BLOCK.TOOL_GOLD_SWORD]: '#facc15' };
-const TIER_PALETTE = {
-  '#5decf5': { dark: '#113832', base: '#2be4eb', hi: '#a5f3fc' },
-  '#38bdf8': { dark: '#113832', base: '#2be4eb', hi: '#a5f3fc' },
-  '#a16207': { dark: '#281e0b', base: '#9b6516', hi: '#b87a22' },
-  '#94a3b8': { dark: '#2d2d2d', base: '#8a8e94', hi: '#b8bcc2' },
-  '#e2e8f0': { dark: '#383838', base: '#dcdcdc', hi: '#ffffff' },
-  '#facc15': { dark: '#5e4208', base: '#f5cc27', hi: '#fef08a' }
-};
-
-function drawDiagonalHandle(ctx, iStart, iEnd) {
-  for (let i = iStart; i <= iEnd; i++) {
-    ctx.fillStyle = '#563e16'; ctx.fillRect(i, 15 - i, 2, 2);
-    ctx.fillStyle = '#896727'; ctx.fillRect(i, 15 - i, 1, 1);
-    ctx.fillStyle = '#281e0b'; ctx.fillRect(i + 1, 16 - i, 1, 1);
-  }
-}
 
 function drawItemIcon(canvas, itemId) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 16, 16);
   if (!itemId || itemId === BLOCK.AIR) return;
-  if (PICKAXE_COLORS[itemId]) {
-    const pal = TIER_PALETTE[PICKAXE_COLORS[itemId]];
-    drawDiagonalHandle(ctx, 2, 12);
-    ctx.fillStyle = pal.dark; ctx.fillRect(7, 1, 7, 2); ctx.fillRect(13, 2, 2, 6); ctx.fillRect(6, 3, 2, 2);
-    ctx.fillStyle = pal.base; ctx.fillRect(8, 2, 5, 2); ctx.fillRect(12, 4, 2, 3); ctx.fillRect(7, 3, 2, 2);
-    ctx.fillStyle = pal.hi; ctx.fillRect(8, 2, 3, 1); ctx.fillRect(7, 3, 1, 1);
-  } else if (SWORD_COLORS[itemId]) {
-    const pal = TIER_PALETTE[SWORD_COLORS[itemId]];
-    ctx.fillStyle = pal.dark; ctx.fillRect(1, 13, 2, 2);
-    ctx.fillStyle = '#7a542e'; ctx.fillRect(2, 12, 3, 3);
-    ctx.fillStyle = '#3d2810'; ctx.fillRect(3, 8, 2, 2); ctx.fillRect(6, 11, 2, 2);
-    ctx.fillStyle = '#facc15'; ctx.fillRect(4, 9, 4, 2);
-    for (let i = 5; i <= 13; i++) {
-      ctx.fillStyle = pal.dark; ctx.fillRect(i + 1, 15 - i, 2, 2);
-      ctx.fillStyle = pal.base; ctx.fillRect(i, 15 - i, 2, 2);
-      ctx.fillStyle = pal.hi; ctx.fillRect(i, 15 - i, 1, 1);
+  const mcSprite = (itemId === BLOCK.ITEM_CLOCK && typeof celestialAngle !== 'undefined' && Math.cos(celestialAngle) < 0 && mcClockNightCanvas) ? mcClockNightCanvas : mcItemCanvases.get(itemId);
+  if (mcSprite) {
+    ctx.drawImage(mcSprite, 0, 0);
+    if (itemId === BLOCK.ITEM_MAP && typeof exploredMapCells !== 'undefined' && exploredMapCells.size > 0) drawExploredMapOverlay(ctx);
+    if (typeof getItemEnchantLevel === 'function' && getItemEnchantLevel(itemId) > 0) {
+      ctx.fillStyle = '#e879f9'; ctx.fillRect(11, 2, 2, 2); ctx.fillRect(3, 11, 2, 2);
     }
-  } else if (itemId === BLOCK.TOOL_AXE) {
-    drawDiagonalHandle(ctx, 2, 12);
-    ctx.fillStyle = '#113832'; ctx.fillRect(7, 1, 6, 6); ctx.fillRect(6, 3, 4, 6);
-    ctx.fillStyle = '#2be4eb'; ctx.fillRect(8, 2, 4, 4); ctx.fillRect(7, 4, 3, 3);
-    ctx.fillStyle = '#a5f3fc'; ctx.fillRect(8, 2, 3, 2); ctx.fillRect(7, 4, 2, 2);
-  } else if (itemId === BLOCK.TOOL_SHOVEL) {
-    drawDiagonalHandle(ctx, 2, 10);
-    ctx.fillStyle = '#113832'; ctx.fillRect(9, 1, 6, 6);
-    ctx.fillStyle = '#2be4eb'; ctx.fillRect(10, 2, 4, 4); ctx.fillRect(11, 1, 3, 2);
-    ctx.fillStyle = '#a5f3fc'; ctx.fillRect(11, 2, 2, 2);
-  } else if (itemId === BLOCK.TOOL_HOE) {
-    drawDiagonalHandle(ctx, 2, 12);
-    ctx.fillStyle = '#113832'; ctx.fillRect(7, 1, 7, 3); ctx.fillRect(6, 3, 3, 2);
-    ctx.fillStyle = '#2be4eb'; ctx.fillRect(8, 2, 5, 2); ctx.fillRect(7, 3, 2, 2);
-    ctx.fillStyle = '#a5f3fc'; ctx.fillRect(8, 2, 3, 1);
-  } else if (itemId === BLOCK.TOOL_SHEARS) {
-    ctx.fillStyle = '#78350f'; ctx.fillRect(1, 11, 4, 4); ctx.fillRect(4, 12, 4, 4);
-    ctx.fillStyle = '#b45309'; ctx.fillRect(2, 11, 3, 3); ctx.fillRect(5, 12, 3, 3);
-    ctx.fillStyle = '#64748b'; ctx.fillRect(5, 5, 8, 3); ctx.fillRect(7, 2, 3, 8);
-    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(5, 6, 7, 2); ctx.fillRect(8, 3, 2, 7);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(6, 6, 4, 1); ctx.fillRect(8, 3, 1, 4);
-  } else if (itemId === BLOCK.TOOL_FLINT_AND_STEEL) {
-    ctx.fillStyle = '#334155'; ctx.fillRect(2, 3, 7, 3); ctx.fillRect(2, 5, 3, 7); ctx.fillRect(2, 10, 6, 3);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(3, 4, 5, 2); ctx.fillRect(3, 6, 2, 5); ctx.fillRect(3, 10, 5, 2);
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(8, 6, 6, 7);
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(9, 7, 4, 5); ctx.fillStyle = '#475569'; ctx.fillRect(10, 8, 2, 2);
-    ctx.fillStyle = '#f97316'; ctx.fillRect(7, 2, 3, 3); ctx.fillStyle = '#fef08a'; ctx.fillRect(8, 2, 1, 2);
-  } else if (itemId === BLOCK.ITEM_STICK) {
-    drawDiagonalHandle(ctx, 3, 12);
-  } else if (itemId === BLOCK.ITEM_COAL) {
-    ctx.fillStyle = '#090d16'; ctx.fillRect(3, 3, 10, 10);
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(4, 4, 8, 8);
-    ctx.fillStyle = '#334155'; ctx.fillRect(5, 5, 6, 6);
-    ctx.fillStyle = '#64748b'; ctx.fillRect(5, 5, 3, 3);
-  } else if (itemId === BLOCK.ITEM_IRON_INGOT || itemId === BLOCK.ITEM_GOLD_INGOT) {
-    const isGold = itemId === BLOCK.ITEM_GOLD_INGOT;
-    ctx.fillStyle = isGold ? '#78350f' : '#334155'; ctx.fillRect(2, 5, 12, 7);
-    ctx.fillStyle = isGold ? '#b45309' : '#64748b'; ctx.fillRect(2, 6, 12, 6);
-    ctx.fillStyle = isGold ? '#facc15' : '#e2e8f0'; ctx.fillRect(3, 5, 10, 5);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 6, 4, 2);
-  } else if (itemId === BLOCK.ITEM_DIAMOND) {
-    ctx.fillStyle = '#0369a1'; ctx.fillRect(4, 2, 8, 12); ctx.fillRect(2, 5, 12, 6);
-    ctx.fillStyle = '#0284c7'; ctx.fillRect(4, 3, 8, 10); ctx.fillRect(3, 5, 10, 6);
-    ctx.fillStyle = '#5decf5'; ctx.fillRect(5, 4, 6, 8);
-    ctx.fillStyle = '#e0f2fe'; ctx.fillRect(6, 5, 3, 3);
-  } else if (itemId === BLOCK.ITEM_BUCKET || itemId === BLOCK.ITEM_WATER_BUCKET || itemId === BLOCK.ITEM_LAVA_BUCKET) {
-    ctx.fillStyle = '#334155'; ctx.fillRect(2, 4, 12, 8); ctx.fillRect(3, 12, 10, 3);
-    ctx.fillStyle = '#64748b'; ctx.fillRect(3, 4, 10, 8); ctx.fillRect(4, 12, 8, 2);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(4, 5, 8, 7);
-    ctx.fillStyle = '#f8fafc'; ctx.fillRect(5, 6, 2, 5);
-    if (itemId === BLOCK.ITEM_BUCKET) {
-      ctx.fillStyle = '#475569'; ctx.fillRect(5, 4, 6, 2);
-    } else {
-      ctx.fillStyle = itemId === BLOCK.ITEM_WATER_BUCKET ? '#2563eb' : '#f97316'; ctx.fillRect(4, 4, 8, 4);
-      ctx.fillStyle = itemId === BLOCK.ITEM_WATER_BUCKET ? '#93c5fd' : '#fef08a'; ctx.fillRect(5, 4, 4, 2);
-    }
-  } else if (itemId === BLOCK.TOOL_BOW) {
-    ctx.fillStyle = '#cbd5e1'; for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
-    ctx.fillStyle = '#281e0b'; ctx.fillRect(5, 1, 5, 2); ctx.fillRect(10, 4, 2, 8); ctx.fillRect(5, 13, 5, 2);
-    ctx.fillStyle = '#896727'; ctx.fillRect(5, 2, 4, 2); ctx.fillRect(9, 4, 2, 8); ctx.fillRect(5, 12, 4, 2);
-    ctx.fillStyle = '#facc15'; ctx.fillRect(6, 7, 5, 1);
-  } else if (isArmorItem(itemId)) {
-    const isDia = itemId >= BLOCK.ARMOR_DIAMOND_HELMET, sIdx = getArmorSlotForItem(itemId);
-    const darkC = isDia ? '#113832' : '#333333', midC = isDia ? '#1b7a6e' : '#737373', hiC = isDia ? '#2be4eb' : '#dcdcdc', glintC = isDia ? '#a5f3fc' : '#ffffff';
-    ctx.fillStyle = darkC;
-    if (sIdx === 0) {
-      ctx.fillRect(1, 2, 14, 11); ctx.fillStyle = midC; ctx.fillRect(2, 3, 12, 9);
-      ctx.fillStyle = hiC; ctx.fillRect(3, 4, 10, 4); ctx.fillRect(3, 8, 3, 3); ctx.fillRect(10, 8, 3, 3);
-      ctx.fillStyle = glintC; ctx.fillRect(4, 4, 4, 2);
-    } else if (sIdx === 1) {
-      ctx.fillRect(1, 1, 14, 14); ctx.fillStyle = midC; ctx.fillRect(2, 2, 12, 12);
-      ctx.fillStyle = hiC; ctx.fillRect(3, 3, 3, 4); ctx.fillRect(10, 3, 3, 4); ctx.fillRect(4, 6, 8, 7);
-      ctx.fillStyle = glintC; ctx.fillRect(5, 6, 3, 3);
-    } else if (sIdx === 2) {
-      ctx.fillRect(2, 1, 12, 14); ctx.fillStyle = midC; ctx.fillRect(3, 2, 10, 12);
-      ctx.fillStyle = hiC; ctx.fillRect(4, 3, 8, 3); ctx.fillRect(4, 6, 3, 7); ctx.fillRect(9, 6, 3, 7);
-      ctx.fillStyle = glintC; ctx.fillRect(5, 3, 3, 2);
-    } else {
-      ctx.fillRect(1, 5, 7, 10); ctx.fillRect(8, 5, 7, 10); ctx.fillStyle = midC; ctx.fillRect(2, 6, 5, 8); ctx.fillRect(9, 6, 5, 8);
-      ctx.fillStyle = hiC; ctx.fillRect(3, 7, 3, 6); ctx.fillRect(10, 7, 3, 6);
-      ctx.fillStyle = glintC; ctx.fillRect(3, 7, 2, 2); ctx.fillRect(10, 7, 2, 2);
-    }
-  } else if (itemId === BLOCK.TOOL_FISHING_ROD) {
-    drawDiagonalHandle(ctx, 2, 12);
-    ctx.fillStyle = '#475569'; ctx.fillRect(4, 11, 2, 2);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(13, 4, 1, 7);
-    ctx.fillStyle = '#ef4444'; ctx.fillRect(12, 11, 3, 3);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(12, 11, 3, 1);
-  } else if (itemId === BLOCK.ITEM_BONE) {
-    ctx.fillStyle = '#94a3b8'; for (let i = 4; i <= 11; i++) ctx.fillRect(i + 1, 15 - i, 2, 2);
-    ctx.fillStyle = '#cbd5e1'; for (let i = 4; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(2, 11, 4, 3); ctx.fillRect(10, 2, 4, 3);
-  } else if (itemId === BLOCK.ITEM_BONE_MEAL) {
-    ctx.fillStyle = '#64748b'; ctx.fillRect(2, 8, 12, 6);
-    ctx.fillStyle = '#b8bcc8'; ctx.fillRect(3, 7, 10, 6);
-    ctx.fillStyle = '#f8fafc'; ctx.fillRect(5, 5, 5, 5);
-  } else if (itemId === BLOCK.ITEM_RAW_PORKCHOP || itemId === BLOCK.ITEM_COOKED_PORKCHOP) {
-    const isCooked = itemId === BLOCK.ITEM_COOKED_PORKCHOP;
-    ctx.fillStyle = isCooked ? '#6b4c28' : '#881337'; ctx.fillRect(2, 3, 12, 10);
-    ctx.fillStyle = isCooked ? '#a8844c' : '#be123c'; ctx.fillRect(3, 4, 10, 8);
-    ctx.fillStyle = isCooked ? '#e8bd68' : '#fda4af'; ctx.fillRect(4, 5, 8, 6);
-    ctx.fillStyle = '#fef2f2'; ctx.fillRect(9, 6, 2, 2);
-  } else if (itemId === BLOCK.ITEM_RAW_FISH || itemId === BLOCK.ITEM_COOKED_FISH) {
-    const isCooked = itemId === BLOCK.ITEM_COOKED_FISH;
-    ctx.fillStyle = isCooked ? '#785634' : '#7c5838'; ctx.fillRect(2, 4, 10, 8);
-    ctx.fillStyle = isCooked ? '#b08858' : '#b88656'; ctx.fillRect(3, 5, 9, 6); ctx.fillRect(11, 4, 3, 8);
-    ctx.fillStyle = isCooked ? '#ebbc78' : '#deb284'; ctx.fillRect(4, 6, 7, 4);
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(4, 6, 2, 2);
-  } else if (itemId === BLOCK.ITEM_APPLE || itemId === BLOCK.ITEM_GOLDEN_APPLE) {
-    const isGold = itemId === BLOCK.ITEM_GOLDEN_APPLE;
-    ctx.fillStyle = '#78350f'; ctx.fillRect(7, 1, 1, 3);
-    ctx.fillStyle = '#22c55e'; ctx.fillRect(8, 2, 3, 2);
-    ctx.fillStyle = isGold ? '#a16207' : '#991b1b'; ctx.fillRect(3, 3, 10, 11);
-    ctx.fillStyle = isGold ? '#eab308' : '#ef4444'; ctx.fillRect(4, 4, 8, 9); ctx.fillRect(3, 5, 10, 7);
-    ctx.fillStyle = isGold ? '#fef08a' : '#fca5a5'; ctx.fillRect(5, 5, 2, 2);
-  } else if (itemId === BLOCK.ITEM_BREAD) {
-    ctx.fillStyle = '#78350f'; ctx.fillRect(1, 5, 14, 8);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(2, 6, 12, 6);
-    ctx.fillStyle = '#d97706'; ctx.fillRect(3, 5, 10, 6);
-    ctx.fillStyle = '#fbbf24'; ctx.fillRect(4, 6, 8, 3);
-    ctx.fillStyle = '#fef08a'; ctx.fillRect(5, 6, 1, 2); ctx.fillRect(8, 6, 1, 2);
-  } else if (itemId === BLOCK.ITEM_MINECART) {
-    ctx.fillStyle = '#334155'; ctx.fillRect(1, 4, 14, 8);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(2, 5, 12, 5);
-    ctx.fillStyle = '#334155'; ctx.fillRect(4, 6, 8, 4);
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(3, 11, 3, 3); ctx.fillRect(10, 11, 3, 3);
-  } else if (itemId === BLOCK.ITEM_BOAT) {
-    ctx.fillStyle = '#451a03'; ctx.fillRect(1, 7, 14, 7);
-    ctx.fillStyle = '#78350f'; ctx.fillRect(1, 8, 14, 5);
-    ctx.fillStyle = '#d97706'; ctx.fillRect(3, 7, 10, 4);
-    ctx.fillStyle = '#fcd34d'; ctx.fillRect(6, 3, 2, 6); ctx.fillRect(9, 3, 2, 6);
-  } else if (itemId === BLOCK.TOOL_GRAPPLING_HOOK) {
-    ctx.fillStyle = '#475569'; for (let i = 2; i <= 11; i++) ctx.fillRect(i + 1, 15 - i, 2, 2);
-    ctx.fillStyle = '#cbd5e1'; for (let i = 2; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
-    ctx.fillStyle = '#7e22ce'; ctx.fillRect(8, 1, 6, 3); ctx.fillRect(12, 4, 3, 5);
-    ctx.fillStyle = '#c084fc'; ctx.fillRect(9, 2, 5, 2); ctx.fillRect(12, 4, 2, 4); ctx.fillRect(7, 4, 3, 2);
-    ctx.fillStyle = '#f3e8ff'; ctx.fillRect(10, 2, 2, 1);
-  } else if (itemId === BLOCK.ITEM_EMERALD) {
-    ctx.fillStyle = '#064e3b'; ctx.fillRect(3, 1, 10, 14);
-    ctx.fillStyle = '#047857'; ctx.fillRect(4, 2, 8, 12); ctx.fillRect(3, 4, 10, 8);
-    ctx.fillStyle = '#10b981'; ctx.fillRect(5, 3, 6, 10); ctx.fillStyle = '#a7f3d0'; ctx.fillRect(6, 4, 2, 3);
-  } else if (itemId === BLOCK.ITEM_ENDER_PEARL) {
-    ctx.fillStyle = '#042f2e'; ctx.fillRect(2, 2, 12, 12);
-    ctx.fillStyle = '#115e59'; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = '#0d9488'; ctx.fillRect(4, 4, 8, 8);
-    ctx.fillStyle = '#5eead4'; ctx.fillRect(5, 5, 3, 3);
-  } else if (itemId === BLOCK.ITEM_COMPASS) {
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(2, 2, 12, 12);
-    ctx.fillStyle = '#475569'; ctx.fillRect(2, 3, 12, 10); ctx.fillRect(3, 2, 10, 12);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(4, 4, 8, 8);
-    const tx = (typeof player !== 'undefined' && player.hasBedSpawn) ? player.spawnX : 0, tz = (typeof player !== 'undefined' && player.hasBedSpawn) ? player.spawnZ : 0;
-    const rel = (typeof player !== 'undefined') ? (Math.atan2(tx - player.x, -(tz - player.z)) - player.yaw) : 0;
-    const nx = Math.round(Math.sin(rel) * 2.6), ny = -Math.round(Math.cos(rel) * 2.6);
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(7 - nx, 7 - ny, 2, 2); ctx.fillStyle = '#ef4444'; ctx.fillRect(7, 7, 2, 2); ctx.fillRect(7 + nx, 7 + ny, 2, 2);
-  } else if (itemId === BLOCK.ITEM_CLOCK) {
-    ctx.fillStyle = '#78350f'; ctx.fillRect(2, 2, 12, 12);
-    ctx.fillStyle = '#b45309'; ctx.fillRect(2, 3, 12, 10); ctx.fillRect(3, 2, 10, 12);
-    ctx.fillStyle = '#facc15'; ctx.fillRect(3, 3, 10, 10);
-    const night = typeof isNight !== 'undefined' && isNight, ang = typeof celestialAngle !== 'undefined' ? celestialAngle : 0;
-    ctx.fillStyle = night ? '#0f172a' : '#1d4ed8'; ctx.fillRect(5, 5, 6, 6);
-    ctx.fillStyle = night ? '#e2e8f0' : '#fef08a'; ctx.fillRect(7 + Math.round(Math.sin(ang) * 1.6), 6, 2, 2);
+    return;
+  }
+  if (PICKAXE_COLORS[itemId] || SWORD_COLORS[itemId]) {
+    ctx.fillStyle = '#563e16'; for (let i = 2; i <= 12; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = PICKAXE_COLORS[itemId] || SWORD_COLORS[itemId]; ctx.fillRect(7, 2, 6, 3);
   } else if (itemId >= BLOCK.ITEM_PAPER && itemId <= BLOCK.ITEM_MAP) {
     drawPaperOrMapIcon(ctx, itemId);
   } else {
@@ -693,6 +663,6 @@ function drawItemIcon(canvas, itemId) {
     ctx.drawImage(atlasCanvas, def.tiles[2] * TILE_PX, 0, TILE_PX, TILE_PX, 0, 0, 16, 16);
   }
   if (typeof getItemEnchantLevel === 'function' && getItemEnchantLevel(itemId) > 0) {
-    ctx.fillStyle = '#e879f9'; ctx.fillRect(11, 2, 2, 2); ctx.fillRect(3, 11, 2, 2); ctx.fillStyle = '#c084fc'; ctx.fillRect(12, 4, 1, 2);
+    ctx.fillStyle = '#e879f9'; ctx.fillRect(11, 2, 2, 2); ctx.fillRect(3, 11, 2, 2);
   }
 }

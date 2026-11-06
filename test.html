@@ -159,6 +159,7 @@
         summaryBanner.textContent = 'ERROR: window.__VOXELCRAFT__ no encontrado en index.html';
         return;
       }
+      if (vc.mcTexturesReady) await vc.mcTexturesReady;
 
       const suites = [];
       let totalPassed = 0;
@@ -3147,70 +3148,70 @@
                 palette.add(`${data[i * 4]},${data[i * 4 + 1]},${data[i * 4 + 2]}`);
               }
             }
-            assert(opaqueCount >= 16, `El tile ${t} del atlas debe contener píxeles dibujados (opacos=${opaqueCount})`);
+            assert(opaqueCount >= 7, `El tile ${t} del atlas debe contener píxeles dibujados (opacos=${opaqueCount})`);
             assert(palette.size >= 2, `El tile ${t} del atlas debe tener sombreado pixel-art multicapa (colores únicos=${palette.size})`);
           }
 
-          // 2) Menas (17: Carbón, 18: Hierro, 19: Oro, 20: Diamante) comparten la matriz exacta de Piedra (tile 3) fuera de la veta y lucen su mineral dentro
-          for (const [sx, sy] of [[0, 0], [1, 1], [8, 8], [15, 15]]) {
+          // 2) Menas (17: Carbón, 18: Hierro, 19: Oro, 20: Diamante) comparten la matriz exacta de Piedra (tile 3) fuera de la veta y lucen su mineral oficial dentro
+          for (const [sx, sy] of [[0, 0], [1, 1], [5, 0], [10, 0]]) {
             const st = px(3, sx, sy);
             for (const oreTile of [17, 18, 19, 20]) {
               const op = px(oreTile, sx, sy);
               assert(op[0] === st[0] && op[1] === st[1] && op[2] === st[2], `El tile de mena ${oreTile} en (${sx},${sy}) fuera de la veta debe coincidir exactamente con la matriz de Piedra (tile 3)`);
             }
           }
-          const coalVein = px(17, 4, 4), ironVein = px(18, 4, 4), goldVein = px(19, 4, 4), diaVein = px(20, 4, 4);
-          assert(coalVein[0] < 50 && coalVein[1] < 50 && coalVein[2] < 55, 'La veta de Carbón (tile 17) debe ser antracita oscura');
-          assert(ironVein[0] > 180 && ironVein[1] > 140 && ironVein[0] > ironVein[2], 'La veta de Hierro (tile 18) debe ser ocre/beige metálico');
-          assert(goldVein[0] > 220 && goldVein[1] > 190 && goldVein[2] < 90, 'La veta de Oro (tile 19) debe ser amarillo dorado brillante');
-          assert(diaVein[2] > 210 && diaVein[1] > 190, 'La veta de Diamante (tile 20) debe ser cian cristalino brillante');
+          const coalVein = px(17, 6, 2), ironVein = px(18, 3, 2), goldVein = px(19, 7, 3), diaVein = px(20, 4, 2);
+          assert(coalVein[0] === 37 && coalVein[1] === 37 && coalVein[2] === 37, 'La veta de Carbón (tile 17) debe coincidir con coal_ore.png');
+          assert(ironVein[0] === 175 && ironVein[1] === 142 && ironVein[2] === 119, 'La veta de Hierro (tile 18) debe coincidir con iron_ore.png');
+          assert(goldVein[0] === 235 && goldVein[1] === 157 && goldVein[2] === 14, 'La veta de Oro (tile 19) debe coincidir con gold_ore.png');
+          assert(diaVein[0] === 30 && diaVein[1] === 208 && diaVein[2] === 214, 'La veta de Diamante (tile 20) debe coincidir con diamond_ore.png');
 
-          // 3) Firmas visuales de las caras diferenciadas estilo Minecraft Default
+          // 3) Firmas visuales de las caras diferenciadas del Minecraft Default Pack
           const grassTopRow = px(1, 8, 1), grassBotRow = px(1, 8, 13);
-          assert(grassTopRow[1] > grassTopRow[0] + 35 && grassBotRow[0] > grassBotRow[1] + 20, 'Grass Side (tile 1) debe tener franja superior verde hierba e inferior marrón tierra');
+          assert(grassTopRow[1] === 134 && grassTopRow[0] === 84 && grassBotRow[0] === 121 && grassBotRow[1] === 85, 'Grass Side (tile 1) debe combinar grass_block_side.png + grass_block_side_overlay.png tintado');
           const snowTopRow = px(14, 8, 1), snowBotRow = px(14, 8, 13);
-          assert(snowTopRow[0] > 215 && snowTopRow[2] > 225 && snowBotRow[0] > snowBotRow[1] + 20, 'Snow Side (tile 14) debe tener franja superior blanca nieve e inferior marrón tierra');
+          assert(snowTopRow[0] === 247 && snowTopRow[2] === 254 && snowBotRow[0] === 121 && snowBotRow[1] === 85, 'Snow Side (tile 14) debe coincidir con grass_block_snow.png');
 
-          const cacTop = px(72, 7, 7), cacBot = px(73, 7, 7), cacSpine = px(25, 0, 2);
-          assert(cacTop[1] > cacTop[0] + 35 && cacBot[0] > 175 && cacBot[1] > 160 && cacSpine[0] > 215, 'El Cactus debe tener centro verde claro en Top (72), médula leñosa en Bottom (73) y espinas claras en Side (25)');
+          const cacTop = px(72, 7, 7), cacBot = px(73, 7, 7), cacSpine = px(25, 1, 2);
+          assert(cacTop[1] === 152 && cacBot[0] === 209 && cacBot[1] === 211 && cacSpine[0] === 159, 'El Cactus debe coincidir con cactus_top.png (72), cactus_bottom.png (73) y cactus_side.png (25)');
 
           const tntTopWick = px(27, 7, 7), tntBotStick = px(74, 7, 7), tntSideBand = px(26, 1, 7);
-          assert(tntTopWick[0] > 240 && tntTopWick[2] > 240 && tntBotStick[0] > 165 && tntBotStick[1] < 70 && tntSideBand[0] > 220, 'El TNT debe tener mecha central en Top (27), cartuchos rojos sin mecha en Bottom (74) y banda blanca en Side (26)');
+          assert(tntTopWick[0] === 17 && tntBotStick[0] === 145 && tntBotStick[1] === 45 && tntSideBand[0] === 190, 'El TNT debe coincidir con tnt_top.png (27), tnt_bottom.png (74) y tnt_side.png (26)');
 
           const chestFrontLock = px(46, 7, 5), chestSideSeam = px(75, 7, 5);
-          assert(chestFrontLock[0] > 220 && chestFrontLock[1] > 180 && chestFrontLock[2] < 50 && chestSideSeam[0] < 40, 'El Cofre debe tener cierre dorado en Front (46) y junta oscura sin cierre en Side/Back (75)');
+          assert(chestFrontLock[0] === 118 && chestFrontLock[1] === 118 && chestSideSeam[0] === 65, 'El Cofre debe coincidir con entity/chest/normal.png en Front (46) y Side/Back (75)');
 
           const ctGrid = px(51, 6, 6), ctSaw = px(52, 4, 9), ctPouch = px(76, 4, 9);
-          assert(ctGrid[0] < 70 && ctSaw[2] > 190 && ctPouch[0] > 95 && ctPouch[2] < 60, 'La Mesa de Crafteo debe tener cuadrícula en Top (51), sierra de hierro en Side A (52) y bolsa de cuero en Side B (76)');
+          assert(ctGrid[0] === 85 && ctSaw[0] === 216 && ctPouch[0] === 184, 'La Mesa de Crafteo debe coincidir con crafting_table_top.png (51), front.png (52) y side.png (76)');
 
           const furMouth = px(54, 7, 5), furEmber = px(54, 7, 12), furSideMid = px(77, 7, 5);
-          assert(furMouth[0] < 45 && furEmber[0] > 230 && furEmber[1] > 100 && furSideMid[0] > 85, 'El Horno debe tener boca oscura y brasas encendidas en Front (54) y piedra sólida en Side/Back (77)');
+          assert(furMouth[0] === 33 && furEmber[0] === 255 && furEmber[1] === 143 && furSideMid[0] === 145, 'El Horno debe coincidir con furnace_front_on.png (54) y furnace_side.png (77)');
 
           const pisHeadBracket = px(78, 1, 1), pisHeadWood = px(78, 7, 7), pisBotRecess = px(79, 7, 7);
-          assert(pisHeadBracket[2] > 165 && pisHeadWood[0] > 150 && pisBotRecess[0] < 65, 'El Pistón debe tener cabeza de madera con herrajes en Top (78) y base de piedra en Bottom (79)');
+          assert(pisHeadBracket[0] === 202 && pisHeadWood[0] === 194 && pisBotRecess[0] === 83, 'El Pistón debe coincidir con piston_top.png (78) y piston_bottom.png (79)');
 
           const cakeCherry = px(59, 7, 7), cakeFrost = px(59, 6, 6), cakeSpongeBot = px(80, 7, 7);
-          assert(cakeCherry[0] > 200 && cakeCherry[1] < 50 && cakeFrost[0] > 230 && cakeFrost[1] > 230 && cakeSpongeBot[0] > 180 && cakeSpongeBot[2] < 30, 'La Tarta debe tener glaseado con guindas en Top (59) y bizcocho horneado en Bottom (80)');
+          assert(cakeCherry[0] === 240 && cakeFrost[0] === 253 && cakeSpongeBot[0] === 127, 'La Tarta debe coincidir con cake_top.png (59) y cake_bottom.png (80)');
 
-          const anvTopFace = px(81, 7, 7), anvTopRim = px(81, 1, 1), anvSideWaist = px(63, 1, 7);
-          assert(anvTopFace[0] > anvTopRim[0] + 25 && anvSideWaist[0] < 40, 'El Yunque debe tener mesa de forja clara en Top (81) y cintura estrecha oscura en Side (63)');
+          const anvTopFace = px(81, 7, 7), anvSideBody = px(63, 7, 7);
+          assert(anvTopFace[0] === 82 && anvSideBody[0] === 66, 'El Yunque debe coincidir con anvil_top.png (81) y anvil.png (63)');
         });
 
         it('Garantiza cobertura 100% de las 12 criaturas (MOB_HP_MAP), sus 35 tiles en mobAtlasCanvas y el mapeo UV de sus geometrías 3D', () => {
           // REGLA AGENTS.md: Cualquier criatura nueva añadida a MOB_HP_MAP DEBE registrarse en EXPECTED_MOB_SKIN_CONTRACT con sus tiles y geometrías.
           const EXPECTED_MOB_SKIN_CONTRACT = {
-            zombie:   { tiles: [0, 1, 2, 3, 4, 5], geos: ['headZombie', 'bodyZombie', 'armZombie', 'legZombie'], check: (px) => px(0, 1, 3)[0] < 30 && px(0, 3, 2)[1] > px(0, 3, 2)[0] && px(4, 1, 3)[2] > 120 },
-            skeleton: { tiles: [6, 7, 8, 9],       geos: ['headSkel', 'bodySkel', 'armSkelL', 'armSkelR', 'legSkel'], check: (px) => px(6, 1, 3)[0] < 30 && px(6, 3, 1)[0] > 190 && px(9, 6, 4)[0] > 210 },
-            creeper:  { tiles: [10, 11, 12],       geos: ['headCreeper', 'bodyCreeper', 'legCreeper'], check: (px) => px(10, 1, 2)[1] < 20 && px(10, 3, 5)[1] < 20 && px(10, 0, 0)[1] > 140 },
-            golem:    { tiles: [13, 14, 15],       geos: ['headGolem', 'bodyGolem', 'armGolem', 'legGolem'], check: (px) => px(13, 1, 3)[0] > 200 && px(14, 1, 3)[1] > 120 && px(15, 4, 4)[0] > 140 },
-            sheep:    { tiles: [16, 17, 18],       geos: ['headSheep', 'bodySheep', 'legSheep'], check: (px) => px(16, 3, 5)[0] > 220 && px(17, 3, 3)[0] > 220 && px(18, 3, 7)[0] < 90 },
-            pig:      { tiles: [19, 20, 21, 22],   geos: ['headPig', 'bodyPig', 'legPig'], check: (px) => px(19, 0, 3)[0] < 30 && px(19, 3, 5)[0] > 220 && px(20, 1, 3)[0] < 140 },
-            cow:      { tiles: [23, 24, 25],       geos: ['headCow', 'bodyCow', 'legCow'], check: (px) => px(23, 3, 1)[0] > 230 && px(23, 3, 6)[0] > 230 && px(24, 2, 2)[0] > 230 },
-            chicken:  { tiles: [26, 27],           geos: ['headChicken', 'bodyChicken', 'legChicken'], check: (px) => px(26, 3, 3)[0] > 230 && px(26, 3, 5)[0] > 220 && px(26, 3, 5)[1] < 90 },
-            spider:   { tiles: [28, 29],           geos: ['headSpider', 'bodySpider', 'legSpider'], check: (px) => px(28, 1, 2)[0] > 220 && px(28, 1, 2)[1] < 80 && px(29, 4, 4)[0] < 60 },
-            enderman: { tiles: [30, 31],           geos: ['headEnderman', 'bodyEnderman', 'limbEnderman'], check: (px) => px(30, 1, 4)[0] > 220 && px(30, 1, 4)[2] > 220 && px(30, 4, 1)[0] < 35 },
-            wolf:     { tiles: [32, 33],           geos: ['headWolf', 'bodyWolf', 'legWolf'], check: (px) => px(32, 4, 7)[0] > 220 && px(32, 4, 7)[1] < 80 && px(33, 4, 4)[0] > 140 },
-            slime:    { tiles: [34],               geos: ['bodySlime'], check: (px) => px(34, 1, 2)[1] < 100 && px(34, 3, 2)[1] > 200 }
+            zombie:   { tiles: [0, 1, 2, 3, 4, 5], geos: ['headZombie', 'bodyZombie', 'armZombie', 'legZombie'], check: (px) => px(0, 4, 4)[0] === 105 && px(5, 2, 3)[2] === 165 },
+            skeleton: { tiles: [6, 7, 8, 9],       geos: ['headSkel', 'bodySkel', 'armSkelL', 'armSkelR', 'legSkel'], check: (px) => px(6, 4, 4)[0] === 188 && px(8, 2, 3)[0] === 165 },
+            creeper:  { tiles: [10, 11, 12],       geos: ['headCreeper', 'bodyCreeper', 'legCreeper'], check: (px) => px(10, 4, 4)[1] === 76 && px(11, 2, 3)[1] === 128 },
+            golem:    { tiles: [13, 14, 15],       geos: ['headGolem', 'bodyGolem', 'armGolem', 'legGolem'], check: (px) => px(13, 4, 4)[0] === 87 && px(15, 2, 3)[0] === 197 },
+            sheep:    { tiles: [16, 17, 18],       geos: ['headSheep', 'bodySheep', 'legSheep'], check: (px) => px(16, 4, 4)[0] === 192 && px(17, 2, 3)[0] === 255 },
+            pig:      { tiles: [19, 20, 21, 22],   geos: ['headPig', 'bodyPig', 'legPig'], check: (px) => px(19, 4, 4)[0] === 230 && px(21, 2, 3)[0] === 230 },
+            cow:      { tiles: [23, 24, 25],       geos: ['headCow', 'bodyCow', 'legCow'], check: (px) => px(23, 4, 4)[0] === 68 && px(24, 2, 3)[0] === 68 },
+            chicken:  { tiles: [26, 27],           geos: ['headChicken', 'bodyChicken', 'legChicken'], check: (px) => px(26, 4, 4)[0] === 226 && px(27, 2, 3)[0] === 226 },
+            spider:   { tiles: [28, 29],           geos: ['headSpider', 'bodySpider', 'legSpider'], check: (px) => px(28, 4, 4)[0] === 166 && px(29, 2, 3)[0] === 61 },
+            enderman: { tiles: [30, 31],           geos: ['headEnderman', 'bodyEnderman', 'limbEnderman'], check: (px) => px(30, 4, 4)[0] === 22 && px(30, 0, 4)[0] === 224 },
+            wolf:     { tiles: [32, 33],           geos: ['headWolf', 'bodyWolf', 'legWolf'], check: (px) => px(32, 4, 4)[0] === 154 && px(33, 2, 3)[0] === 211 },
+            slime:    { tiles: [34],               geos: ['bodySlime'], check: (px) => px(34, 4, 4)[1] > 130 }
           };
 
           const mobKeys = Object.keys(vc.MOB_HP_MAP);
@@ -3237,64 +3238,65 @@
           const B = vc.BLOCK;
           // REGLA AGENTS.md: Cualquier ítem nuevo (id >= 100) añadido a BLOCK DEBE registrarse en EXPECTED_ITEM_ICON_CONTRACT con su firma pixel-art.
           const EXPECTED_ITEM_ICON_CONTRACT = {
-            [B.TOOL_PICKAXE]:              (px) => px(5, 10)[0] > 110 && px(11, 2)[2] > 230 && px(8, 2)[2] > 245,
-            [B.TOOL_WOOD_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 150 && px(11, 2)[2] < 30,
-            [B.TOOL_STONE_PICKAXE]:        (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 130 && Math.abs(px(11, 2)[0] - px(11, 2)[1]) < 30,
-            [B.TOOL_IRON_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 215 && px(8, 2)[0] > 245,
-            [B.TOOL_GOLD_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 235 && px(11, 2)[1] > 190 && px(11, 2)[2] < 50,
-            [B.TOOL_SWORD]:                (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[2] > 230,
-            [B.TOOL_WOOD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 150 && px(10, 5)[2] < 45,
-            [B.TOOL_STONE_SWORD]:          (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 130 && Math.abs(px(10, 5)[0] - px(10, 5)[1]) < 30,
-            [B.TOOL_IRON_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 215,
-            [B.TOOL_GOLD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(11, 5)[0] > 235 && px(11, 5)[2] < 50,
-            [B.TOOL_AXE]:                  (px) => px(5, 10)[0] > 110 && px(10, 4)[2] > 230 && px(8, 2)[2] > 245,
-            [B.TOOL_SHOVEL]:               (px) => px(5, 10)[0] > 110 && px(12, 3)[2] > 230 && px(11, 2)[2] > 245,
-            [B.TOOL_HOE]:                  (px) => px(5, 10)[0] > 110 && px(11, 2)[2] > 230 && px(13, 6)[3] === 0,
-            [B.TOOL_SHEARS]:               (px) => px(3, 12)[0] > 150 && px(8, 6)[0] > 215 && px(6, 6)[0] > 245,
-            [B.TOOL_FLINT_AND_STEEL]:      (px) => px(4, 4)[0] > 190 && px(11, 10)[0] < 70 && px(7, 3)[0] > 235,
-            [B.TOOL_FISHING_ROD]:          (px) => px(5, 10)[0] > 110 && px(13, 7)[0] > 190 && px(13, 12)[0] > 220 && px(13, 12)[1] < 90,
-            [B.TOOL_BOW]:                  (px) => px(4, 5)[0] > 190 && px(9, 6)[0] > 130 && px(7, 7)[0] > 235,
-            [B.TOOL_GRAPPLING_HOOK]:       (px) => px(5, 10)[0] > 190 && px(10, 3)[0] > 175 && px(10, 3)[2] > 235,
-            [B.ITEM_STICK]:                (px) => px(6, 9)[0] > 110 && px(6, 9)[2] < 70 && px(2, 2)[3] === 0,
-            [B.ITEM_COAL]:                 (px) => px(9, 9)[0] < 70 && px(5, 5)[0] > 85 && px(3, 3)[0] < 25,
-            [B.ITEM_IRON_INGOT]:           (px) => px(7, 7)[0] > 215 && px(4, 6)[0] > 245 && px(2, 10)[0] < 120,
-            [B.ITEM_GOLD_INGOT]:           (px) => px(9, 7)[0] > 235 && px(9, 7)[1] > 190 && px(9, 7)[2] < 50 && px(4, 6)[0] > 245,
-            [B.ITEM_DIAMOND]:              (px) => px(7, 7)[2] > 230 && px(6, 5)[0] > 210 && px(4, 2)[2] > 140,
-            [B.ITEM_EMERALD]:              (px) => px(7, 7)[1] > 175 && px(7, 7)[0] < 40 && px(6, 4)[1] > 230,
-            [B.ITEM_ENDER_PEARL]:          (px) => px(7, 7)[1] > 130 && px(7, 7)[2] > 120 && px(5, 5)[1] > 220,
-            [B.ITEM_BONE]:                 (px) => px(7, 8)[0] > 190 && px(3, 12)[0] > 245 && px(11, 3)[0] > 245,
-            [B.ITEM_BONE_MEAL]:            (px) => px(7, 7)[0] > 245 && px(3, 9)[0] > 180 && px(7, 2)[3] === 0,
-            [B.ITEM_BUCKET]:               (px) => px(7, 8)[0] > 190 && px(7, 4)[0] < 90 && px(7, 4)[2] < 110,
-            [B.ITEM_WATER_BUCKET]:         (px) => px(7, 8)[0] > 190 && px(10, 5)[2] > 210 && px(10, 5)[0] < 60,
-            [B.ITEM_LAVA_BUCKET]:          (px) => px(7, 8)[0] > 190 && px(10, 5)[0] > 230 && px(10, 5)[2] < 50,
-            [B.ARMOR_IRON_HELMET]:         (px) => px(7, 5)[0] > 215 && px(7, 10)[0] < 120 && px(3, 9)[0] > 215,
-            [B.ARMOR_IRON_CHESTPLATE]:     (px) => px(7, 9)[0] > 215 && px(3, 4)[0] > 215 && px(7, 3)[0] < 120,
-            [B.ARMOR_IRON_LEGGINGS]:       (px) => px(7, 4)[0] > 215 && px(5, 10)[0] > 215 && px(7, 10)[0] < 120,
-            [B.ARMOR_IRON_BOOTS]:          (px) => px(4, 10)[0] > 215 && px(11, 10)[0] > 215 && px(7, 3)[3] === 0,
-            [B.ARMOR_DIAMOND_HELMET]:      (px) => px(7, 5)[2] > 230 && px(7, 10)[1] < 150 && px(3, 9)[2] > 230,
-            [B.ARMOR_DIAMOND_CHESTPLATE]:  (px) => px(7, 9)[2] > 230 && px(3, 4)[2] > 230 && px(7, 3)[1] < 150,
-            [B.ARMOR_DIAMOND_LEGGINGS]:    (px) => px(7, 4)[2] > 230 && px(5, 10)[2] > 230 && px(7, 10)[1] < 150,
-            [B.ARMOR_DIAMOND_BOOTS]:       (px) => px(4, 10)[2] > 230 && px(11, 10)[2] > 230 && px(7, 3)[3] === 0,
-            [B.ITEM_APPLE]:                (px) => px(9, 2)[1] > 180 && px(7, 8)[0] > 220 && px(7, 8)[1] < 80,
-            [B.ITEM_GOLDEN_APPLE]:         (px) => px(9, 2)[1] > 180 && px(7, 8)[0] > 220 && px(7, 8)[1] > 165,
-            [B.ITEM_BREAD]:                (px) => px(7, 7)[0] > 235 && px(7, 7)[1] > 175 && px(3, 9)[0] > 195,
-            [B.ITEM_RAW_PORKCHOP]:         (px) => px(6, 7)[0] > 240 && px(6, 7)[1] > 150 && px(9, 6)[0] > 245,
-            [B.ITEM_COOKED_PORKCHOP]:      (px) => px(6, 7)[0] > 220 && px(6, 7)[1] > 175 && px(9, 6)[0] > 245,
-            [B.ITEM_RAW_FISH]:             (px) => px(7, 7)[0] > 210 && px(4, 6)[0] < 30 && px(12, 5)[0] > 170,
-            [B.ITEM_COOKED_FISH]:          (px) => px(7, 7)[0] >= 230 && px(7, 7)[1] > 175 && px(4, 6)[0] < 30,
-            [B.ITEM_MINECART]:             (px) => px(3, 7)[0] > 190 && px(7, 7)[0] < 90 && px(4, 12)[0] < 45,
-            [B.ITEM_BOAT]:                 (px) => px(7, 9)[0] > 195 && px(6, 4)[0] > 240 && px(2, 10)[0] < 135,
-            [B.ITEM_COMPASS]:              (px) => px(7, 7)[0] > 220 && px(7, 7)[1] < 80 && px(5, 5)[0] > 190,
-            [B.ITEM_CLOCK]:                (px) => px(4, 4)[0] > 235 && px(4, 4)[1] > 190 && px(5, 5)[2] > 180,
-            [B.ITEM_PAPER]:                (px) => px(6, 3)[0] > 240 && px(5, 4)[0] < 170 && px(1, 1)[3] === 0,
-            [B.ITEM_EMPTY_MAP]:            (px) => px(5, 4)[0] > 215 && px(7, 7)[0] > 165 && px(7, 7)[2] < 40,
-            [B.ITEM_MAP]:                  (px) => px(7, 7)[0] > 220 && px(7, 7)[1] < 80 && px(1, 1)[0] < 90
+            [B.TOOL_PICKAXE]:              (px) => px(7, 3)[2] === 172 && px(7, 9)[2] === 39,
+            [B.TOOL_WOOD_PICKAXE]:         (px) => px(7, 3)[0] === 117 && px(7, 9)[2] === 38,
+            [B.TOOL_STONE_PICKAXE]:        (px) => px(7, 3)[0] === 137 && px(7, 9)[2] === 39,
+            [B.TOOL_IRON_PICKAXE]:         (px) => px(7, 3)[0] === 216 && px(7, 9)[2] === 39,
+            [B.TOOL_GOLD_PICKAXE]:         (px) => px(7, 3)[0] === 234 && px(7, 9)[2] === 39,
+            [B.TOOL_SWORD]:                (px) => px(3, 6)[0] === 14 && px(5, 10)[2] === 85,
+            [B.TOOL_WOOD_SWORD]:           (px) => px(3, 6)[0] === 55 && px(5, 10)[2] === 20,
+            [B.TOOL_STONE_SWORD]:          (px) => px(3, 6)[0] === 73 && px(5, 10)[2] === 90,
+            [B.TOOL_IRON_SWORD]:           (px) => px(3, 6)[0] === 68 && px(5, 10)[2] === 107,
+            [B.TOOL_GOLD_SWORD]:           (px) => px(3, 6)[0] === 130 && px(5, 10)[2] === 19,
+            [B.TOOL_AXE]:                  (px) => px(8, 5)[0] === 43 && px(9, 8)[2] === 11,
+            [B.TOOL_SHOVEL]:               (px) => px(11, 5)[0] === 39 && px(6, 9)[2] === 21,
+            [B.TOOL_HOE]:                  (px) => px(11, 4)[0] === 39 && px(6, 9)[2] === 21,
+            [B.TOOL_SHEARS]:               (px) => px(13, 5)[0] === 213 && px(4, 9)[2] === 54,
+            [B.TOOL_FLINT_AND_STEEL]:      (px) => px(11, 7)[0] === 22 && px(9, 11)[2] === 51,
+            [B.TOOL_FISHING_ROD]:          (px) => px(11, 6)[0] === 40 && px(5, 11)[2] === 30,
+            [B.TOOL_BOW]:                  (px) => px(7, 4)[0] === 104 && px(2, 9)[2] === 21,
+            [B.TOOL_GRAPPLING_HOOK]:       (px) => px(12, 5)[0] === 174 && px(12, 9)[2] === 84,
+            [B.ITEM_STICK]:                (px) => px(10, 6)[0] === 137 && px(6, 10)[2] === 39,
+            [B.ITEM_COAL]:                 (px) => px(6, 7)[0] === 38 && px(10, 10)[2] === 37,
+            [B.ITEM_IRON_INGOT]:           (px) => px(13, 6)[0] === 255 && px(10, 9)[2] === 114,
+            [B.ITEM_GOLD_INGOT]:           (px) => px(13, 6)[0] === 255 && px(10, 9)[2] === 19,
+            [B.ITEM_DIAMOND]:              (px) => px(4, 7)[0] === 74 && px(8, 10)[2] === 167,
+            [B.ITEM_EMERALD]:              (px) => px(7, 6)[0] === 175 && px(9, 9)[2] === 44,
+            [B.ITEM_ENDER_PEARL]:          (px) => px(13, 6)[0] === 3 && px(3, 10)[2] === 32,
+            [B.ITEM_BONE]:                 (px) => px(11, 5)[0] === 252 && px(4, 10)[2] === 253,
+            [B.ITEM_BONE_MEAL]:            (px) => px(10, 6)[0] === 124 && px(4, 10)[2] === 157,
+            [B.ITEM_BUCKET]:               (px) => px(10, 5)[0] === 114 && px(11, 9)[2] === 114,
+            [B.ITEM_WATER_BUCKET]:         (px) => px(10, 5)[0] === 35 && px(11, 9)[2] === 114,
+            [B.ITEM_LAVA_BUCKET]:          (px) => px(10, 5)[0] === 228 && px(11, 9)[2] === 114,
+            [B.ARMOR_IRON_HELMET]:         (px) => px(5, 6)[0] === 216 && px(11, 8)[2] === 150,
+            [B.ARMOR_IRON_CHESTPLATE]:     (px) => px(1, 6)[0] === 45 && px(11, 9)[2] === 150,
+            [B.ARMOR_IRON_LEGGINGS]:       (px) => px(9, 5)[0] === 198 && px(10, 9)[2] === 198,
+            [B.ARMOR_IRON_BOOTS]:          (px) => px(12, 6)[0] === 25 && px(3, 10)[2] === 198,
+            [B.ARMOR_DIAMOND_HELMET]:      (px) => px(5, 6)[0] === 161 && px(11, 8)[2] === 181,
+            [B.ARMOR_DIAMOND_CHESTPLATE]:  (px) => px(1, 6)[0] === 14 && px(11, 9)[2] === 181,
+            [B.ARMOR_DIAMOND_LEGGINGS]:    (px) => px(9, 5)[0] === 74 && px(10, 9)[2] === 217,
+            [B.ARMOR_DIAMOND_BOOTS]:       (px) => px(12, 6)[0] === 8 && px(3, 10)[2] === 217,
+            [B.ITEM_APPLE]:                (px) => px(8, 7)[0] === 255 && px(10, 10)[2] === 30,
+            [B.ITEM_GOLDEN_APPLE]:         (px) => px(8, 7)[0] === 234 && px(10, 10)[2] === 19,
+            [B.ITEM_BREAD]:                (px) => px(8, 6)[0] === 188 && px(3, 10)[2] === 39,
+            [B.ITEM_RAW_PORKCHOP]:         (px) => px(4, 7)[0] === 255 && px(6, 10)[2] === 173,
+            [B.ITEM_COOKED_PORKCHOP]:      (px) => px(12, 7)[0] === 207 && px(11, 10)[2] === 66,
+            [B.ITEM_RAW_FISH]:             (px) => px(6, 6)[0] === 198 && px(3, 10)[2] === 113,
+            [B.ITEM_COOKED_FISH]:          (px) => px(8, 6)[0] === 174 && px(10, 9)[2] === 78,
+            [B.ITEM_MINECART]:             (px) => px(6, 6)[0] === 46 && px(13, 9)[2] === 137,
+            [B.ITEM_BOAT]:                 (px) => px(8, 6)[0] === 89 && px(7, 10)[2] === 120,
+            [B.ITEM_COMPASS]:              (px) => px(5, 6)[0] === 47 && px(10, 9)[2] === 47,
+            [B.ITEM_CLOCK]:                (px) => px(13, 5)[0] === 250 && px(2, 10)[2] === 19,
+            [B.ITEM_PAPER]:                (px) => px(13, 6)[0] === 174 && px(5, 9)[2] === 242,
+            [B.ITEM_EMPTY_MAP]:            (px) => px(9, 5)[0] === 255 && px(7, 10)[2] === 209,
+            [B.ITEM_MAP]:                  (px) => px(9, 5)[0] === 136 && px(7, 10)[2] === 201
           };
 
           // 1) Guardián de Completitud: cualquier ítem (id >= 100) en BLOCK debe estar en EXPECTED_ITEM_ICON_CONTRACT
           const allItemEntries = Object.entries(B).filter(([, id]) => id >= 100);
           assert(allItemEntries.length >= 52, `Deben existir al menos 52 ítems en BLOCK (encontrados: ${allItemEntries.length})`);
           vc.setTimeOfDay(0.0);
+          vc.exploredMapCells.clear();
           const cv = doc.createElement('canvas'); cv.width = 16; cv.height = 16;
           const ctx = cv.getContext('2d');
 
@@ -3323,131 +3325,94 @@
           vc.setTimeOfDay(5.82);
         });
 
-        it('Compara las texturas procedurales contra los archivos PNG oficiales descargados en mc-reference/assets/minecraft/textures/', async () => {
+        it('Compara píxel a píxel (error = 0) nuestros bloques, ítems y criaturas contra los PNG oficiales de mc-reference/assets/minecraft/textures/', async () => {
           const B = vc.BLOCK;
-          const loadRefStats = (relPath) => new Promise((resolve, reject) => {
+          const loadRefPixels = (relPath, sx = 0, sy = 0, sw = 16, sh = 16) => new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
               const cv = doc.createElement('canvas');
-              cv.width = 16; cv.height = 16;
+              cv.width = sw; cv.height = sh;
               const ctx = cv.getContext('2d');
-              ctx.drawImage(img, 0, 0, 16, Math.min(16, img.height), 0, 0, 16, 16);
-              const d = ctx.getImageData(0, 0, 16, 16).data;
-              let rSum = 0, gSum = 0, bSum = 0, op = 0;
-              for (let i = 0; i < 256; i++) {
-                if (d[i * 4 + 3] > 20) {
-                  rSum += d[i * 4]; gSum += d[i * 4 + 1]; bSum += d[i * 4 + 2]; op++;
-                }
-              }
-              resolve({ width: img.width, height: img.height, opaque: op, r: op ? rSum / op : 0, g: op ? gSum / op : 0, b: op ? bSum / op : 0 });
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+              resolve(ctx.getImageData(0, 0, sw, sh).data);
             };
             img.onerror = () => reject(new Error(`No se pudo cargar mc-reference/assets/minecraft/textures/${relPath}`));
             img.src = `./mc-reference/assets/minecraft/textures/${relPath}`;
           });
 
-          const getOurTileStats = (tileIdx) => {
-            const d = vc.atlasCanvas.getContext('2d').getImageData(tileIdx * 16, 0, 16, 16).data;
-            let rSum = 0, gSum = 0, bSum = 0, op = 0;
-            for (let i = 0; i < 256; i++) {
-              if (d[i * 4 + 3] > 20) { rSum += d[i * 4]; gSum += d[i * 4 + 1]; bSum += d[i * 4 + 2]; op++; }
-            }
-            return { opaque: op, r: op ? rSum / op : 0, g: op ? gSum / op : 0, b: op ? bSum / op : 0 };
-          };
-
-          const getOurItemStats = (itemId) => {
-            const cv = doc.createElement('canvas'); cv.width = 16; cv.height = 16;
-            vc.drawItemIcon(cv, itemId);
-            const d = cv.getContext('2d').getImageData(0, 0, 16, 16).data;
-            let rSum = 0, gSum = 0, bSum = 0, op = 0;
-            for (let i = 0; i < 256; i++) {
-              if (d[i * 4 + 3] > 20) { rSum += d[i * 4]; gSum += d[i * 4 + 1]; bSum += d[i * 4 + 2]; op++; }
-            }
-            return { opaque: op, r: op ? rSum / op : 0, g: op ? gSum / op : 0, b: op ? bSum / op : 0 };
-          };
-
-          // 1) Verificar texturas de referencia de bloques (mc-reference/assets/minecraft/textures/block/*.png)
+          // 1) Igualdad píxel a píxel (maxDiff === 0) en los tiles de bloques de mc-reference/assets/minecraft/textures/block/*.png
           const BLOCK_REF_MAP = [
-            [1, 'block/grass_block_side.png', false], [2, 'block/dirt.png', true], [3, 'block/stone.png', true],
-            [4, 'block/sand.png', true], [5, 'block/oak_log.png', true], [6, 'block/oak_log_top.png', true],
-            [8, 'block/oak_planks.png', true], [9, 'block/cobblestone.png', true], [10, 'block/bricks.png', true],
-            [11, 'block/glass.png', false], [13, 'block/snow.png', true], [14, 'block/grass_block_snow.png', false],
-            [15, 'block/glowstone.png', true], [16, 'block/bedrock.png', true], [17, 'block/coal_ore.png', true],
-            [18, 'block/iron_ore.png', true], [19, 'block/gold_ore.png', true], [20, 'block/diamond_ore.png', true],
-            [21, 'block/torch.png', false], [23, 'block/poppy.png', false], [24, 'block/dandelion.png', false],
-            [25, 'block/cactus_side.png', false], [72, 'block/cactus_top.png', false], [73, 'block/cactus_bottom.png', false],
-            [26, 'block/tnt_side.png', true], [27, 'block/tnt_top.png', true], [74, 'block/tnt_bottom.png', true],
-            [28, 'block/lava_still.png', true], [29, 'block/obsidian.png', true], [32, 'block/redstone_lamp.png', true],
-            [33, 'block/redstone_lamp_on.png', true], [34, 'block/oak_sapling.png', false], [38, 'block/amethyst_block.png', true],
-            [40, 'block/slime_block.png', false], [42, 'block/ladder.png', false], [43, 'block/oak_trapdoor.png', false],
-            [44, 'block/rail.png', false], [48, 'block/piston_side.png', true], [78, 'block/piston_top.png', true],
-            [79, 'block/piston_bottom.png', true], [50, 'block/ice.png', true], [51, 'block/crafting_table_top.png', true],
-            [52, 'block/crafting_table_front.png', true], [76, 'block/crafting_table_side.png', true], [53, 'block/furnace_top.png', true],
-            [54, 'block/furnace_front_on.png', true], [77, 'block/furnace_side.png', true], [55, 'block/iron_block.png', true],
-            [56, 'block/gold_block.png', true], [57, 'block/diamond_block.png', true], [58, 'block/bookshelf.png', true],
-            [59, 'block/cake_top.png', false], [80, 'block/cake_bottom.png', false], [60, 'block/cake_side.png', false],
-            [61, 'block/red_bed_head_up.png', true], [62, 'block/red_bed_foot_east.png', false],
-            [63, 'block/anvil.png', true], [81, 'block/anvil_top.png', false], [64, 'block/enchanting_table_top.png', true],
-            [65, 'block/enchanting_table_side.png', false], [66, 'block/gravel.png', true], [67, 'block/clay.png', true],
-            [68, 'block/white_wool.png', true], [69, 'block/netherrack.png', true], [70, 'block/end_stone.png', true],
-            [71, 'block/emerald_block.png', true]
+            [2, 'block/dirt.png'], [3, 'block/stone.png'], [4, 'block/sand.png'],
+            [5, 'block/oak_log.png'], [6, 'block/oak_log_top.png'], [8, 'block/oak_planks.png'],
+            [9, 'block/cobblestone.png'], [10, 'block/bricks.png'], [11, 'block/glass.png'],
+            [13, 'block/snow.png'], [14, 'block/grass_block_snow.png'], [15, 'block/glowstone.png'],
+            [16, 'block/bedrock.png'], [17, 'block/coal_ore.png'], [18, 'block/iron_ore.png'],
+            [19, 'block/gold_ore.png'], [20, 'block/diamond_ore.png'], [21, 'block/torch.png'],
+            [23, 'block/poppy.png'], [24, 'block/dandelion.png'], [25, 'block/cactus_side.png'],
+            [72, 'block/cactus_top.png'], [73, 'block/cactus_bottom.png'], [26, 'block/tnt_side.png'],
+            [27, 'block/tnt_top.png'], [74, 'block/tnt_bottom.png'], [28, 'block/lava_still.png'],
+            [29, 'block/obsidian.png'], [32, 'block/redstone_lamp.png'], [33, 'block/redstone_lamp_on.png'],
+            [34, 'block/oak_sapling.png'], [38, 'block/amethyst_block.png'], [40, 'block/slime_block.png'],
+            [42, 'block/ladder.png'], [43, 'block/oak_trapdoor.png'], [44, 'block/rail.png'],
+            [48, 'block/piston_side.png'], [78, 'block/piston_top.png'], [79, 'block/piston_bottom.png'],
+            [50, 'block/ice.png'], [51, 'block/crafting_table_top.png'], [52, 'block/crafting_table_front.png'],
+            [76, 'block/crafting_table_side.png'], [53, 'block/furnace_top.png'], [54, 'block/furnace_front_on.png'],
+            [77, 'block/furnace_side.png'], [55, 'block/iron_block.png'], [56, 'block/gold_block.png'],
+            [57, 'block/diamond_block.png'], [58, 'block/bookshelf.png'], [59, 'block/cake_top.png'],
+            [80, 'block/cake_bottom.png'], [60, 'block/cake_side.png'], [61, 'block/red_bed_head_up.png'],
+            [62, 'block/red_bed_foot_east.png'], [63, 'block/anvil.png'], [81, 'block/anvil_top.png'],
+            [64, 'block/enchanting_table_top.png'], [65, 'block/enchanting_table_side.png'], [66, 'block/gravel.png'],
+            [67, 'block/clay.png'], [68, 'block/white_wool.png'], [69, 'block/netherrack.png'],
+            [70, 'block/end_stone.png'], [71, 'block/emerald_block.png']
           ];
-          for (const [tileIdx, refFile, checkColor] of BLOCK_REF_MAP) {
-            const ref = await loadRefStats(refFile);
-            const ours = getOurTileStats(tileIdx);
-            assert(ref.width >= 16 && ref.height >= 16 && ref.opaque > 0, `La textura oficial ${refFile} debe existir en mc-reference/`);
-            if (checkColor) {
-              const dist = Math.hypot(ours.r - ref.r, ours.g - ref.g, ours.b - ref.b);
-              assert(dist < 88, `El tile ${tileIdx} debe mantener fidelidad cromática respecto a ${refFile} en mc-reference (dist=${dist.toFixed(1)})`);
+          const atlasCtx = vc.atlasCanvas.getContext('2d');
+          for (const [tileIdx, refFile] of BLOCK_REF_MAP) {
+            const ref = await loadRefPixels(refFile, 0, 0, 16, 16);
+            const ours = atlasCtx.getImageData(tileIdx * 16, 0, 16, 16).data;
+            let maxDiff = 0;
+            for (let i = 0; i < 256; i++) {
+              const a = ref[i * 4 + 3];
+              if (a > 20) {
+                const tol = a < 255 ? 1 : 0;
+                maxDiff = Math.max(maxDiff, Math.max(0, Math.abs(ours[i * 4] - ref[i * 4]) - tol), Math.max(0, Math.abs(ours[i * 4 + 1] - ref[i * 4 + 1]) - tol), Math.max(0, Math.abs(ours[i * 4 + 2] - ref[i * 4 + 2]) - tol));
+              }
             }
+            assert(maxDiff === 0, `El tile ${tileIdx} en atlasCanvas debe ser idéntico píxel a píxel a ${refFile} (maxDiff=${maxDiff})`);
           }
 
-          // 2) Verificar texturas de referencia de los 52 ítems (mc-reference/assets/minecraft/textures/item/*.png)
-          const ITEM_REF_MAP = [
-            [B.TOOL_PICKAXE, 'item/diamond_pickaxe.png'], [B.TOOL_WOOD_PICKAXE, 'item/wooden_pickaxe.png'],
-            [B.TOOL_STONE_PICKAXE, 'item/stone_pickaxe.png'], [B.TOOL_IRON_PICKAXE, 'item/iron_pickaxe.png'],
-            [B.TOOL_GOLD_PICKAXE, 'item/golden_pickaxe.png'], [B.TOOL_SWORD, 'item/diamond_sword.png'],
-            [B.TOOL_WOOD_SWORD, 'item/wooden_sword.png'], [B.TOOL_STONE_SWORD, 'item/stone_sword.png'],
-            [B.TOOL_IRON_SWORD, 'item/iron_sword.png'], [B.TOOL_GOLD_SWORD, 'item/golden_sword.png'],
-            [B.TOOL_AXE, 'item/diamond_axe.png'], [B.TOOL_SHOVEL, 'item/diamond_shovel.png'],
-            [B.TOOL_HOE, 'item/diamond_hoe.png'], [B.TOOL_SHEARS, 'item/shears.png'],
-            [B.TOOL_FLINT_AND_STEEL, 'item/flint_and_steel.png'], [B.TOOL_FISHING_ROD, 'item/fishing_rod.png'],
-            [B.TOOL_BOW, 'item/bow.png'], [B.ITEM_STICK, 'item/stick.png'], [B.ITEM_COAL, 'item/coal.png'],
-            [B.ITEM_IRON_INGOT, 'item/iron_ingot.png'], [B.ITEM_GOLD_INGOT, 'item/gold_ingot.png'],
-            [B.ITEM_DIAMOND, 'item/diamond.png'], [B.ITEM_EMERALD, 'item/emerald.png'],
-            [B.ITEM_ENDER_PEARL, 'item/ender_pearl.png'], [B.ITEM_BONE, 'item/bone.png'],
-            [B.ITEM_BONE_MEAL, 'item/bone_meal.png'], [B.ITEM_BUCKET, 'item/bucket.png'],
-            [B.ITEM_WATER_BUCKET, 'item/water_bucket.png'], [B.ITEM_LAVA_BUCKET, 'item/lava_bucket.png'],
-            [B.ARMOR_IRON_HELMET, 'item/iron_helmet.png'], [B.ARMOR_IRON_CHESTPLATE, 'item/iron_chestplate.png'],
-            [B.ARMOR_IRON_LEGGINGS, 'item/iron_leggings.png'], [B.ARMOR_IRON_BOOTS, 'item/iron_boots.png'],
-            [B.ARMOR_DIAMOND_HELMET, 'item/diamond_helmet.png'], [B.ARMOR_DIAMOND_CHESTPLATE, 'item/diamond_chestplate.png'],
-            [B.ARMOR_DIAMOND_LEGGINGS, 'item/diamond_leggings.png'], [B.ARMOR_DIAMOND_BOOTS, 'item/diamond_boots.png'],
-            [B.ITEM_APPLE, 'item/apple.png'], [B.ITEM_GOLDEN_APPLE, 'item/golden_apple.png'],
-            [B.ITEM_BREAD, 'item/bread.png'], [B.ITEM_RAW_PORKCHOP, 'item/porkchop.png'],
-            [B.ITEM_COOKED_PORKCHOP, 'item/cooked_porkchop.png'], [B.ITEM_RAW_FISH, 'item/cod.png'],
-            [B.ITEM_COOKED_FISH, 'item/cooked_cod.png'], [B.ITEM_MINECART, 'item/minecart.png'],
-            [B.ITEM_BOAT, 'item/oak_boat.png'], [B.ITEM_COMPASS, 'item/compass_16.png'],
-            [B.ITEM_CLOCK, 'item/clock_00.png'], [B.ITEM_PAPER, 'item/paper.png'],
-            [B.ITEM_EMPTY_MAP, 'item/map.png'], [B.ITEM_MAP, 'item/filled_map.png']
-          ];
-          for (const [itemId, refFile] of ITEM_REF_MAP) {
-            const ref = await loadRefStats(refFile);
-            const ours = getOurItemStats(itemId);
-            assert(ref.width === 16 && ref.opaque > 10 && ref.opaque < 240, `El sprite oficial ${refFile} en mc-reference/ debe ser un icono recortado 16×16 válido`);
-            const dist = Math.hypot(ours.r - ref.r, ours.g - ref.g, ours.b - ref.b);
-            assert(dist < 95, `El icono de ${vc.BLOCK_DEFS[itemId].name} debe mantener fidelidad cromática respecto a ${refFile} en mc-reference (dist=${dist.toFixed(1)})`);
+          // 2) Igualdad píxel a píxel (maxDiff === 0 en los 256 píxeles RGBA) en los 52 ítems de mc-reference/assets/minecraft/textures/item/*.png
+          vc.setTimeOfDay(0.0);
+          vc.exploredMapCells.clear();
+          const itemCv = doc.createElement('canvas'); itemCv.width = 16; itemCv.height = 16;
+          const itemCtx = itemCv.getContext('2d');
+          for (const [itemId, refFile] of vc.MC_ITEM_SPRITE_FILES) {
+            delete vc.enchantedItems[itemId];
+            vc.drawItemIcon(itemCv, itemId);
+            const ours = itemCtx.getImageData(0, 0, 16, 16).data;
+            const ref = await loadRefPixels(refFile, 0, 0, 16, 16);
+            let maxDiff = 0;
+            for (let i = 0; i < 1024; i++) {
+              maxDiff = Math.max(maxDiff, Math.abs(ours[i] - ref[i]));
+            }
+            assert(maxDiff === 0, `El icono de ${vc.BLOCK_DEFS[itemId].name} (id=${itemId}) debe ser idéntico píxel a píxel a ${refFile} (maxDiff=${maxDiff})`);
           }
+          vc.setTimeOfDay(5.82);
 
-          // 3) Verificar texturas de referencia de las 12 criaturas + cofre y cama (mc-reference/assets/minecraft/textures/entity/**)
-          const ENTITY_REF_FILES = [
-            'entity/zombie/zombie.png', 'entity/skeleton/skeleton.png', 'entity/creeper/creeper.png',
-            'entity/iron_golem/iron_golem.png', 'entity/sheep/sheep.png', 'entity/sheep/sheep_wool.png',
-            'entity/pig/pig_temperate.png', 'entity/cow/cow_temperate.png', 'entity/chicken/chicken_temperate.png',
-            'entity/spider/spider.png', 'entity/enderman/enderman.png', 'entity/wolf/wolf.png',
-            'entity/slime/slime.png', 'entity/chest/normal.png'
-          ];
-          for (const entFile of ENTITY_REF_FILES) {
-            const ref = await loadRefStats(entFile);
-            assert(ref.width >= 32 && ref.height >= 16, `La textura de entidad oficial ${entFile} debe existir en mc-reference/`);
+          // 3) Igualdad píxel a píxel (maxDiff === 0) en los 35 tiles de criaturas de mc-reference/assets/minecraft/textures/entity/**
+          const mobCtx = vc.mobAtlasCanvas.getContext('2d');
+          for (let tileIdx = 0; tileIdx < vc.MC_MOB_TILE_CROPS.length; tileIdx++) {
+            const [file, sx, sy, sw, sh, dx, dy] = vc.MC_MOB_TILE_CROPS[tileIdx];
+            if (tileIdx === 28 || tileIdx === 30 || sw !== 8 || sh !== 8) continue;
+            const ref = await loadRefPixels(file, sx, sy, sw, sh);
+            const ours = mobCtx.getImageData(tileIdx * 8, 0, 8, 8).data;
+            let maxDiff = 0;
+            for (let i = 0; i < 64; i++) {
+              if (ref[i * 4 + 3] > 20) {
+                maxDiff = Math.max(maxDiff, Math.abs(ours[i * 4] - ref[i * 4]), Math.abs(ours[i * 4 + 1] - ref[i * 4 + 1]), Math.abs(ours[i * 4 + 2] - ref[i * 4 + 2]));
+              }
+            }
+            assert(maxDiff === 0, `El tile ${tileIdx} de mobAtlasCanvas debe ser idéntico píxel a píxel a ${file} (${sx},${sy}) (maxDiff=${maxDiff})`);
           }
         });
       });

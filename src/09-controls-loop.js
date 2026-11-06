@@ -762,7 +762,7 @@ window.__VOXELCRAFT__ = {
   getArmorDefenseRatio, equipArmorItem, shearSheep, applyBoneMealAt, fishingBobber, FISHING_LOOT_TABLE, findWaterForFishing, useFishingRod, sleepInBed, respawnPlayerAtBed, useAnvilAt, enchantedItems, getItemEnchantLevel, countNearbyBookshelves, useEnchantingTableAt, cakeSlicesMap, getCakeSlicesAt, eatCakeSliceAt, igniteMobWithFire, useFlintAndSteelAt, getPickaxeTier, getRequiredPickaxeTier, canHarvestBlockWithTool, throwEnderPearl, exploredMapCells, mapState, isMapCellExplored, revealMapAroundPlayer, useEmptyMap, useCartographyMap, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
-  handGroup, handMesh, handMat, handArmMesh, handSleeveMesh, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,
+  handGroup, handMesh, handMat, handArmMesh, handSleeveMesh, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon, mcTexturesReady, MC_BLOCK_TILE_FILES, MC_ITEM_SPRITE_FILES, MC_MOB_TILE_CROPS, MC_CUTOUT_TILES, MC_BIOME_TINTS,
   player, playerAvatar, toggleCameraMode, toggleZoom, getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
   updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
   chunks, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, mobAtlasCanvas, mobAtlasTexture, mobGeos, activeTNTs,
