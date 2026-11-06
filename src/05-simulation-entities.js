@@ -183,11 +183,12 @@ function updateVoxelSimulation(dt) {
       } else if (below === BLOCK.AIR && wy - 1 > 1) {
         setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
       } else {
+        const isSource = (wy <= SEA_LEVEL) || (getVoxelGlobal(wx + 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx - 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz + 1) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz - 1) !== BLOCK.WATER);
         for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
           const sideB = getVoxelGlobal(wx + dx, wy, wz + dz);
           if (sideB === BLOCK.LAVA) {
             setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
-          } else if (wy <= SEA_LEVEL && sideB === BLOCK.AIR) {
+          } else if (isSource && sideB === BLOCK.AIR) {
             const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
             if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER) {
               setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
@@ -203,8 +204,17 @@ function updateVoxelSimulation(dt) {
           turnedToObsidian = true; break;
         }
       }
-      if (!turnedToObsidian && getVoxelGlobal(wx, wy - 1, wz) === BLOCK.AIR && wy - 1 > 1) {
-        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.LAVA, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
+      if (!turnedToObsidian) {
+        const below = getVoxelGlobal(wx, wy - 1, wz);
+        if (below === BLOCK.AIR && wy - 1 > 1) {
+          setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.LAVA, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
+        } else if (BLOCK_DEFS[below].solid && getVoxelGlobal(wx + 1, wy, wz) !== BLOCK.LAVA && getVoxelGlobal(wx - 1, wy, wz) !== BLOCK.LAVA && getVoxelGlobal(wx, wy, wz + 1) !== BLOCK.LAVA && getVoxelGlobal(wx, wy, wz - 1) !== BLOCK.LAVA) {
+          for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            if (getVoxelGlobal(wx + dx, wy, wz + dz) === BLOCK.AIR && BLOCK_DEFS[getVoxelGlobal(wx + dx, wy - 1, wz + dz)].solid) {
+              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.LAVA, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
+            }
+          }
+        }
       }
     } else if (b === BLOCK.SAPLING) {
       const soil = getVoxelGlobal(wx, wy - 1, wz);

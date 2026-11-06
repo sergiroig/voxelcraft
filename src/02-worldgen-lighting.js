@@ -216,6 +216,21 @@ function createWorldGenerator(seed) {
       setF(lx - 1, sy + 1, lz, BLOCK.FLOWER_YELLOW, true);
       return { type: 'oasis' };
     }
+    if (featureType === 'lava_pool') {
+      setF(lx, sy - 1, lz, BLOCK.STONE); setF(lx, sy, lz, BLOCK.LAVA); setF(lx, sy + 1, lz, BLOCK.AIR);
+      for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        setF(lx + dx, sy, lz + dz, BLOCK.STONE);
+      }
+      setF(lx + 1, sy, lz + 1, BLOCK.OBSIDIAN); setF(lx - 1, sy, lz - 1, BLOCK.GRAVEL);
+      return { type: 'lava_pool' };
+    }
+    if (featureType === 'water_spring') {
+      setF(lx, sy - 1, lz, BLOCK.CLAY); setF(lx, sy, lz, BLOCK.WATER); setF(lx, sy + 1, lz, BLOCK.LILY_PAD, true);
+      for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        setF(lx + dx, sy, lz + dz, BLOCK.CLAY);
+      }
+      return { type: 'water_spring' };
+    }
     setF(lx, sy + 1, lz, BLOCK.STONE); setF(lx, sy + 2, lz, BLOCK.COBBLE, true);
     setF(lx + 1, sy + 1, lz, BLOCK.COBBLE, true); setF(lx - 1, sy + 1, lz, BLOCK.GRAVEL, true);
     setF(lx, sy + 1, lz + 1, BLOCK.COBBLE, true);
@@ -354,7 +369,9 @@ function createWorldGenerator(seed) {
             for (let ty = 1; ty <= ch; ty++) data[colOffset + sy + ty] = BLOCK.CACTUS;
           } else if (biome === 'Desierto' && r < 0.0025 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'oasis');
-          } else if (biome === 'Meseta' && r < 0.004) {
+          } else if (r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
+            placeEnvFeatureInChunk(data, lx, sy, lz, 'lava_pool');
+          } else if (biome === 'Meseta' && r < 0.006) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
           }
         } else if (biome === 'Cumbres Heladas') {
@@ -369,6 +386,8 @@ function createWorldGenerator(seed) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'fallen_log');
           } else if (r > treeThr - 0.005 && (biome === 'Taiga Nevada' || biome === 'Llanura')) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
+          } else if (r > treeThr - 0.0065 && sy > SEA_LEVEL + 2 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
+            placeEnvFeatureInChunk(data, lx, sy, lz, biome === 'Sabana' ? 'lava_pool' : 'water_spring');
           } else if (topBlock === BLOCK.GRASS && data[colOffset + sy + 1] === BLOCK.AIR) {
             const grassLim = (biome === 'Jungla' || biome === 'Sabana') ? 0.16 : 0.085;
             if (r < grassLim) data[colOffset + sy + 1] = BLOCK.TALL_GRASS;

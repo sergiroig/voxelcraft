@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=36"></iframe>
+    <iframe id="game-frame" src="./index.html?v=37"></iframe>
   </div>
 
   <script>
@@ -2304,6 +2304,78 @@
           const dTemple = new Uint8Array(vc.CHUNK_VOLUME);
           const tp = gen.placeStructureInChunk(dTemple, surf, 3, 3, 'temple');
           assert(tp.type === 'temple' && dTemple[idx(8, 29, 8)] === vc.BLOCK.ENCHANTING_TABLE && dTemple[idx(7, 29, 6)] === vc.BLOCK.EMERALD_BLOCK && dTemple[idx(8, 29, 6)] === vc.BLOCK.CHEST, 'El Templo de la Jungla debe incluir Mesa de Encantamientos, altar de Esmeralda y Cofre');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 42: Expansión Horizontal de Agua/Lava en Altura, Charcas Volcánicas y Daño Térmico
+      // =========================================================================
+      describe('42. Expansión Horizontal de Agua/Lava en Altura, Charcas Volcánicas y Daño por Lava', () => {
+        it('Expande horizontalmente el Agua y la Lava vertidas sobre suelo sólido en altura (wy > SEA_LEVEL) formando un charco acotado sin inundación infinita', () => {
+          const cx = 10, cy = 54, cz = 10;
+          for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+            vc.setVoxelGlobal(cx + dx, cy - 1, cz + dz, vc.BLOCK.STONE);
+            vc.setVoxelGlobal(cx + dx, cy, cz + dz, vc.BLOCK.AIR);
+          }
+
+          // 1) Verter 1 fuente de Agua en (10, 54, 10) -> se expande a los 4 vecinos cardinales en 1 tick y se detiene en el siguiente
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.WATER);
+          vc.updateVoxelSimulation(0.20);
+          assert(
+            vc.getVoxelGlobal(cx + 1, cy, cz) === vc.BLOCK.WATER &&
+            vc.getVoxelGlobal(cx - 1, cy, cz) === vc.BLOCK.WATER &&
+            vc.getVoxelGlobal(cx, cy, cz + 1) === vc.BLOCK.WATER &&
+            vc.getVoxelGlobal(cx, cy, cz - 1) === vc.BLOCK.WATER,
+            'El Agua vertida en altura debe expandirse horizontalmente a sus 4 vecinos cardinales sobre suelo sólido'
+          );
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(cx + 2, cy, cz) === vc.BLOCK.AIR, 'El charco de Agua en altura debe quedar acotado y no inundar infinitamente a radio 2');
+
+          // Limpiar y probar expansión horizontal de Lava en (10, 54, 10)
+          for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) vc.setVoxelGlobal(cx + dx, cy, cz + dz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.LAVA);
+          vc.updateVoxelSimulation(0.20);
+          assert(
+            vc.getVoxelGlobal(cx + 1, cy, cz) === vc.BLOCK.LAVA &&
+            vc.getVoxelGlobal(cx - 1, cy, cz) === vc.BLOCK.LAVA,
+            'La Lava vertida en altura también debe extenderse horizontalmente sobre suelo sólido'
+          );
+
+          for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+            vc.setVoxelGlobal(cx + dx, cy, cz + dz, vc.BLOCK.AIR);
+            vc.setVoxelGlobal(cx + dx, cy - 1, cz + dz, vc.BLOCK.AIR);
+          }
+        });
+
+        it('Genera charcas volcánicas de Lava (lava_pool) y manantiales (water_spring) en superficie, y aplica daño térmico al tocar Lava en Supervivencia', () => {
+          const gen = vc.getGenerator(), idx = (x, y, z) => (z * 16 + x) * 64 + y;
+          const dPool = new Uint8Array(vc.CHUNK_VOLUME);
+          gen.placeEnvFeatureInChunk(dPool, 5, 28, 5, 'lava_pool');
+          gen.placeEnvFeatureInChunk(dPool, 11, 28, 11, 'water_spring');
+          assert(dPool[idx(5, 28, 5)] === vc.BLOCK.LAVA && dPool[idx(6, 28, 6)] === vc.BLOCK.OBSIDIAN, 'lava_pool debe generar una poza superficial de Lava bordeada de Piedra y Obsidiana');
+          assert(dPool[idx(11, 28, 11)] === vc.BLOCK.WATER && dPool[idx(11, 29, 11)] === vc.BLOCK.LILY_PAD && dPool[idx(12, 28, 11)] === vc.BLOCK.CLAY, 'water_spring debe generar un manantial de Agua con Arcilla y Nenúfar');
+
+          // Probar físicas viscosas y quemadura por Lava en modo Supervivencia
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          vc.toggleGameMode('survival');
+          vc.player.flying = false;
+          vc.armorSlots.fill(0);
+          vc.player.health = 10;
+          vc.player.lavaBurnTimer = 0;
+
+          const lx = 12, ly = 52, lz = 12;
+          vc.setVoxelGlobal(lx, ly - 1, lz, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(lx, ly, lz, vc.BLOCK.LAVA);
+          vc.player.x = lx + 0.5; vc.player.y = ly; vc.player.z = lz + 0.5;
+
+          vc.updatePlayerPhysics(0.65);
+          assert(vc.player.health === 8, `Estar sumergido en Lava durante 0.65s en Supervivencia debe infligir 2❤ de quemadura (HP=${vc.player.health})`);
+
+          vc.setVoxelGlobal(lx, ly, lz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(lx, ly - 1, lz, vc.BLOCK.AIR);
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.player.health = 10;
+          vc.player.lavaBurnTimer = 0;
         });
       });
 

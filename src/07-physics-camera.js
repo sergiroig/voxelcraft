@@ -495,19 +495,20 @@ function updatePlayerPhysics(dt) {
   }
 
   const inWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
+  const inLava = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LAVA || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.LAVA;
   const wantJump = keys['Space'] || touchJump;
   const wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown;
   const sprint   = keys['ShiftLeft'] || keys['ShiftRight'] || joySprint;
 
   const groundBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z));
-  const onIce = !player.flying && !inWater && (
+  const onIce = !player.flying && !inWater && !inLava && (
     groundBlock === BLOCK.ICE ||
     getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.55), Math.floor(player.z)) === BLOCK.ICE
   );
 
   const baseSpeed = player.flying
     ? (sprint ? 22 : 12)
-    : (inWater ? 3.8 : (sprint ? 7.2 : 4.7));
+    : (inLava ? 2.4 : (inWater ? 3.8 : (sprint ? 7.2 : 4.7)));
   const speed = baseSpeed * (onIce ? 1.45 : 1.0) * (isShieldBlocking ? 0.65 : 1.0);
 
   if (onIce) {
@@ -564,11 +565,15 @@ function updatePlayerPhysics(dt) {
       } else {
         player.vy = -2.2;
       }
-    } else if (inWater) {
-      player.vy -= 9.0 * dt;
-      player.vy *= 0.88;
+    } else if (inWater || inLava) {
+      player.vy -= (inLava ? 6.0 : 9.0) * dt;
+      player.vy *= (inLava ? 0.72 : 0.88);
       player.maxFallVel = 0;
-      if (wantJump) player.vy = 4.2;
+      if (wantJump) player.vy = inLava ? 3.4 : 4.2;
+      if (inLava && gameMode === 'survival') {
+        player.lavaBurnTimer = (player.lavaBurnTimer || 0) + dt;
+        if (player.lavaBurnTimer >= 0.6) { player.lavaBurnTimer = 0; damagePlayer(2); spawnBlockParticles(player.x, player.y + 0.5, player.z, BLOCK.LAVA, 8); }
+      }
     } else {
       player.vy -= 26.0 * dt;
       if (player.vy < -38) player.vy = -38;
