@@ -256,7 +256,7 @@ function updateVoxelSimulation(dt) {
 // ============================================================================
 const MAX_WEATHER_DROPS = 180;
 const weatherGeo = new THREE.BoxGeometry(0.05, 0.55, 0.05);
-const weatherMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.72, depthWrite: false });
+const weatherMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.22, depthWrite: false });
 const weatherInstanced = new THREE.InstancedMesh(weatherGeo, weatherMat, MAX_WEATHER_DROPS);
 weatherInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 weatherInstanced.visible = false;
@@ -302,8 +302,10 @@ function updateWeather(dt) {
   const curBiome = generator.getBiomeAt(player.x, player.z);
   isSnowing = (curBiome === 'Taiga Nevada' || curBiome === 'Cumbres Heladas' || player.y >= 42);
   isSandstorm = !isSnowing && (curBiome === 'Desierto' || curBiome === 'Meseta');
-  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0x7dd3fc));
-  weatherScaleVec.set(isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.9), isSnowing ? 0.25 : (isSandstorm ? 0.18 : 1.0), isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.9));
+  const dayBri = Math.max(0.18, typeof sunFactor === 'number' ? sunFactor : 1.0);
+  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0xe2e8f0)).multiplyScalar(isSnowing || isSandstorm ? (0.30 + 0.70 * dayBri) : (0.40 + 0.60 * dayBri));
+  weatherMat.opacity = isSnowing ? (0.20 + 0.28 * dayBri) : (isSandstorm ? (0.18 + 0.22 * dayBri) : (0.08 + 0.16 * dayBri));
+  weatherScaleVec.set(isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.42), isSnowing ? 0.25 : (isSandstorm ? 0.18 : 1.0), isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.42));
 
   if (weatherMode === 'storm') {
     stormThunderAccum += dt;

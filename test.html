@@ -934,6 +934,21 @@
           assert(vc.getWeatherState().weatherMode === 'rain', 'El modo climático debe ser rain');
           assert(vc.weatherInstanced.visible === true, 'weatherInstanced debe ser visible bajo la lluvia');
           assert(vc.gpuShaderUniforms.uWindStrength.value > 1.2, 'La lluvia debe incrementar uWindStrength en GPU');
+          const origTime = vc.getState().timeOfDay, origXRain = vc.player.x, origYRain = vc.player.y, origZRain = vc.player.z;
+          vc.teleportToBiome('Bosque');
+          vc.player.y = 26;
+          vc.setTimeOfDay(0.5);
+          vc.updateDynamicSky(0.016);
+          vc.updateWeather(0.016);
+          const dayRainOpacity = vc.weatherInstanced.material.opacity;
+          vc.setTimeOfDay(Math.PI);
+          vc.updateDynamicSky(0.016);
+          vc.updateWeather(0.016);
+          const nightRainOpacity = vc.weatherInstanced.material.opacity;
+          assert(dayRainOpacity <= 0.28 && nightRainOpacity <= 0.14 && nightRainOpacity < dayRainOpacity, `La lluvia debe ser translúcida de día (opacidad=${dayRainOpacity.toFixed(2)}) y aún más tenue de noche (opacidad=${nightRainOpacity.toFixed(2)})`);
+          vc.setTimeOfDay(origTime);
+          vc.updateDynamicSky(0.016);
+          vc.player.x = origXRain; vc.player.y = origYRain; vc.player.z = origZRain;
 
           vc.toggleWeather('storm');
           assert(vc.getWeatherState().weatherMode === 'storm', 'El modo climático debe ser storm');

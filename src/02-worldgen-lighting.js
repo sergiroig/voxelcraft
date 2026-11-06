@@ -121,7 +121,8 @@ function createWorldGenerator(seed) {
     }
     if (treeType === 'acacia') {
       const leanX = r > 0.99 ? 1 : -1, leanZ = (((r * 100) | 0) & 1) ? 1 : 0;
-      for (let ty = 1; ty <= 3; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+      for (let ty = 1; ty <= 4; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+      if (leanZ !== 0) setT(lx + leanX, sy + 4, lz, BLOCK.WOOD);
       setT(lx + leanX, sy + 4, lz + leanZ, BLOCK.WOOD);
       setT(lx + leanX, sy + 5, lz + leanZ, BLOCK.WOOD);
       const cxT = lx + leanX, czT = lz + leanZ, topY = sy + 5;
