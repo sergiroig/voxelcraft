@@ -484,9 +484,11 @@ function placeBlockAtCurrentTarget() {
     if (currentHit.block === BLOCK.ANVIL) { useAnvilAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.ENCHANTING_TABLE) { useEnchantingTableAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.CAKE) {
+      if (gameMode === 'survival' && (player.hunger ?? 10) >= (player.maxHunger || 10)) return false;
       setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR);
-      player.hunger = Math.min(player.maxHunger || 10, (player.hunger ?? 10) + 6); player.exhaustion = 0;
-      player.health = Math.min(player.maxHealth, player.health + 6);
+      player.hunger = Math.min(player.maxHunger || 10, (player.hunger ?? 10) + 6);
+      player.saturation = Math.min(player.hunger, (player.saturation || 0) + 3.6);
+      player.exhaustion = 0; player.starveTimer = 0;
       renderHeartsUI(); sfx.play('eat'); player.swingTime = 1.0; return true;
     }
     if (bId === BLOCK.ITEM_BONE_MEAL && applyBoneMealAt(currentHit.x, currentHit.y, currentHit.z)) return true;

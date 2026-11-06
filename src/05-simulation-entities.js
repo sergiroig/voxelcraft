@@ -407,15 +407,11 @@ function updateArrows(dt) {
         }
       }
     } else {
-      const stepDist = Math.hypot(a.vx * dt, a.vy * dt, a.vz * dt);
-      const speed = Math.hypot(a.vx, a.vy, a.vz) || 1;
+      const stepDist = Math.hypot(a.vx * dt, a.vy * dt, a.vz * dt), speed = Math.hypot(a.vx, a.vy, a.vz) || 1;
       const hitM = raycastMob(a.x, a.y, a.z, a.vx / speed, a.vy / speed, a.vz / speed, stepDist + 0.55);
       if (hitM) {
-        damageMob(hitM, 4, a.vx, a.vz);
-        a.active = false;
-        dummyMatrix.makeTranslation(0, -999, 0);
-        arrowInstanced.setMatrixAt(i, dummyMatrix);
-        continue;
+        damageMob(hitM, 4, a.vx, a.vz); a.active = false;
+        dummyMatrix.makeTranslation(0, -999, 0); arrowInstanced.setMatrixAt(i, dummyMatrix); continue;
       }
     }
 
@@ -424,21 +420,14 @@ function updateArrows(dt) {
     const b = getVoxelGlobal(Math.floor(nx), Math.floor(ny), Math.floor(nz));
 
     if (b === BLOCK.TNT) {
-      igniteTNT(Math.floor(nx), Math.floor(ny), Math.floor(nz), 1.4);
-      a.active = false;
-      dummyMatrix.makeTranslation(0, -999, 0);
-      arrowInstanced.setMatrixAt(i, dummyMatrix);
-      continue;
+      igniteTNT(Math.floor(nx), Math.floor(ny), Math.floor(nz), 1.4); a.active = false;
+      dummyMatrix.makeTranslation(0, -999, 0); arrowInstanced.setMatrixAt(i, dummyMatrix); continue;
     } else if (BLOCK_DEFS[b].solid) {
       if (a.isGrapple) {
-        grapplePullPlayerTo(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z));
-        a.active = false;
-        dummyMatrix.makeTranslation(0, -999, 0);
-        arrowInstanced.setMatrixAt(i, dummyMatrix);
-        continue;
+        grapplePullPlayerTo(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z)); a.active = false;
+        dummyMatrix.makeTranslation(0, -999, 0); arrowInstanced.setMatrixAt(i, dummyMatrix); continue;
       }
-      a.stuck = true;
-      sfx.play('hit');
+      a.stuck = true; sfx.play('hit');
     } else {
       a.x = nx; a.y = ny; a.z = nz;
     }
@@ -453,26 +442,31 @@ function updateArrows(dt) {
   if (anyUpdated) arrowInstanced.instanceMatrix.needsUpdate = true;
 }
 
-const FOOD_HEAL_MAP = {
-  [BLOCK.ITEM_APPLE]: 4, [BLOCK.ITEM_BREAD]: 5, [BLOCK.CAKE]: 6,
-  [BLOCK.ITEM_RAW_PORKCHOP]: 3, [BLOCK.ITEM_COOKED_PORKCHOP]: 8,
-  [BLOCK.ITEM_RAW_FISH]: 2, [BLOCK.ITEM_COOKED_FISH]: 6, [BLOCK.ITEM_GOLDEN_APPLE]: 10
+const FOOD_HUNGER_MAP = {
+  [BLOCK.ITEM_RAW_FISH]: 2, [BLOCK.ITEM_RAW_PORKCHOP]: 3, [BLOCK.ITEM_APPLE]: 4, [BLOCK.ITEM_GOLDEN_APPLE]: 4,
+  [BLOCK.ITEM_BREAD]: 5, [BLOCK.ITEM_COOKED_FISH]: 6, [BLOCK.CAKE]: 6, [BLOCK.ITEM_COOKED_PORKCHOP]: 8
 };
+const FOOD_SATURATION_MAP = {
+  [BLOCK.ITEM_RAW_FISH]: 1.0, [BLOCK.ITEM_RAW_PORKCHOP]: 1.8, [BLOCK.ITEM_APPLE]: 2.4, [BLOCK.CAKE]: 3.6,
+  [BLOCK.ITEM_BREAD]: 6.0, [BLOCK.ITEM_COOKED_FISH]: 6.0, [BLOCK.ITEM_GOLDEN_APPLE]: 9.6, [BLOCK.ITEM_COOKED_PORKCHOP]: 12.8
+};
+const FOOD_HEAL_MAP = FOOD_HUNGER_MAP;
 
 function eatHeldApple(foodItemOverride) {
   const heldId = foodItemOverride || (isFoodItem(getActiveHeldItem()) ? getActiveHeldItem() : BLOCK.ITEM_APPLE);
-  const healAmount = FOOD_HEAL_MAP[heldId] || 4;
+  const hungerGain = FOOD_HUNGER_MAP[heldId] || 4, satGain = FOOD_SATURATION_MAP[heldId] || 2.4;
   if (gameMode === 'survival' && (inventoryCounts[heldId] || 0) <= 0) return false;
   const maxH = player.maxHunger || 10, curH = player.hunger !== undefined ? player.hunger : maxH;
-  if (player.health >= player.maxHealth && curH >= maxH && gameMode === 'survival' && heldId !== BLOCK.ITEM_GOLDEN_APPLE) return false;
+  if (curH >= maxH && gameMode === 'survival' && heldId !== BLOCK.ITEM_GOLDEN_APPLE) return false;
   if (gameMode === 'survival') {
     if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
     inventoryCounts[heldId] = Math.max(0, (inventoryCounts[heldId] || 1) - 1);
     if (inventoryCounts[heldId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId) hotbarSlots[selectedSlot] = BLOCK.AIR;
   }
-  player.hunger = Math.min(maxH, curH + healAmount);
+  player.hunger = Math.min(maxH, curH + hungerGain);
+  player.saturation = Math.min(player.hunger, (player.saturation || 0) + satGain);
   player.exhaustion = 0; player.starveTimer = 0;
-  player.health = Math.min(player.maxHealth, player.health + healAmount);
+  if (heldId === BLOCK.ITEM_GOLDEN_APPLE) player.health = player.maxHealth;
   renderHeartsUI(); refreshInventoryCountsUI(); saveWorldData();
   player.swingTime = 1.0; sfx.play('eat');
   return true;

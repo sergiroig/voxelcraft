@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=41"></iframe>
+    <iframe id="game-frame" src="./index.html?v=42"></iframe>
   </div>
 
   <script>
@@ -966,14 +966,14 @@
           while (vc.mobs.length > 0) vc.removeMobAt(0);
         });
 
-        it('Cura +4 corazones al comer una Manzana Curativa y permite fabricar Espada/Arco', () => {
-          vc.player.health = 5;
+        it('Restaura +4 muslitos de Hambre al comer una Manzana Roja (+4🍗) y permite fabricar Espada/Arco', () => {
+          vc.player.hunger = 5;
           vc.inventoryCounts[vc.BLOCK.ITEM_APPLE] = 3;
-          const healed = vc.eatHeldApple();
-          assert(healed === true, 'eatHeldApple() debe devolver true cuando al jugador le falta vida');
-          assert(vc.player.health === 9, `La manzana debe restaurar +4 corazones (5 -> 9, obtuvo ${vc.player.health})`);
+          const ate = vc.eatHeldApple();
+          assert(ate === true, 'eatHeldApple() debe devolver true cuando al jugador le falta hambre');
+          assert(vc.player.hunger === 9, `La manzana debe restaurar +4 muslitos de hambre (5 -> 9, obtuvo ${vc.player.hunger})`);
           assert(vc.inventoryCounts[vc.BLOCK.ITEM_APPLE] === 2, 'En Supervivencia debe consumir 1 manzana');
-          vc.player.health = vc.player.maxHealth;
+          vc.player.hunger = vc.player.maxHunger;
         });
       });
 
@@ -1197,10 +1197,10 @@
           vc.inventoryCounts[vc.BLOCK.WHEAT_3] = (vc.inventoryCounts[vc.BLOCK.WHEAT_3] || 0) + 3;
           assert(vc.craftRecipe(breadRecIdx) === true, 'Debe permitir craftear Pan Horneado con 3× Trigo Maduro');
 
-          vc.player.health = 4;
+          vc.player.hunger = 4;
           const ate = vc.eatHeldApple(vc.BLOCK.ITEM_BREAD);
-          assert(ate === true && vc.player.health === 9, `Comer Pan debe restaurar +5 corazones (salud=${vc.player.health})`);
-          vc.player.health = vc.player.maxHealth;
+          assert(ate === true && vc.player.hunger === 9, `Comer Pan debe restaurar +5 muslitos de hambre (hunger=${vc.player.hunger})`);
+          vc.player.hunger = vc.player.maxHunger;
 
           vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR);
           vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR);
@@ -2053,12 +2053,12 @@
           assert(smeltPork && smeltPork.outId === vc.BLOCK.ITEM_COOKED_PORKCHOP, 'El Horno debe asar Chuleta Cruda en Chuleta Asada (ITEM_COOKED_PORKCHOP)');
           vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.AIR);
 
-          // Colocar y comer una Tarta Dulce (BLOCK.CAKE) haciendo clic derecho sobre ella (+6❤)
-          vc.player.health = 3;
+          // Colocar y comer una Tarta Dulce (BLOCK.CAKE) haciendo clic derecho sobre ella (+6🍗)
+          vc.player.hunger = 3;
           vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.CAKE);
           vc.setCurrentHit({ x: fx, y: fy, z: fz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.CAKE });
           vc.placeBlockAtCurrentTarget();
-          assert(vc.getVoxelGlobal(fx, fy, fz) === vc.BLOCK.AIR && vc.player.health === 9, `Hacer clic derecho sobre BLOCK.CAKE debe comerla y curar +6❤ (HP=${vc.player.health})`);
+          assert(vc.getVoxelGlobal(fx, fy, fz) === vc.BLOCK.AIR && vc.player.hunger === 9, `Hacer clic derecho sobre BLOCK.CAKE debe comerla y restaurar +6🍗 de hambre (hunger=${vc.player.hunger})`);
 
           // Verificar que los 17 bloques/objetos de la Fase 2 tienen definición e icono 16×16 válido
           const phase2Ids = [
@@ -2485,9 +2485,10 @@
           assert(allDrums.length === 10, `Deben renderizarse 10 iconos de hambre en #hunger-row (actual=${allDrums.length})`);
           assert(doc.querySelectorAll('#hunger-row .drumstick.empty').length === 0, 'Con hunger=10 no debe haber muslitos vacíos');
 
-          // Acumular 8.5 de desgaste -> debe consumir 2 puntos de hambre (10 -> 8)
-          vc.addHungerExhaustion(8.5);
-          assert(vc.player.hunger === 8, `Tras 8.5 de desgaste el hambre debe bajar a 8 (actual=${vc.player.hunger})`);
+          // Con saturación > 0 el desgaste consume primero saturación y cuando llega a 0 consume muslitos de hambre
+          vc.player.saturation = 1.0;
+          vc.addHungerExhaustion(12.5); // 3 ticks de 4.0: 1 de saturación + 2 de hambre (10 -> 8)
+          assert(vc.player.saturation === 0 && vc.player.hunger === 8, `Tras 12.5 de desgaste (1 sat + 2 hambre) el hambre debe bajar a 8 (actual=${vc.player.hunger}, sat=${vc.player.saturation})`);
           assert(doc.querySelectorAll('#hunger-row .drumstick.empty').length === 2, 'En el HUD deben mostrarse 2 muslitos vacíos');
 
           // Al bajar el oxígeno por debajo de 10 debe mostrarse #air-row con burbujas
@@ -2520,14 +2521,23 @@
           vc.updatePlayerPhysics(0.1);
           assert(vc.player.health === 5, `Con hunger=0 durante >4s en Supervivencia debe perder 1❤ por inanición (HP=${vc.player.health})`);
 
-          // 3) Permite comer con la vida llena (health === 10) si tiene hambre (hunger < 10)
-          vc.player.health = 10;
+          // 3) Comida normal llena Hambre/Saturación (sin curar vida de golpe ni permitir comer con hunger=10), mientras que la Manzana Dorada cura +10❤ directamente incluso con hunger=10
+          vc.player.health = 6;
           vc.player.hunger = 4;
+          vc.player.saturation = 0;
           vc.inventoryCounts[vc.BLOCK.ITEM_BREAD] = 2;
           const ate = vc.eatHeldApple(vc.BLOCK.ITEM_BREAD);
-          assert(ate === true && vc.player.hunger === 9, `Debe permitir comer Pan con vida llena cuando hunger=4, subiendo hunger a 9 (actual=${vc.player.hunger})`);
+          assert(ate === true && vc.player.hunger === 9 && vc.player.health === 6, `El Pan debe subir hunger de 4 a 9 sin curar vida de golpe (hunger=${vc.player.hunger}, HP=${vc.player.health})`);
+          assert(vc.player.saturation === 6.0, `El Pan debe aportar 6.0 de saturación (sat=${vc.player.saturation})`);
 
-          vc.player.health = 10; vc.player.hunger = 10; vc.player.exhaustion = 0; vc.player.starveTimer = 0;
+          // Con hunger === 10 una comida normal NO debe poder comerse, pero la Manzana Dorada SÍ y cura toda la vida
+          vc.player.hunger = 10;
+          assert(vc.eatHeldApple(vc.BLOCK.ITEM_BREAD) === false, 'Con hunger=10 no debe permitir comer Pan');
+          vc.inventoryCounts[vc.BLOCK.ITEM_GOLDEN_APPLE] = 1;
+          const ateGold = vc.eatHeldApple(vc.BLOCK.ITEM_GOLDEN_APPLE);
+          assert(ateGold === true && vc.player.health === 10, 'La Manzana Dorada debe poderse comer con hunger=10 y restaurar toda la salud (+10❤)');
+
+          vc.player.health = 10; vc.player.hunger = 10; vc.player.saturation = 5.0; vc.player.exhaustion = 0; vc.player.starveTimer = 0;
           vc.renderHeartsUI();
         });
       });

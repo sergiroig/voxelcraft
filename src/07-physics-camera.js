@@ -56,7 +56,7 @@ const player = {
   x: 8.5, y: 42, z: 8.5, vx: 0, vy: 0, vz: 0, iceVx: 0, iceVz: 0,
   yaw: 0, pitch: -0.15, radius: 0.3, height: 1.75, eyeHeight: 1.58,
   onGround: false, flying: false, stepAccum: 0, bobTime: 0, swingTime: 0,
-  health: 10, maxHealth: 10, regenTimer: 0, hunger: 10, maxHunger: 10, exhaustion: 0, starveTimer: 0,
+  health: 10, maxHealth: 10, regenTimer: 0, hunger: 10, maxHunger: 10, saturation: 5.0, exhaustion: 0, starveTimer: 0,
   air: 10, maxAir: 10, airTimer: 0, wasInFluid: false, maxFallVel: 0, portalCooldown: 0
 };
 
@@ -214,7 +214,8 @@ function addHungerExhaustion(amount) {
   let changed = false;
   while (player.exhaustion >= 4.0) {
     player.exhaustion -= 4.0;
-    if (player.hunger > 0) { player.hunger--; changed = true; }
+    if ((player.saturation || 0) > 0) player.saturation = Math.max(0, player.saturation - 1.0);
+    else if (player.hunger > 0) { player.hunger--; changed = true; }
   }
   if (changed) renderHeartsUI();
   return player.hunger;
@@ -591,10 +592,11 @@ function updatePlayerPhysics(dt) {
     }
   }
 
-  // Passive health regeneration (requires hunger >= 8 in Survival) & starvation damage (hunger === 0)
+  // Passive health regeneration (fast at hunger=10+saturation, normal at hunger>=8) & starvation damage (hunger===0)
   if (player.health < player.maxHealth && (gameMode === 'creative' || (player.hunger ?? 10) >= 8)) {
+    const regenInterval = (gameMode === 'survival' && player.hunger >= 10 && (player.saturation || 0) > 0) ? 1.0 : 4.0;
     player.regenTimer += dt;
-    if (player.regenTimer > 4.0) { player.regenTimer = 0; player.health++; addHungerExhaustion(1.5); renderHeartsUI(); }
+    if (player.regenTimer >= regenInterval) { player.regenTimer = 0; player.health++; addHungerExhaustion(1.5); renderHeartsUI(); }
   }
   if (gameMode === 'survival' && !player.flying && player.hunger <= 0) {
     player.starveTimer = (player.starveTimer || 0) + dt;

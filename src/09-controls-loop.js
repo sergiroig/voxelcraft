@@ -768,7 +768,7 @@ window.__VOXELCRAFT__ = {
   updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
   chunks, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, mobAtlasCanvas, mobAtlasTexture, mobGeos, activeTNTs,
   particles, particleInstanced, itemDrops, dropInstanced, arrows, arrowInstanced, shootArrow, shootGrappleHook, grapplePullPlayerTo, updateArrows,
-  eatHeldApple, growTreeAt, toggleVoxelDoor, toggleVoxelTrapdoor, triggerVoxelPiston, portals, registerPortalAt, activateObsidianPortal, useVoxelPortal,
+  eatHeldApple, FOOD_HUNGER_MAP, FOOD_SATURATION_MAP, growTreeAt, toggleVoxelDoor, toggleVoxelTrapdoor, triggerVoxelPiston, portals, registerPortalAt, activateObsidianPortal, useVoxelPortal,
   chestLootMap, openVoxelChest, openChestModalUI, closeChestModal, isChestOpen: () => chestOpen,
   minecarts, getRidingCart: () => ridingCart, spawnMinecart, toggleRideMinecart, updateMinecarts,
   boats, getRidingBoat: () => ridingBoat, spawnBoat, toggleRideBoat, updateBoats, toggleShieldBlock, isShieldBlocking: () => isShieldBlocking,
