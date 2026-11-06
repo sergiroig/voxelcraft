@@ -32,8 +32,8 @@ const BLOCK = {
   ITEM_PAPER: 149, ITEM_EMPTY_MAP: 150, ITEM_MAP: 151
 };
 
-// Atlas has 72 tiles (columns) of 16x16 pixels
-const ATLAS_COLS = 72;
+// Atlas has 82 tiles (columns) of 16x16 pixels covering all distinct Minecraft block faces
+const ATLAS_COLS = 82;
 const TILE_PX = 16;
 
 // Block Definitions:
@@ -64,8 +64,8 @@ const BLOCK_DEFS = {
   [BLOCK.TALL_GRASS]:          { name: 'Hierba Alta',              solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x52a238, tiles: [22,22,22,22,22,22] },
   [BLOCK.FLOWER_RED]:          { name: 'Rosa Roja',                solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xe83b3b, tiles: [23,23,23,23,23,23] },
   [BLOCK.FLOWER_YELLOW]:       { name: 'Diente de León',           solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xfacc15, tiles: [24,24,24,24,24,24] },
-  [BLOCK.CACTUS]:              { name: 'Cactus',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [25,25,25,25,25,25] },
-  [BLOCK.TNT]:                 { name: 'TNT (Explosivo)',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,27,26,26,26,26] },
+  [BLOCK.CACTUS]:              { name: 'Cactus',                   solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: false, color: 0x2d8a3e, tiles: [72,73,25,25,25,25] },
+  [BLOCK.TNT]:                 { name: 'TNT (Explosivo)',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.12, stoneLike: false, color: 0xdc2626, tiles: [27,74,26,26,26,26] },
   [BLOCK.LAVA]:                { name: 'Lava Ardiente',            solid: false, opaque: true,  shape: 'cube',  light: 15, hardness: 0.25, stoneLike: false, color: 0xff5a1f, tiles: [28,28,28,28,28,28] },
   [BLOCK.OBSIDIAN]:            { name: 'Obsidiana',                solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 2.20, stoneLike: true,  color: 0x2e1a47, tiles: [29,29,29,29,29,29] },
   [BLOCK.LEVER_OFF]:           { name: 'Palanca Redstone',         solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.08, stoneLike: false, color: 0x94a3b8, tiles: [30,30,30,30,30,30] },
@@ -85,20 +85,20 @@ const BLOCK_DEFS = {
   [BLOCK.TRAPDOOR_CLOSED]:     { name: 'Trampilla Mecánica',       solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.45, stoneLike: false, color: 0x854d0e, tiles: [43,43,43,43,43,43] },
   [BLOCK.TRAPDOOR_OPEN]:       { name: 'Trampilla (Abierta)',      solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.45, stoneLike: false, color: 0xa16207, tiles: [43,43,43,43,43,43] },
   [BLOCK.RAIL]:                { name: 'Vía de Ferrocarril',       solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.25, stoneLike: true,  color: 0x94a3b8, tiles: [44,44,44,44,44,44] },
-  [BLOCK.CHEST]:               { name: 'Cofre de Tesoro',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xd97706, tiles: [45,45,46,46,46,46] },
+  [BLOCK.CHEST]:               { name: 'Cofre de Tesoro',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.60, stoneLike: false, color: 0xd97706, tiles: [45,45,46,75,75,75] },
   [BLOCK.LILY_PAD]:            { name: 'Nenúfar Acuático',         solid: true,  opaque: false, shape: 'cross', light: 0,  hardness: 0.06, stoneLike: false, color: 0x22c55e, tiles: [47,47,47,47,47,47] },
-  [BLOCK.PISTON]:              { name: 'Pistón Mecánico Redstone', solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.85, stoneLike: true,  color: 0x94a3b8, tiles: [48, 9,48,48,48,48] },
+  [BLOCK.PISTON]:              { name: 'Pistón Mecánico Redstone', solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.85, stoneLike: true,  color: 0x94a3b8, tiles: [78,79,48,48,48,48] },
   [BLOCK.PORTAL]:              { name: 'Portal de Obsidiana',      solid: false, opaque: false, shape: 'cube',  light: 12, hardness: 0.50, stoneLike: false, color: 0xc084fc, tiles: [49,49,49,49,49,49] },
   [BLOCK.ICE]:                 { name: 'Hielo Resbaladizo',        solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: true,  color: 0x7dd3fc, tiles: [50,50,50,50,50,50] },
-  [BLOCK.CRAFTING_TABLE]:      { name: 'Mesa de Crafteo',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xa16207, tiles: [51, 8,52,52,52,52] },
-  [BLOCK.FURNACE]:             { name: 'Horno de Fundición',       solid: true,  opaque: true,  shape: 'cube',  light: 10, hardness: 1.20, stoneLike: true,  color: 0x64748b, tiles: [53,53,54,53,53,53] },
+  [BLOCK.CRAFTING_TABLE]:      { name: 'Mesa de Crafteo',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xa16207, tiles: [51, 8,52,76,52,76] },
+  [BLOCK.FURNACE]:             { name: 'Horno de Fundición',       solid: true,  opaque: true,  shape: 'cube',  light: 10, hardness: 1.20, stoneLike: true,  color: 0x64748b, tiles: [53,53,54,77,77,77] },
   [BLOCK.IRON_BLOCK]:          { name: 'Bloque de Hierro',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.50, stoneLike: true,  color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
   [BLOCK.GOLD_BLOCK]:          { name: 'Bloque de Oro',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfacc15, tiles: [56,56,56,56,56,56] },
   [BLOCK.DIAMOND_BLOCK]:       { name: 'Bloque de Diamante',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.75, stoneLike: true,  color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
   [BLOCK.BOOKSHELF]:           { name: 'Estantería de Libros',     solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xb45309, tiles: [ 8, 8,58,58,58,58] },
-  [BLOCK.CAKE]:                { name: 'Tarta Dulce (+6🍗)',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xf43f5e, tiles: [59, 8,60,60,60,60] },
+  [BLOCK.CAKE]:                { name: 'Tarta Dulce (+6🍗)',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xf43f5e, tiles: [59,80,60,60,60,60] },
   [BLOCK.BED]:                 { name: 'Cama Roja (Dormir)',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.45, stoneLike: false, color: 0xdc2626, tiles: [61, 8,62,62,62,62] },
-  [BLOCK.ANVIL]:               { name: 'Yunque de Hierro',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.85, stoneLike: true,  color: 0x475569, tiles: [63,63,63,63,63,63] },
+  [BLOCK.ANVIL]:               { name: 'Yunque de Hierro',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.85, stoneLike: true,  color: 0x475569, tiles: [81,63,63,63,63,63] },
   [BLOCK.ENCHANTING_TABLE]:    { name: 'Mesa de Encantamientos',   solid: true,  opaque: true,  shape: 'cube',  light: 9,  hardness: 1.80, stoneLike: true,  color: 0x38bdf8, tiles: [64,29,65,65,65,65] },
   [BLOCK.GRAVEL]:              { name: 'Grava',                    solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.40, stoneLike: false, color: 0x94a3b8, tiles: [66,66,66,66,66,66] },
   [BLOCK.CLAY]:                { name: 'Arcilla',                  solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x9ca3af, tiles: [67,67,67,67,67,67] },
@@ -406,91 +406,67 @@ function createProceduralAtlas() {
   const shade = (r, g, b, f) =>
     `rgb(${Math.min(255, Math.max(0, (r * f) | 0))},${Math.min(255, Math.max(0, (g * f) | 0))},${Math.min(255, Math.max(0, (b * f) | 0))})`;
 
-  // 0: Grass Top
-  drawTile(0, (x, y, r) => shade(88, 168, 58, 0.88 + r * 0.24));
-  // 1: Grass Side
+  // 0..16: Core Terrain & Building Blocks (Minecraft Default 16x16 style)
+  const stoneBase = (x, y) => {
+    const h = ((Math.imul(x + 11, 73) ^ Math.imul(y + 5, 151)) & 15) / 15;
+    const strata = ((x + y * 3) % 7 === 0) ? 0.86 : (((x * 2 + y) % 9 === 0) ? 1.07 : 0.96);
+    return shade(125, 128, 132, (0.88 + h * 0.16) * strata);
+  };
+  drawTile(0, (x, y, r) => shade(88, 168, 58, 0.86 + r * 0.26 + (((x * 3 + y * 5) % 7 === 0) ? 0.06 : 0)));
   drawTile(1, (x, y, r) => {
     const grassDepth = 3 + ((Math.sin(x * 1.3) * 1.5 + 1.5) | 0);
     if (y < grassDepth) return shade(88, 168, 58, 0.85 + r * 0.25);
     if (y === grassDepth) return shade(62, 125, 42, 0.9);
-    return shade(134, 96, 67, 0.86 + r * 0.26);
+    return shade(134, 96, 67, 0.86 + r * 0.26 + (((x * 5 + y * 3) % 11 === 0) ? -0.1 : 0));
   });
-  // 2: Dirt
-  drawTile(2, (x, y, r) => shade(134, 96, 67, 0.85 + r * 0.28));
-  // 3: Stone
-  drawTile(3, (x, y, r) => {
-    const streak = ((x + y * 3) % 7 === 0) ? 0.88 : 1.0;
-    return shade(125, 128, 132, (0.88 + r * 0.22) * streak);
-  });
-  // 4: Sand
+  drawTile(2, (x, y, r) => shade(134, 96, 67, 0.85 + r * 0.28 + (((x * 5 + y * 3) % 9 === 0) ? 0.1 : 0)));
+  drawTile(3, (x, y) => stoneBase(x, y));
   drawTile(4, (x, y, r) => shade(224, 206, 148, 0.92 + Math.sin((x + y) * 0.6) * 0.05 + r * 0.14));
-  // 5: Wood Side
-  drawTile(5, (x, y, r) => shade(107, 78, 46, (0.88 + r * 0.2) * (x % 4 === 0 ? 0.78 : 1.0)));
-  // 6: Wood Top
+  drawTile(5, (x, y, r) => shade(107, 78, 46, (0.86 + r * 0.22) * (x % 4 === 0 ? 0.74 : (x % 4 === 2 ? 1.05 : 0.95))));
   drawTile(6, (x, y, r) => {
     const dist = Math.hypot(x - 7.5, y - 7.5);
-    if (dist > 6.8) return shade(107, 78, 46, 0.85 + r * 0.2);
-    return shade(168, 132, 84, (Math.sin(dist * 2.2) > 0.3 ? 0.9 : 1.04) * (0.95 + r * 0.1));
+    if (dist > 6.6) return shade(107, 78, 46, 0.85 + r * 0.2);
+    return shade(172, 136, 86, (Math.sin(dist * 2.3) > 0.25 ? 0.88 : 1.05) * (0.95 + r * 0.1));
   });
-  // 7: Leaves
-  drawTile(7, (x, y, r) => shade(52, 128, 42, 0.76 + r * 0.4));
-  // 8: Planks
+  drawTile(7, (x, y, r) => shade(52, 128, 42, (((x * 3 + y * 5) % 4 === 0) ? 0.68 : 0.84) + r * 0.34));
   drawTile(8, (x, y, r) => {
     const border = (y % 4 === 0) || ((x + (y >> 2) * 7) % 16 === 0);
-    return shade(176, 136, 82, (border ? 0.78 : 0.96) + r * 0.1);
+    return shade(176, 136, 82, (border ? 0.76 : (y % 4 === 1 ? 1.03 : 0.95)) + r * 0.08);
   });
-  // 9: Cobblestone
   drawTile(9, (x, y, r) => {
     const cell = ((x * 3 + y * 5) ^ (x * y)) & 7;
-    return shade(115, 118, 122, cell === 0 ? 0.68 : (0.85 + r * 0.28));
+    return shade(115, 118, 122, cell === 0 ? 0.64 : (cell === 3 ? 1.08 : (0.85 + r * 0.26)));
   });
-  // 10: Bricks
   drawTile(10, (x, y, r) => {
     const row = y >> 2;
-    if ((y % 4 === 0) || ((x + (row % 2) * 4) % 8 === 0)) return shade(190, 185, 178, 0.9 + r * 0.1);
-    return shade(168, 72, 58, 0.88 + r * 0.22);
+    if ((y % 4 === 0) || ((x + (row % 2) * 4) % 8 === 0)) return shade(192, 186, 178, 0.9 + r * 0.1);
+    return shade(172, 74, 58, (y % 4 === 1 ? 0.98 : 0.86) + r * 0.2);
   });
-  // 11: Glass
   drawTile(11, (x, y) => {
-    const edge = x === 0 || x === 15 || y === 0 || y === 15;
-    const streak = (x + y === 5) || (x + y === 6) || (x + y === 19);
-    if (edge) return 'rgba(215, 242, 255, 0.95)';
-    if (streak) return 'rgba(255, 255, 255, 0.8)';
+    if (x === 0 || x === 15 || y === 0 || y === 15) return 'rgba(215, 242, 255, 0.95)';
+    if ((x + y === 5) || (x + y === 6) || (x + y === 19)) return 'rgba(255, 255, 255, 0.82)';
     return null;
   });
-  // 12: Water
-  drawTile(12, (x, y, r) => {
-    const wave = Math.sin(x * 0.5 + y * 0.3) * 12;
-    return `rgba(28, ${118 + (wave | 0)}, 216, ${0.74 + r * 0.08})`;
-  });
-  // 13: Snow Top
+  drawTile(12, (x, y, r) => `rgba(28, ${118 + ((Math.sin(x * 0.5 + y * 0.3) * 12) | 0)}, 216, ${0.74 + r * 0.08})`);
   drawTile(13, (x, y, r) => shade(240, 248, 255, 0.94 + r * 0.08));
-  // 14: Snow Side
   drawTile(14, (x, y, r) => {
     const snowDepth = 3 + ((Math.cos(x * 1.2) * 1.5 + 1.5) | 0);
-    if (y <= snowDepth) return shade(240, 248, 255, 0.94 + r * 0.08);
-    return shade(134, 96, 67, 0.86 + r * 0.26);
+    return y <= snowDepth ? shade(240, 248, 255, 0.94 + r * 0.08) : shade(134, 96, 67, 0.86 + r * 0.26);
   });
-  // 15: Glowstone
-  drawTile(15, (x, y, r) => {
-    if (r > 0.72) return shade(255, 250, 185, 1.0);
-    if (r > 0.35) return shade(238, 190, 76, 0.95);
-    return shade(155, 102, 36, 0.9);
-  });
-  // 16: Bedrock
-  drawTile(16, (x, y, r) => shade(45, 45, 50, 0.55 + r * 0.7));
+  drawTile(15, (x, y, r) => r > 0.72 ? shade(255, 250, 185, 1.0) : (r > 0.35 ? shade(238, 190, 76, 0.95) : shade(155, 102, 36, 0.9)));
+  drawTile(16, (x, y, r) => shade(45, 45, 50, 0.52 + r * 0.72));
 
-  // Helper for Ore tiles (17: Coal, 18: Iron, 19: Gold, 20: Diamond)
+  // 17..20: Ores embedded in deterministic Stone matrix with specular top-left highlight
+  const ORE_VEIN_COORDS = [[3,4],[4,4],[5,4],[3,5],[4,5],[10,3],[11,3],[10,4],[11,4],[12,4],[11,5],[5,10],[6,10],[7,10],[5,11],[6,11],[6,12],[11,11],[12,11],[13,11],[11,12],[12,12]];
   const drawOre = (tileIdx, oreR, oreG, oreB) => {
-    drawTile(tileIdx, (x, y, r) => {
-      const isSpeck =
-        ((x >= 3 && x <= 5 && y >= 4 && y <= 5) ||
-         (x >= 10 && x <= 12 && y >= 3 && y <= 5) ||
-         (x >= 5 && x <= 7 && y >= 10 && y <= 12) ||
-         (x >= 11 && x <= 13 && y >= 11 && y <= 12)) && r > 0.22;
-      if (isSpeck) return shade(oreR, oreG, oreB, 0.9 + r * 0.2);
-      const streak = ((x + y * 3) % 7 === 0) ? 0.88 : 1.0;
-      return shade(125, 128, 132, (0.88 + r * 0.22) * streak);
+    drawTile(tileIdx, (x, y) => {
+      for (let i = 0; i < ORE_VEIN_COORDS.length; i++) {
+        if (ORE_VEIN_COORDS[i][0] === x && ORE_VEIN_COORDS[i][1] === y) {
+          const f = (i % 5 === 0) ? 1.18 : ((i % 5 === 4) ? 0.82 : 0.98);
+          return shade(oreR, oreG, oreB, f);
+        }
+      }
+      return stoneBase(x, y);
     });
   };
   drawOre(17, 32, 34, 38);     // Coal Ore
@@ -498,177 +474,51 @@ function createProceduralAtlas() {
   drawOre(19, 255, 232, 68);   // Gold Ore
   drawOre(20, 90, 242, 255);   // Diamond Ore
 
-  // 21: Torch (Cross sprite)
+  // 21..39: Flora, Cacti, TNT, Magma, Obsidian, Redstone, Crops, Geode & Mushroom
   drawTile(21, (x, y, r) => {
     if (x < 7 || x > 8 || y < 5) return null;
-    if (y === 5 || y === 6) return shade(255, 245, 160, 1.0);
-    if (y === 7 || y === 8) return shade(255, 165, 36, 0.95 + r * 0.1);
+    if (y <= 6) return shade(255, 245, 160, 1.0);
+    if (y <= 8) return shade(255, 165, 36, 0.95 + r * 0.1);
     return shade(122, 88, 48, 0.88 + r * 0.2);
   });
-
-  // 22: Tall Grass (Cross sprite)
-  drawTile(22, (x, y, r) => {
-    const bladeH = 4 + (((x * 7) % 5) * 2);
-    if (y < bladeH || (x % 2 === 0 && y < 11)) return null;
-    return shade(76, 158, 48, 0.82 + r * 0.28);
-  });
-
-  // 23: Red Rose (Cross sprite)
-  drawTile(23, (x, y, r) => {
-    if (x >= 6 && x <= 9 && y >= 5 && y <= 8) return shade(232, 45, 45, 0.9 + r * 0.2);
-    if ((x === 7 || x === 8) && y >= 9) return shade(62, 142, 44, 0.9);
-    return null;
-  });
-
-  // 24: Yellow Dandelion (Cross sprite)
-  drawTile(24, (x, y, r) => {
-    if (x >= 6 && x <= 9 && y >= 5 && y <= 8) return shade(250, 208, 24, 0.92 + r * 0.15);
-    if ((x === 7 || x === 8) && y >= 9) return shade(62, 142, 44, 0.9);
-    return null;
-  });
-
-  // 25: Cactus
+  drawTile(22, (x, y, r) => (y < 4 + (((x * 7) % 5) * 2) || (x % 2 === 0 && y < 11)) ? null : shade(76, 158, 48, 0.82 + r * 0.28));
+  drawTile(23, (x, y, r) => (x >= 6 && x <= 9 && y >= 5 && y <= 8) ? shade(232, 45, 45, 0.9 + r * 0.2) : (((x === 7 || x === 8) && y >= 9) ? shade(62, 142, 44, 0.9) : null));
+  drawTile(24, (x, y, r) => (x >= 6 && x <= 9 && y >= 5 && y <= 8) ? shade(250, 208, 24, 0.92 + r * 0.15) : (((x === 7 || x === 8) && y >= 9) ? shade(62, 142, 44, 0.9) : null));
   drawTile(25, (x, y, r) => {
     const rib = (x % 4 === 0);
-    const spine = rib && (y % 5 === 2);
-    if (spine) return '#e2e8f0';
+    if (rib && (y % 5 === 2)) return '#e2e8f0';
     return shade(44, 138, 60, (rib ? 0.78 : 0.96) + r * 0.14);
   });
-
-  // 26: TNT Side
   drawTile(26, (x, y, r) => {
     if (y >= 5 && y <= 10) {
-      const inText = (y >= 6 && y <= 9) && (
-        (x >= 2 && x <= 4 && (y === 6 || x === 3)) ||
-        (x >= 6 && x <= 9 && (x === 6 || x === 9 || x - 6 === y - 6)) ||
-        (x >= 11 && x <= 13 && (y === 6 || x === 12))
-      );
+      const inText = (y >= 6 && y <= 9) && ((x >= 2 && x <= 4 && (y === 6 || x === 3)) || (x >= 6 && x <= 9 && (x === 6 || x === 9 || x - 6 === y - 6)) || (x >= 11 && x <= 13 && (y === 6 || x === 12)));
       return inText ? '#1e293b' : shade(245, 245, 245, 0.94 + r * 0.08);
     }
-    const stickGap = (x % 4 === 0);
-    return shade(215, 38, 38, (stickGap ? 0.75 : 0.96) + r * 0.12);
+    return shade(215, 38, 38, (x % 4 === 0 ? 0.75 : 0.96) + r * 0.12);
   });
-
-  // 27: TNT Top
   drawTile(27, (x, y, r) => {
     if (x >= 7 && x <= 8 && y >= 7 && y <= 8) return '#f8fafc';
     if (x >= 6 && x <= 9 && y >= 6 && y <= 9) return '#334155';
-    return shade(200, 35, 35, 0.85 + r * 0.2);
+    return shade(200, 35, 35, ((x % 4 === 0 || y % 4 === 0) ? 0.72 : 0.92) + r * 0.14);
   });
-
-  // 28: Lava (Glowing molten magma)
   drawTile(28, (x, y, r) => {
     const swirl = Math.sin(x * 0.55 + y * 0.45) + Math.cos(x * 0.35 - y * 0.6);
-    if (swirl > 0.85) return shade(255, 238, 95, 0.95 + r * 0.1);
-    if (swirl > -0.2) return shade(255, 115, 24, 0.9 + r * 0.15);
-    return shade(198, 42, 12, 0.88 + r * 0.15);
+    return swirl > 0.85 ? shade(255, 238, 95, 0.95 + r * 0.1) : (swirl > -0.2 ? shade(255, 115, 24, 0.9 + r * 0.15) : shade(198, 42, 12, 0.88 + r * 0.15));
   });
-
-  // 29: Obsidian (Dark volcanic purple-black glass)
-  drawTile(29, (x, y, r) => {
-    const crystal = ((x * 5 + y * 3) % 11 === 0);
-    if (crystal) return shade(98, 58, 152, 0.9 + r * 0.2);
-    return shade(32, 20, 52, 0.78 + r * 0.35);
-  });
-
-  // 30: Redstone Lever OFF (Cross sprite)
-  drawTile(30, (x, y, r) => {
-    if (y >= 12 && x >= 5 && x <= 10) return shade(110, 114, 120, 0.9 + r * 0.15);
-    if (y >= 6 && y < 12 && x >= 7 && x <= 8) return shade(142, 102, 58, 0.9 + r * 0.15);
-    if (y >= 4 && y <= 6 && x >= 6 && x <= 9) return shade(120, 36, 36, 0.9);
-    return null;
-  });
-
-  // 31: Redstone Lever ON (Cross sprite, glowing red tip)
-  drawTile(31, (x, y, r) => {
-    if (y >= 12 && x >= 5 && x <= 10) return shade(160, 50, 50, 0.95);
-    if (y >= 6 && y < 12 && x >= 7 && x <= 8) return shade(168, 122, 68, 0.95);
-    if (y >= 4 && y <= 6 && x >= 6 && x <= 9) return shade(255, 58, 58, 1.0);
-    return null;
-  });
-
-  // 32: Redstone Lamp OFF
-  drawTile(32, (x, y, r) => {
-    const frame = x === 0 || x === 15 || y === 0 || y === 15 || x === y || (x + y === 15);
-    if (frame) return shade(62, 38, 24, 0.9);
-    return shade(118, 72, 42, 0.85 + r * 0.2);
-  });
-
-  // 33: Redstone Lamp ON (Warm golden lantern)
-  drawTile(33, (x, y, r) => {
-    const frame = x === 0 || x === 15 || y === 0 || y === 15;
-    if (frame) return shade(92, 54, 30, 0.95);
-    const core = Math.hypot(x - 7.5, y - 7.5) < 5.2;
-    if (core) return shade(255, 248, 185, 0.96 + r * 0.08);
-    return shade(248, 192, 72, 0.92 + r * 0.12);
-  });
-
-  // 34: Sapling (Oak tree sprout cross sprite)
-  drawTile(34, (x, y, r) => {
-    if ((x === 7 || x === 8) && y >= 9) return shade(115, 78, 42, 0.92);
-    if (Math.hypot(x - 7.5, y - 6.5) < 4.2) return shade(68, 185, 58, 0.85 + r * 0.25);
-    return null;
-  });
-
-  // 35: Wheat Stage 1 (Young green sprouts)
-  drawTile(35, (x, y, r) => {
-    if (y < 10 || (x % 3 !== 1)) return null;
-    return shade(112, 198, 42, 0.88 + r * 0.2);
-  });
-
-  // 36: Wheat Stage 2 (Medium green-gold stalks)
-  drawTile(36, (x, y, r) => {
-    if (y < 6 || (x % 3 === 0)) return null;
-    return y < 9 ? shade(198, 212, 52, 0.92 + r * 0.15) : shade(124, 188, 46, 0.88 + r * 0.18);
-  });
-
-  // 37: Wheat Stage 3 (Mature golden harvest wheat)
-  drawTile(37, (x, y, r) => {
-    if (y < 3 || (x % 2 === 0 && y < 7)) return null;
-    return y < 8 ? shade(245, 194, 28, 0.94 + r * 0.14) : shade(212, 162, 34, 0.88 + r * 0.18);
-  });
-
-  // 38: Amethyst Crystal Block (Bioluminescent cave geode)
-  drawTile(38, (x, y, r) => {
-    const facet = ((x * 3 + y * 5) % 9 === 0) || (x + y === 15);
-    if (facet) return shade(232, 175, 255, 0.96 + r * 0.1);
-    return shade(148, 62, 224, 0.82 + r * 0.28);
-  });
-
-  // 39: Bioluminescent Cave Mushroom (Glowing cyan-violet cap)
-  drawTile(39, (x, y, r) => {
-    if ((x === 7 || x === 8) && y >= 9) return shade(185, 235, 245, 0.92);
-    const cap = y >= 4 && y <= 8 && Math.abs(x - 7.5) <= (8 - Math.abs(y - 7) * 1.3);
-    if (cap) return ((x + y) % 3 === 0) ? '#a5f3fc' : shade(34, 211, 238, 0.9 + r * 0.18);
-    return null;
-  });
-
-  // 40: Slime Bounce Block (Translucent gelatinous green)
-  drawTile(40, (x, y, r) => {
-    const border = x <= 1 || x >= 14 || y <= 1 || y >= 14;
-    const core = x >= 4 && x <= 11 && y >= 4 && y <= 11;
-    if (border) return shade(58, 198, 86, 0.95);
-    if (core) return shade(38, 148, 62, 0.92 + r * 0.12);
-    return shade(82, 228, 108, 0.9 + r * 0.15);
-  });
-
-  // 41: Mechanical Door (Reinforced oak & iron lattice)
-  drawTile(41, (x, y, r) => {
-    const frame = x <= 1 || x >= 14 || y <= 1 || y >= 14 || y === 7 || y === 8;
-    if (frame) return shade(102, 66, 36, 0.92 + r * 0.12);
-    if (y < 7 && (x === 5 || x === 10)) return shade(148, 163, 184, 0.92);
-    if (y < 7) return null;
-    return shade(156, 108, 62, 0.88 + r * 0.16);
-  });
-
-  // 42: Ladder (Vertical rails + horizontal wooden rungs)
-  drawTile(42, (x, y, r) => {
-    const rail = (x >= 2 && x <= 3) || (x >= 12 && x <= 13);
-    const rung = (x >= 2 && x <= 13) && (y === 2 || y === 6 || y === 10 || y === 14);
-    if (rail) return shade(162, 114, 62, 0.9 + r * 0.15);
-    if (rung) return shade(194, 142, 76, 0.92 + r * 0.14);
-    return null;
-  });
+  drawTile(29, (x, y, r) => ((x * 5 + y * 3) % 11 === 0) ? shade(98, 58, 152, 0.9 + r * 0.2) : shade(32, 20, 52, 0.78 + r * 0.35));
+  drawTile(30, (x, y, r) => (y >= 12 && x >= 5 && x <= 10) ? shade(110, 114, 120, 0.9 + r * 0.15) : ((y >= 6 && y < 12 && x >= 7 && x <= 8) ? shade(142, 102, 58, 0.9 + r * 0.15) : ((y >= 4 && y <= 6 && x >= 6 && x <= 9) ? shade(120, 36, 36, 0.9) : null)));
+  drawTile(31, (x, y) => (y >= 12 && x >= 5 && x <= 10) ? shade(160, 50, 50, 0.95) : ((y >= 6 && y < 12 && x >= 7 && x <= 8) ? shade(168, 122, 68, 0.95) : ((y >= 4 && y <= 6 && x >= 6 && x <= 9) ? shade(255, 58, 58, 1.0) : null)));
+  drawTile(32, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15 || x === y || (x + y === 15)) ? shade(62, 38, 24, 0.9) : shade(118, 72, 42, 0.85 + r * 0.2));
+  drawTile(33, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(92, 54, 30, 0.95) : (Math.hypot(x - 7.5, y - 7.5) < 5.2 ? shade(255, 248, 185, 0.96 + r * 0.08) : shade(248, 192, 72, 0.92 + r * 0.12)));
+  drawTile(34, (x, y, r) => ((x === 7 || x === 8) && y >= 9) ? shade(115, 78, 42, 0.92) : (Math.hypot(x - 7.5, y - 6.5) < 4.2 ? shade(68, 185, 58, 0.85 + r * 0.25) : null));
+  drawTile(35, (x, y, r) => (y < 10 || (x % 3 !== 1)) ? null : shade(112, 198, 42, 0.88 + r * 0.2));
+  drawTile(36, (x, y, r) => (y < 6 || (x % 3 === 0)) ? null : (y < 9 ? shade(198, 212, 52, 0.92 + r * 0.15) : shade(124, 188, 46, 0.88 + r * 0.18)));
+  drawTile(37, (x, y, r) => (y < 3 || (x % 2 === 0 && y < 7)) ? null : (y < 8 ? shade(245, 194, 28, 0.94 + r * 0.14) : shade(212, 162, 34, 0.88 + r * 0.18)));
+  drawTile(38, (x, y, r) => (((x * 3 + y * 5) % 9 === 0) || (x + y === 15)) ? shade(232, 175, 255, 0.96 + r * 0.1) : shade(148, 62, 224, 0.82 + r * 0.28));
+  drawTile(39, (x, y, r) => ((x === 7 || x === 8) && y >= 9) ? shade(185, 235, 245, 0.92) : ((y >= 4 && y <= 8 && Math.abs(x - 7.5) <= (8 - Math.abs(y - 7) * 1.3)) ? (((x + y) % 3 === 0) ? '#a5f3fc' : shade(34, 211, 238, 0.9 + r * 0.18)) : null));
+  drawTile(40, (x, y, r) => (x <= 1 || x >= 14 || y <= 1 || y >= 14) ? shade(58, 198, 86, 0.95) : ((x >= 4 && x <= 11 && y >= 4 && y <= 11) ? shade(38, 148, 62, 0.92 + r * 0.12) : shade(82, 228, 108, 0.9 + r * 0.15)));
+  drawTile(41, (x, y, r) => (x <= 1 || x >= 14 || y <= 1 || y >= 14 || y === 7 || y === 8) ? shade(102, 66, 36, 0.92 + r * 0.12) : ((y < 7 && (x === 5 || x === 10)) ? shade(148, 163, 184, 0.92) : (y < 7 ? null : shade(156, 108, 62, 0.88 + r * 0.16))));
+  drawTile(42, (x, y, r) => ((x >= 2 && x <= 3) || (x >= 12 && x <= 13)) ? shade(162, 114, 62, 0.9 + r * 0.15) : (((x >= 2 && x <= 13) && (y === 2 || y === 6 || y === 10 || y === 14)) ? shade(194, 142, 76, 0.92 + r * 0.14) : null));
 
   // 43..54: Trapdoor, Rail, Chest, Lily Pad, Piston, Portal, Ice, Crafting Table, Furnace
   drawTile(43, (x, y, r) => {
@@ -751,6 +601,23 @@ function createProceduralAtlas() {
   drawTile(69, (x, y, r) => shade(127, 29, 29, 0.78 + r * 0.34));
   drawTile(70, (x, y, r) => shade(234, 228, 176, (((x * 3 + y * 5) % 7 === 0) ? 0.82 : 0.96) + r * 0.1));
   drawTile(71, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(5, 150, 105, 0.96) : (((x + y === 7) || (x + y === 14)) ? shade(167, 243, 208, 0.99) : shade(16, 185, 129, 0.90 + r * 0.14)));
+  // 72..81: Dedicated Minecraft-faithful Top/Bottom/Side faces for Cactus, TNT, Chest, Crafting Table, Furnace, Piston, Cake & Anvil
+  drawTile(72, (x, y, r) => ((x <= 1 || x >= 14 || y <= 1 || y >= 14) && (x + y) % 4 === 0) ? '#e2e8f0' : ((x >= 6 && x <= 9 && y >= 6 && y <= 9) ? shade(134, 198, 92, 0.94 + r * 0.1) : shade(44, 138, 60, (x <= 1 || x >= 14 || y <= 1 || y >= 14 ? 0.78 : 0.95) + r * 0.12)));
+  drawTile(73, (x, y, r) => (x >= 4 && x <= 11 && y >= 4 && y <= 11) ? shade(208, 194, 128, 0.92 + r * 0.12) : shade(44, 138, 60, 0.84 + r * 0.14));
+  drawTile(74, (x, y, r) => (x % 4 === 0 || y % 4 === 0) ? shade(135, 22, 22, 0.9) : shade(212, 48, 38, 0.88 + r * 0.16));
+  drawTile(75, (x, y, r) => y === 5 ? shade(28, 22, 16, 0.98) : ((x === 0 || x === 15 || y === 0 || y === 15) ? shade(62, 40, 22, 0.94) : shade(176, 112, 38, 0.88 + r * 0.16)));
+  drawTile(76, (x, y, r) => {
+    if (y <= 2) return shade(92, 58, 30, 0.94);
+    if (y === 3) return shade(48, 30, 15, 0.96);
+    if (x >= 3 && x <= 6 && y >= 5 && y <= 11) return (x === 3 || x === 6 || y === 5 || y === 11) ? shade(58, 36, 18, 0.96) : shade(120, 72, 32, 0.94);
+    if (x >= 10 && x <= 13 && y >= 5 && y <= 11) return (y <= 6 || x === 11) ? shade(203, 213, 225, 0.98) : shade(168, 118, 66, 0.9);
+    return (x === 0 || x === 15 || y === 15) ? shade(92, 58, 30, 0.92) : shade(168, 118, 66, 0.88 + r * 0.15);
+  });
+  drawTile(77, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15 || y === 8 || ((x + (y >> 2) * 4) % 8 === 0)) ? shade(71, 85, 105, 0.92) : shade(115, 125, 138, 0.86 + r * 0.18));
+  drawTile(78, (x, y, r) => ((x <= 2 || x >= 13) && (y <= 2 || y >= 13)) ? shade(148, 163, 184, 0.96) : shade(184, 134, 72, (y % 4 === 0 ? 0.78 : 0.94) + r * 0.1));
+  drawTile(79, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(71, 85, 105, 0.94) : (Math.hypot(x - 7.5, y - 7.5) < 4.2 ? shade(51, 65, 85, 0.94) : shade(105, 110, 118, 0.86 + r * 0.18)));
+  drawTile(80, (x, y, r) => (x <= 1 || x >= 14 || y <= 1 || y >= 14) ? shade(180, 83, 9, 0.92) : shade(217, 119, 6, 0.88 + r * 0.14));
+  drawTile(81, (x, y, r) => (x >= 3 && x <= 12 && y >= 4 && y <= 11) ? shade(100, 116, 139, 0.92 + r * 0.12) : shade(51, 65, 85, 0.88 + r * 0.14));
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter;
