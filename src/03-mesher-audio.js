@@ -101,9 +101,9 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
 
         const def = BLOCK_DEFS[blockId];
 
-        // Cross-Quad Geometry (Torches, Tall Grass, Flowers, Lily Pads)
+        // Cross-Quad Geometry (Torches, Tall Grass, Flowers, Lily Pads, Vines)
         if (def.shape === 'cross') {
-          if (lodLevel > 0 && blockId !== BLOCK.TORCH) continue;
+          if (lodLevel > 0 && blockId !== BLOCK.TORCH && blockId !== BLOCK.VINE) continue;
           const tileIdx = def.tiles[0];
           const u0 = tileIdx * uvStep + uvPad;
           const u1 = (tileIdx + 1) * uvStep - uvPad;
@@ -111,9 +111,10 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           const packedL = getLightGlobal(wx, y, wz);
           const sL = ((packedL >> 4) / 15) * sunFactor;
           const bL = (packedL & 15) / 15;
-          const rL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 1.05)));
-          const gL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 0.92)));
-          const blL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 0.70)));
+          const isGrTint = blockId === BLOCK.VINE || blockId === BLOCK.FERN;
+          const rL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 1.05))) * (isGrTint ? 0.45 : 1.0);
+          const gL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 0.92))) * (isGrTint ? 0.78 : 1.0);
+          const blL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 0.70))) * (isGrTint ? 0.30 : 1.0);
 
           const diagQuads = blockId === BLOCK.LILY_PAD ? [
             [[0.05, -0.09, 0.95, u0, 0], [0.95, -0.09, 0.95, u1, 0], [0.95, -0.09, 0.05, u1, 1], [0.05, -0.09, 0.05, u0, 1]],

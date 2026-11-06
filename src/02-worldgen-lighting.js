@@ -116,7 +116,7 @@ function createWorldGenerator(seed) {
         }
       }
       for (const [vx, vz] of [[-2, 0], [2, 0], [0, -2], [0, 2], [-2, -1], [2, 1]]) {
-        for (let vy = 1; vy <= 3; vy++) setT(lx + vx, topY - 1 - vy, lz + vz, BLOCK.LEAVES, true);
+        for (let vy = 1; vy <= 3; vy++) setT(lx + vx, topY - 1 - vy, lz + vz, BLOCK.VINE || BLOCK.LEAVES, true);
       }
       return { type: 'jungle', trunkH };
     }
@@ -146,7 +146,7 @@ function createWorldGenerator(seed) {
         }
       }
       for (const [vx, vz] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
-        for (let vy = 1; vy <= 3; vy++) setT(lx + vx, topY - 1 - vy, lz + vz, BLOCK.LEAVES, true);
+        for (let vy = 1; vy <= 3; vy++) setT(lx + vx, topY - 1 - vy, lz + vz, BLOCK.VINE || BLOCK.LEAVES, true);
       }
       setT(lx + 1, sy + 1, lz, BLOCK.GLOW_MUSHROOM, true);
       return { type: 'swamp', trunkH };

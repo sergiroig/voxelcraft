@@ -105,10 +105,8 @@ function setVoxelRawNoRebuild(wx, wy, wz, blockId, dirtyChunksSet) {
 
   if (blockId === BLOCK.AIR && wy + 1 < CHUNK_HEIGHT) {
     const above = ch.data[idx + 1];
-    if (BLOCK_DEFS[above].shape === 'cross') {
-      ch.data[idx + 1] = BLOCK.AIR;
-      dArr.push(idx + 1, BLOCK.AIR);
-    }
+    if (BLOCK_DEFS[above].shape === 'cross' && above !== BLOCK.VINE) { ch.data[idx + 1] = BLOCK.AIR; dArr.push(idx + 1, BLOCK.AIR); }
+    for (let vy = wy - 1; vy >= 1 && ch.data[voxelIndex(lx, vy, lz)] === BLOCK.VINE; vy--) { ch.data[voxelIndex(lx, vy, lz)] = BLOCK.AIR; dArr.push(voxelIndex(lx, vy, lz), BLOCK.AIR); }
   }
   if (prevId === BLOCK.WOOD && blockId === BLOCK.AIR && typeof enqueueLeafDecayAround === 'function') {
     enqueueLeafDecayAround(wx, wy, wz);
