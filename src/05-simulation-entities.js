@@ -103,12 +103,12 @@ function scanNearbyFloatingLeaves() {
     for (let dx = -24; dx <= 24; dx++) {
       const lx = px + dx, cx = Math.floor(lx / CHUNK_SIZE);
       const dArr = worldDeltas[`${cx},${cz}`];
-      const hasDelta = dArr && dArr.length > 0, isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER);
+      const hasDelta = dArr && dArr.length > 0, isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER), isSideNeedW = (nx, ny, nz, sBelow) => { const nb = getVoxelGlobal(nx, ny, nz); return (BLOCK_DEFS[nb].shape === 'cross' && nb !== BLOCK.LADDER) || (nb === BLOCK.AIR && (getVoxelGlobal(nx, ny - 1, nz) === BLOCK.WATER || (sBelow && isWRep(getVoxelGlobal(nx, ny - 1, nz))))); };
       for (let dy = -3; dy <= 8; dy++) {
         const ly = py + dy;
         if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
         const b = getVoxelGlobal(lx, ly, lz);
-        if (b === BLOCK.WATER && (isWRep(getVoxelGlobal(lx, ly - 1, lz)) || (BLOCK_DEFS[getVoxelGlobal(lx, ly - 1, lz)].solid && ((isWRep(getVoxelGlobal(lx + 1, ly, lz)) && isWRep(getVoxelGlobal(lx + 1, ly - 1, lz))) || (isWRep(getVoxelGlobal(lx - 1, ly, lz)) && isWRep(getVoxelGlobal(lx - 1, ly - 1, lz))) || (isWRep(getVoxelGlobal(lx, ly, lz + 1)) && isWRep(getVoxelGlobal(lx, ly - 1, lz + 1))) || (isWRep(getVoxelGlobal(lx, ly, lz - 1)) && isWRep(getVoxelGlobal(lx, ly - 1, lz - 1))))))) simQueue.add(`${lx},${ly},${lz}`); else if (hasDelta && (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES)) {
+        if (b === BLOCK.WATER && (isWRep(getVoxelGlobal(lx, ly - 1, lz)) || (ly <= SEA_LEVEL && (isSideNeedW(lx + 1, ly, lz, BLOCK_DEFS[getVoxelGlobal(lx, ly - 1, lz)].solid) || isSideNeedW(lx - 1, ly, lz, BLOCK_DEFS[getVoxelGlobal(lx, ly - 1, lz)].solid) || isSideNeedW(lx, ly, lz + 1, BLOCK_DEFS[getVoxelGlobal(lx, ly - 1, lz)].solid) || isSideNeedW(lx, ly, lz - 1, BLOCK_DEFS[getVoxelGlobal(lx, ly - 1, lz)].solid))))) simQueue.add(`${lx},${ly},${lz}`); else if (hasDelta && (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES)) {
           if (!hasNearbyWood(lx, ly, lz)) {
             enqueueLeafDecayAround(lx, ly, lz);
             if (leafDecayQueue.length >= 24) return;
@@ -195,7 +195,7 @@ function updateVoxelSimulation(dt) {
           } else if (isSource && isWRep(sideB)) {
             const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
             if (!isWRep(underSide) || BLOCK_DEFS[below].solid) { if (isWRep(underSide)) { setVoxelRawNoRebuild(wx + dx, wy - 1, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy - 1},${wz + dz}`); }
-              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
+              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`); simQueue.add(`${wx},${wy + 1},${wz}`);
             }
           }
         }
