@@ -469,12 +469,12 @@ function shadeBoxGeo(geo, hex) {
 const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
 const handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
 const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.36), 0xf1c27d);
-const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.144, 0.144, 0.18), 0x0284c7);
-const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 1.0, depthTest: false, depthWrite: false });
+const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.12), 0xe8b474);
+const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 1.0, fog: false, depthTest: false, depthWrite: false });
 const handArmMesh = new THREE.Mesh(handArmGeo, handArmMat);
 handArmMesh.renderOrder = 997;
 const handSleeveMesh = new THREE.Mesh(handSleeveGeo, handArmMat);
-handSleeveMesh.position.set(0, 0, 0.10);
+handSleeveMesh.position.set(0, 0, 0.14);
 handSleeveMesh.renderOrder = 998;
 handArmMesh.add(handSleeveMesh);
 handGroup.add(handArmMesh);
