@@ -298,7 +298,7 @@ function createWorldGenerator(seed) {
             } else if (biome === 'Desierto' || h === SEA_LEVEL + 1) {
               data[colOffset + y] = (biome === 'Pantano' && rCol > 0.5) ? BLOCK.CLAY : BLOCK.SAND;
             } else if (biome === 'Meseta') {
-              data[colOffset + y] = (y % 3 === 0) ? BLOCK.BRICK : (y % 3 === 1 ? BLOCK.SAND : BLOCK.GRAVEL);
+              data[colOffset + y] = (h <= SEA_LEVEL + 5) ? (BLOCK.RED_SAND || BLOCK.SAND) : ((y % 4 === 0) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (y % 4 === 1 ? (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND) : (y % 4 === 2 ? (BLOCK.RED_TERRACOTTA || BLOCK.CLAY) : (BLOCK.YELLOW_TERRACOTTA || BLOCK.SAND))));
             } else if (biome === 'Cumbres Heladas') {
               data[colOffset + y] = (h >= 34 && rCol > 0.45) ? BLOCK.ICE : BLOCK.SNOW;
             } else if (h >= 42 || biome === 'Taiga Nevada') {
@@ -307,7 +307,7 @@ function createWorldGenerator(seed) {
               data[colOffset + y] = BLOCK.GRASS;
             }
           } else if (y >= h - 3) {
-            if (biome === 'Meseta') data[colOffset + y] = (y & 1) ? BLOCK.BRICK : BLOCK.SAND;
+            if (biome === 'Meseta') data[colOffset + y] = (h <= SEA_LEVEL + 5) ? (BLOCK.RED_SAND || BLOCK.SAND) : ((y & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
             else data[colOffset + y] = (h <= SEA_LEVEL + 1 || biome === 'Desierto') ? BLOCK.SAND : BLOCK.DIRT;
           } else {
             data[colOffset + y] = (biome === 'Meseta' && y >= h - 8 && rCol > 0.92) ? BLOCK.GOLD_ORE : BLOCK.STONE;
@@ -409,9 +409,11 @@ function createWorldGenerator(seed) {
         const r = hash3D(wx, sy, wz), biome = getBiomeAt(wx, wz);
 
         if (biome === 'Desierto' || biome === 'Meseta') {
-          if (r > 0.984) {
+          if (r > 0.984 && (topBlock === BLOCK.SAND || topBlock === BLOCK.RED_SAND)) {
             const ch = 2 + ((r * 100) & 1);
             for (let ty = 1; ty <= ch; ty++) data[colOffset + sy + ty] = BLOCK.CACTUS;
+          } else if (biome === 'Meseta' && r > 0.986 && data[colOffset + sy + 1] === BLOCK.AIR) {
+            data[colOffset + sy + 1] = BLOCK.DEAD_BUSH || BLOCK.TALL_GRASS;
           } else if (biome === 'Desierto' && r < 0.0025 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'oasis');
           } else if (notOriginChunk && r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
@@ -669,7 +671,7 @@ function createWorldGenerator(seed) {
     let topBlock = BLOCK.GRASS;
     if (h < SEA_LEVEL) topBlock = (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas') ? BLOCK.ICE : BLOCK.WATER;
     else if (h <= SEA_LEVEL + 1 || biome === 'Desierto') topBlock = BLOCK.SAND;
-    else if (biome === 'Meseta') topBlock = (h % 3 === 0) ? BLOCK.BRICK : (h % 3 === 1 ? BLOCK.SAND : BLOCK.GRAVEL);
+    else if (biome === 'Meseta') topBlock = (h <= SEA_LEVEL + 5) ? (BLOCK.RED_SAND || BLOCK.SAND) : ((h % 4 === 0) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (h % 4 === 1 ? (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND) : (h % 4 === 2 ? (BLOCK.RED_TERRACOTTA || BLOCK.CLAY) : (BLOCK.YELLOW_TERRACOTTA || BLOCK.SAND))));
     else if (biome === 'Cumbres Heladas' || biome === 'Taiga Nevada' || h >= 42) topBlock = BLOCK.SNOW;
     const surfY = Math.max(h, SEA_LEVEL);
     return { y: surfY, groundY: h, topBlock, color: BLOCK_DEFS[topBlock].color || 0x58a83a };

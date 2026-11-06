@@ -2282,6 +2282,10 @@
             const res = vc.teleportToBiome(bName);
             assert(res !== null && res.biome === bName, `teleportToBiome("${bName}") debe localizar y teletransportar al bioma ${bName}`);
             assert(gen.getBiomeAt(vc.player.x, vc.player.z) === bName, `getBiomeAt en la posición destino debe ser "${bName}"`);
+            if (bName === 'Meseta') {
+              const sInfo = gen.sampleSurfaceAt(vc.player.x, vc.player.z);
+              assert(sInfo.topBlock !== vc.BLOCK.BRICK, 'El suelo del bioma Meseta debe usar Arena Roja o Terracota, nunca ladrillos (BLOCK.BRICK)');
+            }
           }
 
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
