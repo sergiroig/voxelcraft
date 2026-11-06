@@ -112,8 +112,8 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           const sL = ((packedL >> 4) / 15) * sunFactor;
           const bL = (packedL & 15) / 15;
           const rL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 1.05)));
-          const gL = Math.min(1.0, Math.max(0.08, Math.max(sL * (1.0 - bL * 0.10), bL * 0.92)));
-          const blL = Math.min(1.0, Math.max(0.08, Math.max(sL * (1.0 - bL * 0.30), bL * 0.70)));
+          const gL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 0.92)));
+          const blL = Math.min(1.0, Math.max(0.08, Math.max(sL, bL * 0.70)));
 
           const diagQuads = blockId === BLOCK.LILY_PAD ? [
             [[0.05, -0.09, 0.95, u0, 0], [0.95, -0.09, 0.95, u1, 0], [0.95, -0.09, 0.05, u1, 1], [0.05, -0.09, 0.05, u0, 1]],
@@ -189,10 +189,10 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           const sunLevel = ((packedL >> 4) / 15) * sunFactor;
           const blkLevel = (packedL & 15) / 15;
 
-          // Combine sunlight (white-blue) & block/torch light (warm golden)
+          // Combine sunlight (white-blue) & block/torch light (warm golden without subtracting blue in daylight)
           const baseR = Math.min(1.0, Math.max(0.07, Math.max(sunLevel, blkLevel * 1.04)));
-          const baseG = Math.min(1.0, Math.max(0.07, Math.max(sunLevel * (1.0 - blkLevel * 0.10), blkLevel * 0.90)));
-          const baseB = Math.min(1.0, Math.max(0.08, Math.max(sunLevel * (1.0 - blkLevel * 0.30), blkLevel * 0.68)));
+          const baseG = Math.min(1.0, Math.max(0.07, Math.max(sunLevel, blkLevel * 0.90)));
+          const baseB = Math.min(1.0, Math.max(0.08, Math.max(sunLevel, blkLevel * 0.68)));
 
           if (isWater) {
             const baseV = wvCount;

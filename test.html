@@ -2305,10 +2305,10 @@
           const gen = vc.getGenerator();
           const idx = (x, y, z) => (z * 16 + x) * 64 + y;
 
-          // 1) Abeto Boreal ('pine'): tronco alto + copa cónica + punta de nieve (BLOCK.SNOW)
+          // 1) Abeto Boreal ('pine'): tronco alto + copa cónica coronada con hojas (sin bloque de tierra nevada encima)
           const dPine = new Uint8Array(vc.CHUNK_VOLUME);
           const pInfo = gen.placeTreeInChunk(dPine, 8, 25, 8, 'pine', 0.5);
-          assert(pInfo.type === 'pine' && dPine[idx(8, 26, 8)] === vc.BLOCK.WOOD && dPine[idx(8, 25 + pInfo.trunkH + 2, 8)] === vc.BLOCK.SNOW, 'El Abeto (pine) debe tener tronco de madera y coronar su punta con Nieve (BLOCK.SNOW)');
+          assert(pInfo.type === 'pine' && dPine[idx(8, 26, 8)] === vc.BLOCK.WOOD && dPine[idx(8, 25 + pInfo.trunkH + 1, 8)] === vc.BLOCK.LEAVES && dPine[idx(8, 25 + pInfo.trunkH + 2, 8)] === vc.BLOCK.AIR, 'El Abeto (pine) debe tener tronco de madera y coronar su punta con Hojas (BLOCK.LEAVES), sin bloque de tierra nevada encima');
 
           // 2) Árbol Gigante de Jungla ('jungle'): raíces en base + lianas colgantes de hojas
           const dJun = new Uint8Array(vc.CHUNK_VOLUME);

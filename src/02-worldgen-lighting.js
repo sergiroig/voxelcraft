@@ -102,7 +102,6 @@ function createWorldGenerator(seed) {
         }
       }
       setT(lx, topY + 1, lz, BLOCK.LEAVES, true);
-      setT(lx, topY + 2, lz, BLOCK.SNOW, true);
       return { type: 'pine', trunkH };
     }
     if (treeType === 'jungle') {
@@ -292,20 +291,20 @@ function createWorldGenerator(seed) {
           if (y === h) {
             if (h <= SEA_LEVEL) {
               data[colOffset + y] = (sBiome === 'Pantano' || rCol > 0.68) ? BLOCK.CLAY : (rCol < 0.32 ? BLOCK.GRAVEL : BLOCK.SAND);
-            } else if (sBiome === 'Desierto' || h === SEA_LEVEL + 1) {
-              data[colOffset + y] = (sBiome === 'Pantano' && rCol > 0.5) ? BLOCK.CLAY : BLOCK.SAND;
-            } else if (sBiome === 'Meseta') {
-              data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
             } else if (sBiome === 'Cumbres Heladas') {
               data[colOffset + y] = (h >= 34 && rCol > 0.45) ? BLOCK.ICE : BLOCK.SNOW;
             } else if (h >= 42 || sBiome === 'Taiga Nevada') {
               data[colOffset + y] = BLOCK.SNOW;
+            } else if (sBiome === 'Desierto' || h === SEA_LEVEL + 1) {
+              data[colOffset + y] = (sBiome === 'Pantano' && rCol > 0.5) ? BLOCK.CLAY : BLOCK.SAND;
+            } else if (sBiome === 'Meseta') {
+              data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
             } else {
               data[colOffset + y] = BLOCK.GRASS;
             }
           } else if (y >= h - 3) {
             if (sBiome === 'Meseta') data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
-            else data[colOffset + y] = (h <= SEA_LEVEL + 1 || sBiome === 'Desierto') ? BLOCK.SAND : BLOCK.DIRT;
+            else data[colOffset + y] = (sBiome === 'Desierto' || (h <= SEA_LEVEL + 1 && sBiome !== 'Taiga Nevada' && sBiome !== 'Cumbres Heladas')) ? BLOCK.SAND : BLOCK.DIRT;
           } else {
             data[colOffset + y] = (sBiome === 'Meseta' && y >= h - 8 && rCol > 0.92) ? BLOCK.GOLD_ORE : BLOCK.STONE;
           }
@@ -652,9 +651,9 @@ function createWorldGenerator(seed) {
     const biome = getBiomeAt(wx, wz, (hash3D(wx, h, wz) - 0.5) * 0.028);
     let topBlock = BLOCK.GRASS;
     if (h < SEA_LEVEL) topBlock = (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas') ? BLOCK.ICE : BLOCK.WATER;
+    else if (biome === 'Cumbres Heladas' || biome === 'Taiga Nevada' || h >= 42) topBlock = BLOCK.SNOW;
     else if (h <= SEA_LEVEL + 1 || biome === 'Desierto') topBlock = BLOCK.SAND;
     else if (biome === 'Meseta') topBlock = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((h >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
-    else if (biome === 'Cumbres Heladas' || biome === 'Taiga Nevada' || h >= 42) topBlock = BLOCK.SNOW;
     const surfY = Math.max(h, SEA_LEVEL);
     return { y: surfY, groundY: h, topBlock, color: BLOCK_DEFS[topBlock].color || 0x58a83a };
   }
