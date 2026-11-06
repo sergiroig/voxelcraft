@@ -2,8 +2,13 @@
 'use strict';
 
 // ============================================================================
-// 3. WORLD GENERATOR: BIOMES, 4x4x4 TRILINEAR 3D CAVES & ORES
+// 3. WORLD GENERATOR: 9 BIOMES, BIOME TREES, ENV FEATURES, 3D CAVES & STRUCTURES
 // ============================================================================
+const BIOME_LIST = [
+  'Llanura', 'Bosque', 'Desierto', 'Taiga Nevada',
+  'Jungla', 'Pantano', 'Sabana', 'Meseta', 'Cumbres Heladas'
+];
+
 function createWorldGenerator(seed) {
   const p = new Uint8Array(512);
   const perm = new Uint8Array(256);
@@ -93,10 +98,128 @@ function createWorldGenerator(seed) {
   function getBiomeAt(wx, wz) {
     const temp = noise2D(wx * 0.0045 + 500, wz * 0.0045 + 500);
     const moist = noise2D(wx * 0.0045 - 500, wz * 0.0045 - 500);
-    if (temp > 0.25 && moist < 0.05) return 'Desierto';
-    if (temp < -0.22) return 'Taiga Nevada';
-    if (moist > 0.15) return 'Bosque';
+    const weird = noise2D(wx * 0.006 + 1234, wz * 0.006 - 1234);
+    if (temp < -0.18) return (weird > 0.12 || temp < -0.30) ? 'Cumbres Heladas' : 'Taiga Nevada';
+    if (temp > 0.16) {
+      if (moist < -0.05) return 'Desierto';
+      if (moist < 0.08) return weird > 0.03 ? 'Meseta' : 'Sabana';
+      return 'Jungla';
+    }
+    if (moist > 0.15) return weird < -0.02 ? 'Pantano' : 'Bosque';
+    if (moist > 0.05) return 'Bosque';
     return 'Llanura';
+  }
+
+  function placeTreeInChunk(data, lx, sy, lz, treeType = 'oak', r = 0.5) {
+    const setT = (x, y, z, bId, onlyAir = false) => {
+      if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y <= 1 || y >= CHUNK_HEIGHT) return;
+      const idx = (z * CHUNK_SIZE + x) * CHUNK_HEIGHT + y;
+      if (!onlyAir || data[idx] === BLOCK.AIR) data[idx] = bId;
+    };
+    if (treeType === 'pine') {
+      const trunkH = 6 + ((r * 1000) & 1), topY = sy + trunkH;
+      for (let ty = 1; ty <= trunkH; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+      const layers = [[-3, 2], [-2, 1], [-1, 2], [0, 1]];
+      for (const [dy, rad] of layers) {
+        for (let dz = -rad; dz <= rad; dz++) for (let dx = -rad; dx <= rad; dx++) {
+          if (rad === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+          setT(lx + dx, topY + dy, lz + dz, BLOCK.LEAVES, true);
+        }
+      }
+      setT(lx, topY + 1, lz, BLOCK.LEAVES, true);
+      setT(lx, topY + 2, lz, BLOCK.SNOW, true);
+      return { type: 'pine', trunkH };
+    }
+    if (treeType === 'jungle') {
+      const trunkH = 7 + ((r * 1000) & 1), topY = sy + trunkH;
+      for (let ty = 1; ty <= trunkH; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+      setT(lx + 1, sy + 1, lz, BLOCK.WOOD, true); setT(lx - 1, sy + 1, lz, BLOCK.WOOD, true);
+      for (let dy = -1; dy <= 1; dy++) {
+        const rad = dy === 1 ? 1 : 2;
+        for (let dz = -rad; dz <= rad; dz++) for (let dx = -rad; dx <= rad; dx++) {
+          if (rad === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2 && dy === 0) continue;
+          setT(lx + dx, topY + dy, lz + dz, BLOCK.LEAVES, true);
+        }
+      }
+      for (const [vx, vz] of [[-2, 0], [2, 0], [0, -2], [0, 2], [-2, -1], [2, 1]]) {
+        for (let vy = 1; vy <= 3; vy++) setT(lx + vx, topY - 1 - vy, lz + vz, BLOCK.LEAVES, true);
+      }
+      return { type: 'jungle', trunkH };
+    }
+    if (treeType === 'acacia') {
+      const leanX = r > 0.99 ? 1 : -1, leanZ = (((r * 100) | 0) & 1) ? 1 : 0;
+      for (let ty = 1; ty <= 3; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+      setT(lx + leanX, sy + 4, lz + leanZ, BLOCK.WOOD);
+      setT(lx + leanX, sy + 5, lz + leanZ, BLOCK.WOOD);
+      const cxT = lx + leanX, czT = lz + leanZ, topY = sy + 5;
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+        setT(cxT + dx, topY, czT + dz, BLOCK.LEAVES, true);
+      }
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        if (Math.abs(dx) + Math.abs(dz) <= 1) setT(cxT + dx, topY + 1, czT + dz, BLOCK.LEAVES, true);
+      }
+      return { type: 'acacia', trunkH: 5 };
+    }
+    if (treeType === 'swamp') {
+      const trunkH = 4 + ((r * 1000) & 1), topY = sy + trunkH;
+      for (let ty = 1; ty <= trunkH; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+      for (let dy = -1; dy <= 1; dy++) {
+        const rad = dy === 1 ? 1 : 2;
+        for (let dz = -rad; dz <= rad; dz++) for (let dx = -rad; dx <= rad; dx++) {
+          if (rad === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2 && dy >= 0) continue;
+          setT(lx + dx, topY + dy, lz + dz, BLOCK.LEAVES, true);
+        }
+      }
+      for (const [vx, vz] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) {
+        for (let vy = 1; vy <= 3; vy++) setT(lx + vx, topY - 1 - vy, lz + vz, BLOCK.LEAVES, true);
+      }
+      setT(lx + 1, sy + 1, lz, BLOCK.GLOW_MUSHROOM, true);
+      return { type: 'swamp', trunkH };
+    }
+    const trunkH = 4 + ((r * 1000) & 1), canopyBase = sy + trunkH - 1;
+    for (let ty = 1; ty <= trunkH; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
+    for (let dy = 0; dy <= 2; dy++) {
+      const rad = dy === 2 ? 1 : 2;
+      for (let dz = -rad; dz <= rad; dz++) for (let dx = -rad; dx <= rad; dx++) {
+        if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && dy > 0) continue;
+        setT(lx + dx, canopyBase + dy, lz + dz, BLOCK.LEAVES, true);
+      }
+    }
+    return { type: 'oak', trunkH };
+  }
+
+  function placeEnvFeatureInChunk(data, lx, sy, lz, featureType = 'boulder') {
+    const setF = (x, y, z, bId, onlyAir = false) => {
+      if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y <= 1 || y >= CHUNK_HEIGHT) return;
+      const idx = (z * CHUNK_SIZE + x) * CHUNK_HEIGHT + y;
+      if (!onlyAir || data[idx] === BLOCK.AIR) data[idx] = bId;
+    };
+    if (featureType === 'fallen_log') {
+      for (let dx = -1; dx <= 1; dx++) setF(lx + dx, sy + 1, lz, BLOCK.WOOD, true);
+      setF(lx, sy + 1, lz + 1, BLOCK.GLOW_MUSHROOM, true);
+      return { type: 'fallen_log' };
+    }
+    if (featureType === 'ice_spike') {
+      for (let dy = 1; dy <= 5; dy++) setF(lx, sy + dy, lz, BLOCK.ICE);
+      for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        setF(lx + dx, sy + 1, lz + dz, BLOCK.ICE); setF(lx + dx, sy + 2, lz + dz, BLOCK.ICE);
+      }
+      return { type: 'ice_spike' };
+    }
+    if (featureType === 'oasis') {
+      setF(lx, sy, lz, BLOCK.WATER);
+      for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        setF(lx + dx, sy, lz + dz, BLOCK.GRASS);
+      }
+      setF(lx + 1, sy + 1, lz, BLOCK.WHEAT_1, true);
+      setF(lx - 1, sy + 1, lz, BLOCK.FLOWER_YELLOW, true);
+      return { type: 'oasis' };
+    }
+    setF(lx, sy + 1, lz, BLOCK.STONE); setF(lx, sy + 2, lz, BLOCK.COBBLE, true);
+    setF(lx + 1, sy + 1, lz, BLOCK.COBBLE, true); setF(lx - 1, sy + 1, lz, BLOCK.GRAVEL, true);
+    setF(lx, sy + 1, lz + 1, BLOCK.COBBLE, true);
+    return { type: 'boulder' };
   }
 
   // Pre-allocated 5x17x5 coarse 3D noise grid for 4x4x4 trilinear interpolation
@@ -105,8 +228,7 @@ function createWorldGenerator(seed) {
 
   function generateChunkVoxels(cx, cz, deltaList) {
     const data = new Uint8Array(CHUNK_VOLUME);
-    const wx0 = cx * CHUNK_SIZE;
-    const wz0 = cz * CHUNK_SIZE;
+    const wx0 = cx * CHUNK_SIZE, wz0 = cz * CHUNK_SIZE;
 
     // Step 1: Sample 3D cave noise on 4x4x4 coarse grid (only 425 evaluations!)
     for (let gz = 0; gz <= 4; gz++) {
@@ -124,57 +246,55 @@ function createWorldGenerator(seed) {
 
     const surfaceMap = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
 
-    // Step 2: Heightmap, Biomes & Strata
+    // Step 2: Heightmap, 9 Biomes, Riverbeds (Clay/Gravel) & Strata
     for (let lz = 0; lz < CHUNK_SIZE; lz++) {
       const wz = wz0 + lz;
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-        const wx = wx0 + lx;
-        const biome = getBiomeAt(wx, wz);
-
+        const wx = wx0 + lx, biome = getBiomeAt(wx, wz);
         const continental = fbm2D(wx * 0.008, wz * 0.008, 3, 2.0, 0.5);
         const detail = fbm2D(wx * 0.032, wz * 0.032, 2, 2.0, 0.5);
         const mountain = Math.max(0, fbm2D(wx * 0.012 + 100, wz * 0.012 + 100, 3, 2.1, 0.55));
 
-        let h = Math.floor(
-          SEA_LEVEL + 5 +
-          continental * 14 +
-          detail * 4 +
-          mountain * mountain * 26
-        );
+        let h = Math.floor(SEA_LEVEL + 5 + continental * 14 + detail * 4 + mountain * mountain * 26);
+        if (biome === 'Pantano') h = Math.floor(SEA_LEVEL + continental * 4 + detail * 2);
+        else if (biome === 'Meseta') h += Math.floor(Math.max(0, detail) * 6);
+        else if (biome === 'Cumbres Heladas') h += Math.floor(mountain * 8);
         if (h < 5) h = 5;
-        if (h >= CHUNK_HEIGHT - 4) h = CHUNK_HEIGHT - 5;
+        if (h >= CHUNK_HEIGHT - 6) h = CHUNK_HEIGHT - 7;
         surfaceMap[lz * CHUNK_SIZE + lx] = h;
 
-        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
+        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, rCol = hash3D(wx, h, wz);
         data[colOffset] = BLOCK.BEDROCK;
 
         for (let y = 1; y <= h; y++) {
           if (y === h) {
-            if (h <= SEA_LEVEL + 1 || biome === 'Desierto') {
-              data[colOffset + y] = BLOCK.SAND;
+            if (h <= SEA_LEVEL) {
+              data[colOffset + y] = (biome === 'Pantano' || rCol > 0.68) ? BLOCK.CLAY : (rCol < 0.32 ? BLOCK.GRAVEL : BLOCK.SAND);
+            } else if (biome === 'Desierto' || h === SEA_LEVEL + 1) {
+              data[colOffset + y] = (biome === 'Pantano' && rCol > 0.5) ? BLOCK.CLAY : BLOCK.SAND;
+            } else if (biome === 'Meseta') {
+              data[colOffset + y] = (y % 3 === 0) ? BLOCK.BRICK : (y % 3 === 1 ? BLOCK.SAND : BLOCK.GRAVEL);
+            } else if (biome === 'Cumbres Heladas') {
+              data[colOffset + y] = (h >= 34 && rCol > 0.45) ? BLOCK.ICE : BLOCK.SNOW;
             } else if (h >= 42 || biome === 'Taiga Nevada') {
               data[colOffset + y] = BLOCK.SNOW;
             } else {
               data[colOffset + y] = BLOCK.GRASS;
             }
           } else if (y >= h - 3) {
-            data[colOffset + y] = (h <= SEA_LEVEL + 1 || biome === 'Desierto') ? BLOCK.SAND : BLOCK.DIRT;
+            if (biome === 'Meseta') data[colOffset + y] = (y & 1) ? BLOCK.BRICK : BLOCK.SAND;
+            else data[colOffset + y] = (h <= SEA_LEVEL + 1 || biome === 'Desierto') ? BLOCK.SAND : BLOCK.DIRT;
           } else {
-            data[colOffset + y] = BLOCK.STONE;
+            data[colOffset + y] = (biome === 'Meseta' && y >= h - 8 && rCol > 0.92) ? BLOCK.GOLD_ORE : BLOCK.STONE;
           }
         }
 
         if (h < SEA_LEVEL) {
           for (let y = h + 1; y <= SEA_LEVEL; y++) {
-            if (y === SEA_LEVEL && biome === 'Taiga Nevada') {
-              data[colOffset + y] = BLOCK.ICE;
-            } else {
-              data[colOffset + y] = BLOCK.WATER;
-            }
+            data[colOffset + y] = (y === SEA_LEVEL && (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas')) ? BLOCK.ICE : BLOCK.WATER;
           }
-          if ((biome === 'Llanura' || biome === 'Bosque') && hash3D(wx, SEA_LEVEL, wz) > 0.962) {
-            data[colOffset + SEA_LEVEL + 1] = BLOCK.LILY_PAD;
-          }
+          const lilyT = biome === 'Pantano' ? 0.88 : (biome === 'Jungla' ? 0.93 : ((biome === 'Llanura' || biome === 'Bosque') ? 0.962 : 1.0));
+          if (hash3D(wx, SEA_LEVEL, wz) > lilyT) data[colOffset + SEA_LEVEL + 1] = BLOCK.LILY_PAD;
         }
       }
     }
@@ -183,61 +303,35 @@ function createWorldGenerator(seed) {
     for (let gz = 0; gz < 4; gz++) {
       for (let gx = 0; gx < 4; gx++) {
         for (let gy = 0; gy < 15; gy++) {
-          const v000 = coarseCave[cIdx(gx, gy, gz)];
-          const v100 = coarseCave[cIdx(gx + 1, gy, gz)];
-          const v010 = coarseCave[cIdx(gx, gy + 1, gz)];
-          const v110 = coarseCave[cIdx(gx + 1, gy + 1, gz)];
-          const v001 = coarseCave[cIdx(gx, gy, gz + 1)];
-          const v101 = coarseCave[cIdx(gx + 1, gy, gz + 1)];
-          const v011 = coarseCave[cIdx(gx, gy + 1, gz + 1)];
-          const v111 = coarseCave[cIdx(gx + 1, gy + 1, gz + 1)];
+          const v000 = coarseCave[cIdx(gx, gy, gz)], v100 = coarseCave[cIdx(gx + 1, gy, gz)];
+          const v010 = coarseCave[cIdx(gx, gy + 1, gz)], v110 = coarseCave[cIdx(gx + 1, gy + 1, gz)];
+          const v001 = coarseCave[cIdx(gx, gy, gz + 1)], v101 = coarseCave[cIdx(gx + 1, gy, gz + 1)];
+          const v011 = coarseCave[cIdx(gx, gy + 1, gz + 1)], v111 = coarseCave[cIdx(gx + 1, gy + 1, gz + 1)];
 
           for (let dz = 0; dz < 4; dz++) {
-            const fz = dz * 0.25;
-            const lz = gz * 4 + dz;
+            const fz = dz * 0.25, lz = gz * 4 + dz;
             for (let dx = 0; dx < 4; dx++) {
-              const fx = dx * 0.25;
-              const lx = gx * 4 + dx;
-              const surfY = surfaceMap[lz * CHUNK_SIZE + lx];
+              const fx = dx * 0.25, lx = gx * 4 + dx, surfY = surfaceMap[lz * CHUNK_SIZE + lx];
               const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-
               for (let dy = 0; dy < 4; dy++) {
                 const y = gy * 4 + dy;
-                if (y <= 1 || y >= surfY) continue;
-                // Don't break ocean floors so water doesn't flood caves
-                if (surfY <= SEA_LEVEL + 1 && y >= surfY - 4) continue;
-
+                if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 1 && y >= surfY - 4)) continue;
                 const fy = dy * 0.25;
-                const c00 = v000 + fx * (v100 - v000);
-                const c10 = v010 + fx * (v110 - v010);
-                const c01 = v001 + fx * (v101 - v001);
-                const c11 = v011 + fx * (v111 - v011);
-                const c0 = c00 + fy * (c10 - c00);
-                const c1 = c01 + fy * (c11 - c01);
+                const c0 = (v000 + fx * (v100 - v000)) + fy * ((v010 + fx * (v110 - v010)) - (v000 + fx * (v100 - v000)));
+                const c1 = (v001 + fx * (v101 - v001)) + fy * ((v011 + fx * (v111 - v011)) - (v001 + fx * (v101 - v001)));
                 const caveVal = c0 + fz * (c1 - c0);
 
                 if (caveVal < 0.165) {
-                  if (y <= 4) {
-                    data[colOffset + y] = BLOCK.LAVA;
-                  } else if (y <= 22 && data[colOffset + y - 1] === BLOCK.STONE && hash3D(wx0 + lx, y, wz0 + lz) > 0.968) {
-                    data[colOffset + y] = BLOCK.GLOW_MUSHROOM;
-                  } else {
-                    data[colOffset + y] = BLOCK.AIR;
-                  }
+                  if (y <= 4) data[colOffset + y] = BLOCK.LAVA;
+                  else if (y <= 22 && data[colOffset + y - 1] === BLOCK.STONE && hash3D(wx0 + lx, y, wz0 + lz) > 0.968) data[colOffset + y] = BLOCK.GLOW_MUSHROOM;
+                  else data[colOffset + y] = BLOCK.AIR;
                 } else if (data[colOffset + y] === BLOCK.STONE) {
-                  // Underground Ore & Amethyst Geode Distribution
                   const r = hash3D(wx0 + lx, y, wz0 + lz);
-                  if (caveVal < 0.192 && y >= 5 && y <= 20 && r > 0.945) {
-                    data[colOffset + y] = BLOCK.AMETHYST;
-                  } else if (y < 14 && r > 0.992) {
-                    data[colOffset + y] = BLOCK.DIAMOND_ORE;
-                  } else if (y < 24 && r > 0.988) {
-                    data[colOffset + y] = BLOCK.GOLD_ORE;
-                  } else if (y < 40 && r > 0.978) {
-                    data[colOffset + y] = BLOCK.IRON_ORE;
-                  } else if (y < 52 && r > 0.965) {
-                    data[colOffset + y] = BLOCK.COAL_ORE;
-                  }
+                  if (caveVal < 0.192 && y >= 5 && y <= 20 && r > 0.945) data[colOffset + y] = BLOCK.AMETHYST;
+                  else if (y < 14 && r > 0.992) data[colOffset + y] = BLOCK.DIAMOND_ORE;
+                  else if (y < 24 && r > 0.988) data[colOffset + y] = BLOCK.GOLD_ORE;
+                  else if (y < 40 && r > 0.978) data[colOffset + y] = BLOCK.IRON_ORE;
+                  else if (y < 52 && r > 0.965) data[colOffset + y] = BLOCK.COAL_ORE;
                 }
               }
             }
@@ -246,81 +340,62 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 4: Trees, Cacti & Surface Cross-Quad Flora (Tall Grass, Roses, Dandelions)
+    // Step 4: Biome-Specific Trees, Environmental Formations & Surface Flora
     for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
       for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
-        const wx = wx0 + lx;
-        const wz = wz0 + lz;
-        const sy = surfaceMap[lz * CHUNK_SIZE + lx];
-        if (sy <= SEA_LEVEL + 1 || sy >= 44) continue;
+        const wx = wx0 + lx, wz = wz0 + lz, sy = surfaceMap[lz * CHUNK_SIZE + lx];
+        if (sy <= SEA_LEVEL || sy >= CHUNK_HEIGHT - 11) continue;
+        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, topBlock = data[colOffset + sy];
+        const r = hash3D(wx, sy, wz), biome = getBiomeAt(wx, wz);
 
-        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-        const topBlock = data[colOffset + sy];
-        const r = hash3D(wx, sy, wz);
-        const biome = getBiomeAt(wx, wz);
-
-        if (topBlock === BLOCK.SAND && biome === 'Desierto') {
-          // Desert Cactus
-          if (r > 0.985) {
+        if (biome === 'Desierto' || biome === 'Meseta') {
+          if (r > 0.984) {
             const ch = 2 + ((r * 100) & 1);
-            for (let ty = 1; ty <= ch; ty++) {
-              data[colOffset + sy + ty] = BLOCK.CACTUS;
-            }
+            for (let ty = 1; ty <= ch; ty++) data[colOffset + sy + ty] = BLOCK.CACTUS;
+          } else if (biome === 'Desierto' && r < 0.0025 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
+            placeEnvFeatureInChunk(data, lx, sy, lz, 'oasis');
+          } else if (biome === 'Meseta' && r < 0.004) {
+            placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
           }
+        } else if (biome === 'Cumbres Heladas') {
+          if (r > 0.986) placeEnvFeatureInChunk(data, lx, sy, lz, 'ice_spike');
+          else if (r > 0.980) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
         } else if (topBlock === BLOCK.GRASS || topBlock === BLOCK.SNOW) {
-          const treeThreshold = biome === 'Bosque' ? 0.976 : 0.989;
-          if (r > treeThreshold) {
-            const trunkH = 4 + ((r * 1000) & 1);
-            for (let ty = 1; ty <= trunkH; ty++) {
-              data[colOffset + sy + ty] = BLOCK.WOOD;
-            }
-            const canopyBase = sy + trunkH - 1;
-            for (let dy = 0; dy <= 2; dy++) {
-              const rad = dy === 2 ? 1 : 2;
-              for (let dz = -rad; dz <= rad; dz++) {
-                for (let dx = -rad; dx <= rad; dx++) {
-                  if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && dy > 0) continue;
-                  const tCol = ((lz + dz) * CHUNK_SIZE + (lx + dx)) * CHUNK_HEIGHT;
-                  const py = canopyBase + dy;
-                  if (py < CHUNK_HEIGHT && data[tCol + py] === BLOCK.AIR) {
-                    data[tCol + py] = BLOCK.LEAVES;
-                  }
-                }
-              }
-            }
+          const treeThr = biome === 'Jungla' ? 0.962 : (biome === 'Bosque' ? 0.974 : (biome === 'Taiga Nevada' ? 0.978 : (biome === 'Pantano' ? 0.980 : 0.988)));
+          const treeType = (biome === 'Taiga Nevada') ? 'pine' : (biome === 'Jungla' ? 'jungle' : (biome === 'Sabana' ? 'acacia' : (biome === 'Pantano' ? 'swamp' : 'oak')));
+          if (r > treeThr && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
+            placeTreeInChunk(data, lx, sy, lz, treeType, r);
+          } else if (r > treeThr - 0.003 && (biome === 'Bosque' || biome === 'Taiga Nevada')) {
+            placeEnvFeatureInChunk(data, lx, sy, lz, 'fallen_log');
+          } else if (r > treeThr - 0.005 && (biome === 'Taiga Nevada' || biome === 'Llanura')) {
+            placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
           } else if (topBlock === BLOCK.GRASS && data[colOffset + sy + 1] === BLOCK.AIR) {
-            // Flora (Tall grass & flowers)
-            if (r < 0.085) {
-              data[colOffset + sy + 1] = BLOCK.TALL_GRASS;
-            } else if (r < 0.096) {
-              data[colOffset + sy + 1] = BLOCK.FLOWER_RED;
-            } else if (r < 0.106) {
-              data[colOffset + sy + 1] = BLOCK.FLOWER_YELLOW;
-            } else if (r < 0.111) {
-              data[colOffset + sy + 1] = BLOCK.WHEAT_1;
-            }
+            const grassLim = (biome === 'Jungla' || biome === 'Sabana') ? 0.16 : 0.085;
+            if (r < grassLim) data[colOffset + sy + 1] = BLOCK.TALL_GRASS;
+            else if (r < grassLim + 0.012) data[colOffset + sy + 1] = (biome === 'Pantano') ? BLOCK.GLOW_MUSHROOM : BLOCK.FLOWER_RED;
+            else if (r < grassLim + 0.022) data[colOffset + sy + 1] = BLOCK.FLOWER_YELLOW;
+            else if (r < grassLim + 0.027) data[colOffset + sy + 1] = BLOCK.WHEAT_1;
           }
         }
       }
     }
 
-    // Step 4B: Procedural Structures (Desert Pyramids & Explorer Cabins)
+    // Step 4B: Procedural Structures per Biome (Desert Pyramids, Arctic Igloos, Jungle Temples & Explorer Cabins)
     const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
     if ((cx !== 0 || cz !== 0) && (structHash % 9 === 0)) {
-      const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8);
-      const centerY = surfaceMap[8 * CHUNK_SIZE + 8];
-      if (centerY > SEA_LEVEL + 2 && centerY < CHUNK_HEIGHT - 12) {
-        placeStructureInChunk(data, surfaceMap, cx, cz, centerBiome === 'Desierto' ? 'pyramid' : 'cabin');
+      const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8), centerY = surfaceMap[8 * CHUNK_SIZE + 8];
+      if (centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12) {
+        const sType = (centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
+          : ((centerBiome === 'Taiga Nevada' || centerBiome === 'Cumbres Heladas') ? 'igloo'
+          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple' : 'cabin'));
+        placeStructureInChunk(data, surfaceMap, cx, cz, sType);
       }
     }
 
     // Step 5: Apply user delta modifications
     if (deltaList && deltaList.length > 0) {
-      for (let i = 0; i < deltaList.length; i += 2) {
-        data[deltaList[i]] = deltaList[i + 1];
-      }
+      for (let i = 0; i < deltaList.length; i += 2) data[deltaList[i]] = deltaList[i + 1];
     }
-
     return data;
   }
 
@@ -332,78 +407,77 @@ function createWorldGenerator(seed) {
     };
 
     if (type === 'pyramid') {
-      // Stepped 9x5x9 Desert Pyramid + Underground Treasure Chamber (Gold, Diamond, Glowstone & TNT trap)
       for (let layer = 0; layer <= 4; layer++) {
         const r = 4 - layer;
-        for (let dz = -r; dz <= r; dz++) {
-          for (let dx = -r; dx <= r; dx++) {
-            const blockId = (layer === 1 && (Math.abs(dx) === r || Math.abs(dz) === r)) ? BLOCK.BRICK : BLOCK.SAND;
-            setLocal(8 + dx, baseY + 1 + layer, 8 + dz, blockId);
-          }
+        for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+          const blockId = (layer === 1 && (Math.abs(dx) === r || Math.abs(dz) === r)) ? BLOCK.BRICK : BLOCK.SAND;
+          setLocal(8 + dx, baseY + 1 + layer, 8 + dz, blockId);
         }
       }
-      // Hollow interior & entrance on South (+Z)
-      for (let dz = -2; dz <= 2; dz++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          setLocal(8 + dx, baseY + 1, 8 + dz, BLOCK.AIR);
-          setLocal(8 + dx, baseY + 2, 8 + dz, BLOCK.AIR);
-        }
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        setLocal(8 + dx, baseY + 1, 8 + dz, BLOCK.AIR); setLocal(8 + dx, baseY + 2, 8 + dz, BLOCK.AIR);
       }
-      setLocal(8, baseY + 1, 12, BLOCK.AIR);
-      setLocal(8, baseY + 2, 12, BLOCK.AIR);
-      setLocal(8, baseY + 3, 8, BLOCK.GLOWSTONE);
+      setLocal(8, baseY + 1, 12, BLOCK.AIR); setLocal(8, baseY + 2, 12, BLOCK.AIR); setLocal(8, baseY + 3, 8, BLOCK.GLOWSTONE);
 
-      // Hidden Treasure Chamber 3 blocks below floor
       const chamberY = Math.max(4, baseY - 3);
-      for (let dz = -1; dz <= 1; dz++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          setLocal(8 + dx, chamberY, 8 + dz, BLOCK.BRICK);
-          setLocal(8 + dx, chamberY + 1, 8 + dz, BLOCK.AIR);
-          setLocal(8 + dx, chamberY + 2, 8 + dz, BLOCK.AIR);
-        }
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        setLocal(8 + dx, chamberY, 8 + dz, BLOCK.BRICK);
+        setLocal(8 + dx, chamberY + 1, 8 + dz, BLOCK.AIR); setLocal(8 + dx, chamberY + 2, 8 + dz, BLOCK.AIR);
       }
-      setLocal(7, chamberY + 1, 8, BLOCK.GOLD_ORE);
-      setLocal(9, chamberY + 1, 8, BLOCK.DIAMOND_ORE);
-      setLocal(8, chamberY + 1, 7, BLOCK.CHEST);
-      setLocal(8, chamberY + 1, 8, BLOCK.TNT);
-      setLocal(8, chamberY + 2, 8, BLOCK.GLOWSTONE);
-      for (let ly = chamberY + 1; ly <= baseY + 1; ly++) {
-        setLocal(7, ly, 7, BLOCK.LADDER);
-      }
+      setLocal(7, chamberY + 1, 8, BLOCK.GOLD_ORE); setLocal(9, chamberY + 1, 8, BLOCK.DIAMOND_ORE);
+      setLocal(8, chamberY + 1, 7, BLOCK.CHEST); setLocal(8, chamberY + 1, 8, BLOCK.TNT); setLocal(8, chamberY + 2, 8, BLOCK.GLOWSTONE);
+      for (let ly = chamberY + 1; ly <= baseY + 1; ly++) setLocal(7, ly, 7, BLOCK.LADDER);
       return { type: 'pyramid', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8, chamberY };
-    } else {
-      // 5x4x5 Explorer Cabin (Oak corner pillars, Plank walls, Glass windows, Torch & Treasure Chest inside)
-      for (let dz = -2; dz <= 2; dz++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          setLocal(8 + dx, baseY, 8 + dz, BLOCK.COBBLE);
-          for (let dy = 1; dy <= 3; dy++) {
-            const isCorner = Math.abs(dx) === 2 && Math.abs(dz) === 2;
-            const isWall = Math.abs(dx) === 2 || Math.abs(dz) === 2;
-            if (isCorner) {
-              setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.WOOD);
-            } else if (isWall) {
-              if (dx === 0 && dz === 2 && dy <= 2) {
-                setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR); // Doorway
-              } else if (dy === 2 && (dx === 0 || dz === 0)) {
-                setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.GLASS); // Window
-              } else {
-                setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.PLANKS);
-              }
-            } else {
-              setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
-            }
-          }
-          setLocal(8 + dx, baseY + 4, 8 + dz, BLOCK.WOOD);
+    }
+    if (type === 'igloo') {
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        setLocal(8 + dx, baseY, 8 + dz, BLOCK.WOOL);
+        const dist = Math.abs(dx) + Math.abs(dz);
+        for (let dy = 1; dy <= 3; dy++) {
+          const isWall = (Math.abs(dx) === 2 || Math.abs(dz) === 2) && dist <= 3;
+          if (dx === 0 && dz === 2 && dy <= 2) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+          else if (isWall) setLocal(8 + dx, baseY + dy, 8 + dz, (dy === 2 && (dx === 0 || dz === 0)) ? BLOCK.ICE : BLOCK.SNOW);
+          else if (dist <= 2) setLocal(8 + dx, baseY + dy, 8 + dz, dy === 3 ? BLOCK.SNOW : BLOCK.AIR);
         }
       }
-      setLocal(8, baseY + 1, 8, BLOCK.TORCH);
-      setLocal(7, baseY + 1, 7, BLOCK.CHEST);
-      setLocal(9, baseY + 1, 7, BLOCK.CRAFTING_TABLE);
-      return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+      setLocal(8, baseY + 1, 8, BLOCK.TORCH); setLocal(7, baseY + 1, 7, BLOCK.BED);
+      setLocal(9, baseY + 1, 7, BLOCK.FURNACE); setLocal(8, baseY + 1, 7, BLOCK.CHEST);
+      return { type: 'igloo', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
     }
+    if (type === 'temple') {
+      for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+        setLocal(8 + dx, baseY, 8 + dz, BLOCK.COBBLE);
+        const onEdge = Math.abs(dx) === 3 || Math.abs(dz) === 3;
+        for (let dy = 1; dy <= 3; dy++) {
+          if (dx === 0 && dz === 3 && dy <= 2) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+          else if (onEdge) setLocal(8 + dx, baseY + dy, 8 + dz, ((dx + dy + dz) & 1) ? BLOCK.COBBLE : BLOCK.STONE);
+          else setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+        }
+        if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) setLocal(8 + dx, baseY + 4, 8 + dz, BLOCK.BRICK);
+      }
+      setLocal(8, baseY + 1, 8, BLOCK.ENCHANTING_TABLE); setLocal(8, baseY + 1, 6, BLOCK.CHEST);
+      setLocal(7, baseY + 1, 6, BLOCK.EMERALD_BLOCK); setLocal(9, baseY + 1, 6, BLOCK.GOLD_ORE);
+      setLocal(6, baseY + 2, 8, BLOCK.TORCH); setLocal(10, baseY + 2, 8, BLOCK.TORCH);
+      return { type: 'temple', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+    }
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+      setLocal(8 + dx, baseY, 8 + dz, BLOCK.COBBLE);
+      for (let dy = 1; dy <= 3; dy++) {
+        const isCorner = Math.abs(dx) === 2 && Math.abs(dz) === 2, isWall = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+        if (isCorner) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.WOOD);
+        else if (isWall) {
+          if (dx === 0 && dz === 2 && dy <= 2) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+          else if (dy === 2 && (dx === 0 || dz === 0)) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.GLASS);
+          else setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.PLANKS);
+        } else setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+      }
+      setLocal(8 + dx, baseY + 4, 8 + dz, BLOCK.WOOD);
+    }
+    setLocal(8, baseY + 1, 8, BLOCK.TORCH); setLocal(7, baseY + 1, 7, BLOCK.CHEST); setLocal(9, baseY + 1, 7, BLOCK.CRAFTING_TABLE);
+    return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
   }
 
-  return { generateChunkVoxels, getBiomeAt, placeStructureInChunk };
+  return { generateChunkVoxels, getBiomeAt, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
 }
 
 // ============================================================================

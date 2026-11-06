@@ -774,8 +774,10 @@ const btnApplySeed = document.getElementById('btn-apply-seed'), seedInputEl = do
 if (seedInputEl) seedInputEl.value = `${worldSeed}`;
 if (btnApplySeed) btnApplySeed.addEventListener('click', () => { applyWorldSeed(seedInputEl ? parseInt(seedInputEl.value, 10) : 0); startGameplay(); });
 const btnTpDesert = document.getElementById('btn-tp-desert'), btnTpSnow = document.getElementById('btn-tp-snow');
+const btnTpBiome = document.getElementById('btn-tp-biome'), biomeSelectEl = document.getElementById('biome-select');
 if (btnTpDesert) btnTpDesert.addEventListener('click', () => { teleportToBiome('Desierto'); startGameplay(); });
 if (btnTpSnow) btnTpSnow.addEventListener('click', () => { teleportToBiome('Taiga Nevada'); startGameplay(); });
+if (btnTpBiome && biomeSelectEl) btnTpBiome.addEventListener('click', () => { teleportToBiome(biomeSelectEl.value || 'Llanura'); startGameplay(); });
 btnExport.addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify({ seed: worldSeed, deltas: worldDeltas }, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = `voxelcraft_world_${worldSeed}.json`; a.click(); URL.revokeObjectURL(url);

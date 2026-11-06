@@ -289,7 +289,7 @@ function updateWeather(dt) {
   if (weatherMode === 'clear') return;
 
   const curBiome = generator.getBiomeAt(player.x, player.z);
-  isSnowing = (curBiome === 'Taiga Nevada' || player.y >= 42);
+  isSnowing = (curBiome === 'Taiga Nevada' || curBiome === 'Cumbres Heladas' || player.y >= 42);
   weatherMat.color.setHex(isSnowing ? 0xf8fafc : 0x7dd3fc);
   weatherScaleVec.set(isSnowing ? 2.4 : 0.9, isSnowing ? 0.25 : 1.0, isSnowing ? 2.4 : 0.9);
 

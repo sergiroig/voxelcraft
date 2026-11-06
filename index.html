@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=35" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=35" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=35" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=35" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=35" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=35" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=35" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=35" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=35" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=35" />
+  <link rel="stylesheet" href="src/styles.css?v=36" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=36" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=36" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=36" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=36" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=36" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=36" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=36" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=36" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=36" />
 </head>
 <body>
 
@@ -240,10 +240,22 @@
         <button class="btn btn-primary" id="btn-play">Jugar / Continuar (P o Enter)</button>
       </div>
       <div class="btn-row" style="margin-bottom: 8px; gap: 6px; display: flex; flex-wrap: wrap;">
-        <input id="seed-input" type="number" placeholder="Semilla (ej. 42069)" style="flex:1;min-width:120px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.45);color:#fff;font-family:monospace;" />
+        <input id="seed-input" type="number" placeholder="Semilla (ej. 42069)" style="flex:1;min-width:110px;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.45);color:#fff;font-family:monospace;" />
         <button class="btn btn-secondary" id="btn-apply-seed" style="flex:0 0 auto;">Cargar Semilla</button>
-        <button class="btn btn-secondary" id="btn-tp-desert" style="flex:0 0 auto;">🏜 Ir a Desierto</button>
-        <button class="btn btn-secondary" id="btn-tp-snow" style="flex:0 0 auto;">❄ Ir a Taiga</button>
+        <select id="biome-select" style="padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(15,23,42,0.85);color:#fff;font-size:12px;">
+          <option value="Llanura">🌾 Llanura</option>
+          <option value="Bosque">🌲 Bosque</option>
+          <option value="Desierto">🏜 Desierto</option>
+          <option value="Taiga Nevada">❄ Taiga Nevada</option>
+          <option value="Jungla">🌴 Jungla</option>
+          <option value="Pantano">🐸 Pantano</option>
+          <option value="Sabana">🦒 Sabana</option>
+          <option value="Meseta">🧱 Meseta</option>
+          <option value="Cumbres Heladas">🏔 Cumbres Heladas</option>
+        </select>
+        <button class="btn btn-secondary" id="btn-tp-biome" style="flex:0 0 auto;">🧭 Ir a Bioma</button>
+        <button class="btn btn-secondary" id="btn-tp-desert" style="flex:0 0 auto;">🏜 Desierto</button>
+        <button class="btn btn-secondary" id="btn-tp-snow" style="flex:0 0 auto;">❄ Taiga</button>
       </div>
       <div class="btn-row">
         <button class="btn btn-secondary" id="btn-reset-world">Nuevo Mundo (Semilla Aleatoria)</button>
@@ -256,14 +268,14 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <script src="src/01-config-atlas.js?v=35"></script>
-  <script src="src/02-worldgen-lighting.js?v=35"></script>
-  <script src="src/03-mesher-audio.js?v=35"></script>
-  <script src="src/04-world-renderer.js?v=35"></script>
-  <script src="src/05-simulation-entities.js?v=35"></script>
-  <script src="src/06-mobs-worker.js?v=35"></script>
-  <script src="src/07-physics-camera.js?v=35"></script>
-  <script src="src/08-ui-minimap.js?v=35"></script>
-  <script src="src/09-controls-loop.js?v=35"></script>
+  <script src="src/01-config-atlas.js?v=36"></script>
+  <script src="src/02-worldgen-lighting.js?v=36"></script>
+  <script src="src/03-mesher-audio.js?v=36"></script>
+  <script src="src/04-world-renderer.js?v=36"></script>
+  <script src="src/05-simulation-entities.js?v=36"></script>
+  <script src="src/06-mobs-worker.js?v=36"></script>
+  <script src="src/07-physics-camera.js?v=36"></script>
+  <script src="src/08-ui-minimap.js?v=36"></script>
+  <script src="src/09-controls-loop.js?v=36"></script>
 </body>
 </html>

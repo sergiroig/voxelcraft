@@ -758,7 +758,7 @@ renderMinecraftInventoryDOM();
 requestAnimationFrame(animate);
 
 window.__VOXELCRAFT__ = {
-  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, SMELT_RECIPES, recipeBookState, setRecipeBookFilter, getRecipeCategory, buildMiniPatternHTML, normalizeCraftingId, areCraftingItemsEquivalent, getAvailIngredientCount, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
+  BLOCK, BLOCK_DEFS, BIOME_LIST, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, SMELT_RECIPES, recipeBookState, setRecipeBookFilter, getRecipeCategory, buildMiniPatternHTML, normalizeCraftingId, areCraftingItemsEquivalent, getAvailIngredientCount, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
   isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isArmorItem, getArmorSlotForItem, isFoodItem, isNonStackTool,
   getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, sleepInBed, useAnvilAt, useEnchantingTableAt, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,

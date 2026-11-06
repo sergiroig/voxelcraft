@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=35"></iframe>
+    <iframe id="game-frame" src="./index.html?v=36"></iframe>
   </div>
 
   <script>
@@ -2239,6 +2239,71 @@
           const craftedPick = vc.craftFromOutputSlot();
           assert(craftedPick === true && (vc.inventoryCounts[vc.BLOCK.TOOL_PICKAXE] || 0) >= 1, 'craftFromOutputSlot debe consumir las Gemas de Diamante y fabricar el Pico de Diamante');
           vc.toggleInventory(false);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 41: 9 Biomas de Minecraft, 5 Arquitecturas de Árboles 3D y Entorno Natural
+      // =========================================================================
+      describe('41. 9 Biomas de Minecraft, 5 Arquitecturas de Árboles 3D, Elementos del Entorno y Estructuras', () => {
+        it('Genera los 9 biomas (Llanura, Bosque, Desierto, Taiga Nevada, Jungla, Pantano, Sabana, Meseta, Cumbres Heladas) y permite teletransportarse a todos', () => {
+          assert(Array.isArray(vc.BIOME_LIST) && vc.BIOME_LIST.length === 9, 'BIOME_LIST debe contener los 9 biomas del mundo');
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          const gen = vc.getGenerator();
+
+          for (const bName of vc.BIOME_LIST) {
+            const res = vc.teleportToBiome(bName);
+            assert(res !== null && res.biome === bName, `teleportToBiome("${bName}") debe localizar y teletransportar al bioma ${bName}`);
+            assert(gen.getBiomeAt(vc.player.x, vc.player.z) === bName, `getBiomeAt en la posición destino debe ser "${bName}"`);
+          }
+
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+        });
+
+        it('Construye las 5 especies de árboles 3D (Roble, Abeto con Nieve, Jungla con Lianas, Acacia Inclinada y Sauce de Pantano) y formaciones del entorno', () => {
+          const gen = vc.getGenerator();
+          const idx = (x, y, z) => (z * 16 + x) * 64 + y;
+
+          // 1) Abeto Boreal ('pine'): tronco alto + copa cónica + punta de nieve (BLOCK.SNOW)
+          const dPine = new Uint8Array(vc.CHUNK_VOLUME);
+          const pInfo = gen.placeTreeInChunk(dPine, 8, 25, 8, 'pine', 0.5);
+          assert(pInfo.type === 'pine' && dPine[idx(8, 26, 8)] === vc.BLOCK.WOOD && dPine[idx(8, 25 + pInfo.trunkH + 2, 8)] === vc.BLOCK.SNOW, 'El Abeto (pine) debe tener tronco de madera y coronar su punta con Nieve (BLOCK.SNOW)');
+
+          // 2) Árbol Gigante de Jungla ('jungle'): raíces en base + lianas colgantes de hojas
+          const dJun = new Uint8Array(vc.CHUNK_VOLUME);
+          const jInfo = gen.placeTreeInChunk(dJun, 8, 25, 8, 'jungle', 0.5);
+          assert(jInfo.type === 'jungle' && dJun[idx(9, 26, 8)] === vc.BLOCK.WOOD && dJun[idx(6, 25 + jInfo.trunkH - 3, 8)] === vc.BLOCK.LEAVES, 'El Árbol de Jungla debe incluir contrafuertes en la base y lianas colgantes');
+
+          // 3) Acacia de Sabana ('acacia'): tronco inclinado en diagonal + dosel plano
+          const dAca = new Uint8Array(vc.CHUNK_VOLUME);
+          const aInfo = gen.placeTreeInChunk(dAca, 8, 25, 8, 'acacia', 0.995);
+          assert(aInfo.type === 'acacia' && dAca[idx(9, 29, 9)] === vc.BLOCK.WOOD && dAca[idx(9, 30, 9)] === vc.BLOCK.WOOD && dAca[idx(9, 31, 9)] === vc.BLOCK.LEAVES, 'La Acacia de Sabana debe inclinar su tronco en diagonal y formar un dosel en parasol');
+
+          // 4) Sauce de Pantano ('swamp'): cortinas de hojas colgantes + Hongo Luminoso en la base
+          const dSwp = new Uint8Array(vc.CHUNK_VOLUME);
+          const sInfo = gen.placeTreeInChunk(dSwp, 8, 25, 8, 'swamp', 0.5);
+          assert(sInfo.type === 'swamp' && dSwp[idx(9, 26, 8)] === vc.BLOCK.GLOW_MUSHROOM && dSwp[idx(6, 25 + sInfo.trunkH - 3, 8)] === vc.BLOCK.LEAVES, 'El Sauce de Pantano debe tener lianas colgantes y un Hongo Luminoso junto a la raíz');
+
+          // 5) Formaciones naturales (Tronco caído, Peñasco, Aguja de Hielo, Oasis) + Iglú Ártico y Templo de la Jungla
+          const dEnv = new Uint8Array(vc.CHUNK_VOLUME);
+          gen.placeEnvFeatureInChunk(dEnv, 4, 25, 4, 'fallen_log');
+          gen.placeEnvFeatureInChunk(dEnv, 11, 25, 4, 'ice_spike');
+          gen.placeEnvFeatureInChunk(dEnv, 4, 25, 11, 'oasis');
+          gen.placeEnvFeatureInChunk(dEnv, 11, 25, 11, 'boulder');
+          assert(dEnv[idx(3, 26, 4)] === vc.BLOCK.WOOD && dEnv[idx(5, 26, 4)] === vc.BLOCK.WOOD, 'fallen_log debe tender un tronco horizontal de 3 bloques');
+          assert(dEnv[idx(11, 30, 4)] === vc.BLOCK.ICE, 'ice_spike debe elevar una aguja de Hielo Glaciar (BLOCK.ICE)');
+          assert(dEnv[idx(4, 25, 11)] === vc.BLOCK.WATER && dEnv[idx(5, 25, 11)] === vc.BLOCK.GRASS, 'oasis debe crear una charca de agua rodeada de césped fértil');
+          assert(dEnv[idx(11, 26, 11)] === vc.BLOCK.STONE && dEnv[idx(11, 27, 11)] === vc.BLOCK.COBBLE, 'boulder debe formar un peñasco rocoso 3D');
+
+          // 6) Nuevas estructuras por bioma: Iglú ('igloo') y Templo ('temple')
+          const surf = new Uint8Array(256).fill(28);
+          const dIgloo = new Uint8Array(vc.CHUNK_VOLUME);
+          const ig = gen.placeStructureInChunk(dIgloo, surf, 2, 2, 'igloo');
+          assert(ig.type === 'igloo' && dIgloo[idx(7, 29, 7)] === vc.BLOCK.BED && dIgloo[idx(9, 29, 7)] === vc.BLOCK.FURNACE && dIgloo[idx(8, 29, 7)] === vc.BLOCK.CHEST, 'El Iglú Ártico debe incluir Cama Roja, Horno y Cofre del Tesoro');
+
+          const dTemple = new Uint8Array(vc.CHUNK_VOLUME);
+          const tp = gen.placeStructureInChunk(dTemple, surf, 3, 3, 'temple');
+          assert(tp.type === 'temple' && dTemple[idx(8, 29, 8)] === vc.BLOCK.ENCHANTING_TABLE && dTemple[idx(7, 29, 6)] === vc.BLOCK.EMERALD_BLOCK && dTemple[idx(8, 29, 6)] === vc.BLOCK.CHEST, 'El Templo de la Jungla debe incluir Mesa de Encantamientos, altar de Esmeralda y Cofre');
         });
       });
 
