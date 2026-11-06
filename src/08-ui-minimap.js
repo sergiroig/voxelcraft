@@ -494,7 +494,13 @@ function placeBlockAtCurrentTarget() {
     if (bId === BLOCK.ITEM_BONE_MEAL && applyBoneMealAt(currentHit.x, currentHit.y, currentHit.z)) return true;
   }
 
-  // 2. Consumables, Armor, Fishing Rod, Ender Pearl, Compass, Clock, Bow, Grappling Hook or Sword Shield
+  // 2. Consumables, Armor, Fishing Rod, Ender Pearl, Bone (Wolf Taming), Compass, Clock, Bow, Grappling Hook or Sword Shield
+  if (bId === BLOCK.ITEM_BONE) {
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+    const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 5.2);
+    const wolf = (hitMob && hitMob.type === 'wolf' && !hitMob.allied) ? hitMob : mobs.find(m => m.type === 'wolf' && !m.allied && Math.hypot(m.x - player.x, m.y - player.y, m.z - player.z) < 4.8);
+    if (wolf && tameWolf(wolf, true)) { player.swingTime = 1.0; return true; }
+  }
   if (isFoodItem(bId)) return eatHeldApple(bId);
   if (isArmorItem(bId)) return equipArmorItem(bId);
   if (bId === BLOCK.TOOL_FISHING_ROD) return !!useFishingRod(currentHit ? currentHit.x : undefined, currentHit ? currentHit.y : undefined, currentHit ? currentHit.z : undefined);
@@ -751,7 +757,7 @@ function updateMinimap(dt, forceRender = false) {
   for (let i = 0; i < mobs.length; i++) {
     const m = mobs[i], rx = Math.round(half + (m.x - player.x)), rz = Math.round(half + (m.z - player.z));
     if (rx >= 1 && rx < MAP_SIZE - 1 && rz >= 1 && rz < MAP_SIZE - 1) {
-      minimapCtx.fillStyle = m.type === 'zombie' ? '#ef4444' : (m.type === 'creeper' ? '#22c55e' : (m.type === 'skeleton' ? '#fde047' : (m.type === 'golem' ? '#38bdf8' : '#f8fafc')));
+      minimapCtx.fillStyle = m.allied ? '#38bdf8' : (m.type === 'creeper' ? '#22c55e' : (m.type === 'skeleton' ? '#fde047' : (m.type === 'enderman' ? '#c084fc' : (isHostileMob(m) ? '#ef4444' : '#f8fafc'))));
       minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
     }
   }

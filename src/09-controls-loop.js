@@ -781,7 +781,7 @@ window.__VOXELCRAFT__ = {
   getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }), getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,
   computeChunkLighting, buildChunkMeshArrays, applyArraysToMesh, rebuildChunkImmediate, packChunkPaddedBuffers, requestChunkMeshWorker, updateDynamicResolution,
   getWorkerState: () => ({ hasWorker: meshWorker !== null, workerJobsInFlight, workerJobsCompleted, lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio }),
-  raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation, spawnMob, damageMob, removeMobAt, updateMobs,
+  raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation, spawnMob, damageMob, removeMobAt, updateMobs, tameWolf, teleportEnderman, isHostileMob, MOB_HP_MAP, MOB_LOOT_MAP,
   updatePlayerPhysics, checkAABBCollision, damagePlayer, renderHeartsUI, addHungerExhaustion, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
   canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, updateAmbientAudio, updateDynamicSky,
   getGenerator: () => generator, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,

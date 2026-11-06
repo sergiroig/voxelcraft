@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=42"></iframe>
+    <iframe id="game-frame" src="./index.html?v=44"></iframe>
   </div>
 
   <script>
@@ -2539,6 +2539,76 @@
 
           vc.player.health = 10; vc.player.hunger = 10; vc.player.saturation = 5.0; vc.player.exhaustion = 0; vc.player.starveTimer = 0;
           vc.renderHeartsUI();
+        });
+      });
+
+      // =========================================================================
+      // SUITE 45: Seis Nuevas Criaturas Clásicas (Vaca, Gallina, Araña, Enderman, Lobo y Slime)
+      // =========================================================================
+      describe('45. Seis Nuevas Criaturas Clásicas (Vaca, Gallina, Araña, Enderman, Lobo Aliado y Slime)', () => {
+        it('Genera los 6 nuevos mobs con atlas de 35 tiles (280×8 px), geometrías compartidas y botín especializado', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          assert(vc.mobAtlasCanvas && vc.mobAtlasCanvas.width === 35 * 8 && vc.mobAtlasCanvas.height === 8, `mobAtlasCanvas debe medir 280x8 px (35 tiles, obtuvo ${vc.mobAtlasCanvas ? vc.mobAtlasCanvas.width : 0}x${vc.mobAtlasCanvas ? vc.mobAtlasCanvas.height : 0})`);
+          const newTypes = ['cow', 'chicken', 'spider', 'enderman', 'wolf', 'slime'];
+          for (let i = 0; i < newTypes.length; i++) {
+            const m = vc.spawnMob(newTypes[i], 10 + i * 2, 50, 10);
+            assert(m && m.type === newTypes[i], `spawnMob debe crear el mob '${newTypes[i]}'`);
+            assert(m.hp === vc.MOB_HP_MAP[newTypes[i]], `El mob '${newTypes[i]}' debe iniciar con HP=${vc.MOB_HP_MAP[newTypes[i]]}`);
+            assert(m.root && m.head && m.root.children.length >= 1, `El mob '${newTypes[i]}' debe tener jerarquía 3D válida`);
+          }
+          assert(vc.MOB_LOOT_MAP.cow === vc.BLOCK.ITEM_RAW_PORKCHOP, 'La Vaca debe soltar carne cruda');
+          assert(vc.MOB_LOOT_MAP.chicken === vc.BLOCK.ITEM_APPLE, 'La Gallina debe soltar alimento');
+          assert(vc.MOB_LOOT_MAP.spider === vc.BLOCK.TALL_GRASS, 'La Araña debe soltar fibra/hilo');
+          assert(vc.MOB_LOOT_MAP.enderman === vc.BLOCK.ITEM_ENDER_PEARL, 'El Enderman debe soltar Perla de Ender');
+          assert(vc.MOB_LOOT_MAP.slime === vc.BLOCK.SLIME, 'El Slime debe soltar Bloque de Slime');
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+
+        it('Simula IA especializada: planeo de Gallina, trepado de Araña, salto de Slime, teletransporte de Enderman y domesticación de Lobo con Hueso', () => {
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+
+          // 1) Gallina planea en caída libre (vy >= -2.2)
+          const chicken = vc.spawnMob('chicken', 8.5, 56, 8.5);
+          chicken.vy = -12.0;
+          vc.updateMobs(0.05);
+          assert(chicken.vy >= -2.2, `La Gallina debe batir las alas y limitar su caída a vy >= -2.2 (obtuvo ${chicken.vy})`);
+          vc.removeMobAt(vc.mobs.indexOf(chicken));
+
+          // 2) Araña trepa muros verticales cuando choca horizontalmente (vy = 4.8)
+          vc.setVoxelGlobal(12, 48, 12, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(12, 49, 12, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(11, 47, 12, vc.BLOCK.STONE);
+          const spider = vc.spawnMob('spider', 11.4, 48.0, 12.5);
+          spider.yaw = Math.PI / 2; // +X hacia el muro en x=12
+          spider.speed = 3.2;
+          vc.updateMobs(0.05);
+          assert(spider.vy >= 4.5, `La Araña debe trepar paredes verticales al colisionar en X/Z (vy=${spider.vy})`);
+          vc.setVoxelGlobal(12, 48, 12, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(12, 49, 12, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(11, 47, 12, vc.BLOCK.AIR);
+          vc.removeMobAt(vc.mobs.indexOf(spider));
+
+          // 3) Enderman es neutral hasta ser golpeado; al recibir daño se provoca y se teletransporta
+          const enderman = vc.spawnMob('enderman', 10.5, 50, 10.5);
+          assert(vc.isHostileMob(enderman) === false, 'El Enderman debe ser neutral mientras no sea provocado');
+          const ex0 = enderman.x, ez0 = enderman.z;
+          vc.damageMob(enderman, 2);
+          assert(enderman.provoked === true && vc.isHostileMob(enderman) === true, 'Al recibir daño el Enderman debe volverse hostil (provoked=true)');
+          assert(Math.hypot(enderman.x - ex0, enderman.z - ez0) > 0.5, 'El Enderman debe teletransportarse al recibir daño');
+          vc.removeMobAt(vc.mobs.indexOf(enderman));
+
+          // 4) Lobo salvaje se domestica con ITEM_BONE (allied=true, hp=12) y ataca criaturas hostiles
+          const wolf = vc.spawnMob('wolf', 9.5, 50, 9.5);
+          const zombie = vc.spawnMob('zombie', 10.2, 50, 9.5);
+          const zHpBefore = zombie.hp;
+          vc.inventoryCounts[vc.BLOCK.ITEM_BONE] = 2;
+          const tamed = vc.tameWolf(wolf, true);
+          assert(tamed === true && wolf.allied === true && wolf.hp === 12, `tameWolf debe convertir al Lobo en aliado con 12 HP (allied=${wolf.allied}, hp=${wolf.hp})`);
+          wolf.attackCooldown = 0;
+          vc.updateMobs(0.05);
+          assert(zombie.hp < zHpBefore, `El Lobo domesticado debe atacar al Zombi cercano (HP ${zombie.hp} vs ${zHpBefore})`);
+
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
         });
       });
 
