@@ -2476,9 +2476,9 @@
           vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.AIR);
           // Test de cascada de agua en borde de mina/cueva (no debe quedar agua flotante)
           vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER);
-          vc.setVoxelGlobal(wx + 1, wy - 3, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx + 1, wy - 2, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy, wz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(wx + 1, wy - 3, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx + 1, wy - 2, wz, vc.BLOCK.GLOW_MUSHROOM); vc.setVoxelGlobal(wx + 1, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy, wz, vc.BLOCK.AIR);
           for (let t = 0; t < 6; t++) vc.updateVoxelSimulation(0.2);
-          assert(vc.getVoxelGlobal(wx + 1, wy - 2, wz) === vc.BLOCK.WATER, 'El agua en un borde de mina/cueva debe caer hasta el fondo y no quedar flotando');
+          assert(vc.getVoxelGlobal(wx + 1, wy - 1, wz) === vc.BLOCK.WATER && vc.getVoxelGlobal(wx + 1, wy - 2, wz) === vc.BLOCK.WATER, 'Las setas u otros elementos cross no deben crear una columna de aire en el agua');
           for (let dy = -3; dy <= 0; dy++) { vc.setVoxelGlobal(wx, wy + dy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy + dy, wz, vc.BLOCK.AIR); }
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ; vc.player.vy = 0; vc.player.wasInFluid = false;
           vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.AIR);

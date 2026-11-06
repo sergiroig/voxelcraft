@@ -449,7 +449,8 @@ function createWorldGenerator(seed) {
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
         const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
         for (let y = SEA_LEVEL; y >= 3; y--) {
-          if (data[colOffset + y] === BLOCK.WATER && data[colOffset + y - 1] === BLOCK.AIR) data[colOffset + y - 1] = BLOCK.WATER;
+          const bBelow = data[colOffset + y - 1];
+          if (data[colOffset + y] === BLOCK.WATER && (bBelow === BLOCK.AIR || (BLOCK_DEFS[bBelow].shape === 'cross' && bBelow !== BLOCK.LADDER))) data[colOffset + y - 1] = BLOCK.WATER;
         }
       }
     }
