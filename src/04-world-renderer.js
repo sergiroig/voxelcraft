@@ -427,9 +427,9 @@ function updateGPUShaders(dt) {
   } else {
     scene.fog.color.copy(currentSkyColor); scene.background.copy(currentSkyColor);
     if (typeof weatherMode !== 'undefined' && weatherMode !== 'clear') {
-      const dayK = THREE.MathUtils.clamp((sunFactor - 0.16) / 0.84, 0.0, 1.0);
-      const tint = (typeof isSandstorm !== 'undefined' && isSandstorm) ? 0xd97706 : 0x334155;
-      const strength = (weatherMode === 'storm' ? 0.45 : 0.28) * dayK;
+      const dayK = THREE.MathUtils.smoothstep(sunFactor, 0.30, 0.88);
+      const tint = (typeof isSandstorm !== 'undefined' && isSandstorm) ? 0x9a7b56 : 0x334155;
+      const strength = (weatherMode === 'storm' ? 0.24 : 0.14) * dayK;
       scene.fog.color.lerp(dummyColor.setHex(tint), strength);
       scene.background.lerp(dummyColor.setHex(tint), strength);
     }
