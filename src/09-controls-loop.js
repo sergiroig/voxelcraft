@@ -3,21 +3,16 @@
 
 window.addEventListener('mousemove', (e) => {
   if (!isLocked) return;
-  player.yaw -= e.movementX * 0.0022;
-  player.pitch -= e.movementY * 0.0022;
+  player.yaw -= e.movementX * 0.0022; player.pitch -= e.movementY * 0.0022;
   const maxPitch = Math.PI / 2 - 0.02;
-  if (player.pitch >  maxPitch) player.pitch =  maxPitch;
+  if (player.pitch > maxPitch) player.pitch = maxPitch;
   if (player.pitch < -maxPitch) player.pitch = -maxPitch;
 });
 
 window.addEventListener('keydown', (e) => {
   const isInputFocused = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
   if (isInputFocused) {
-    if (e.code === 'Enter' && menuOpen) {
-      e.preventDefault();
-      if (e.target === seedInputEl) applyWorldSeed(parseInt(seedInputEl.value, 10) || 0);
-      togglePauseMenu(false);
-    }
+    if (e.code === 'Enter' && menuOpen) { e.preventDefault(); if (e.target === seedInputEl) applyWorldSeed(parseInt(seedInputEl.value, 10) || 0); togglePauseMenu(false); }
     return;
   }
   keys[e.code] = true;
@@ -42,11 +37,20 @@ window.addEventListener('keydown', (e) => {
 });
 
 window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-window.addEventListener('wheel', (e) => {
-  if (!isLocked) return;
-  if (selectedSlot < 0) updateHotbarSelection(e.deltaY > 0 ? 0 : hotbarSlots.length - 1);
-  else updateHotbarSelection(selectedSlot + (e.deltaY > 0 ? 1 : -1));
-});
+let lastWheelStepTime = -1000, lastWheelEventTime = -1000, lastWheelDir = 0, wheelDeltaAccum = 0;
+function handleHotbarWheel(deltaY, nowMs = performance.now(), deltaMode = 0) {
+  if (!deltaY) return selectedSlot;
+  const dir = deltaY > 0 ? 1 : -1, dtEvent = nowMs - lastWheelEventTime, dtStep = nowMs - lastWheelStepTime;
+  lastWheelEventTime = nowMs;
+  if (dir === lastWheelDir && dtStep < 110) { wheelDeltaAccum = 0; return selectedSlot; }
+  const normDelta = deltaMode === 1 ? deltaY * 33 : (deltaMode === 2 ? deltaY * 100 : deltaY);
+  if (dir !== lastWheelDir || dtEvent > 65 || Math.abs(wheelDeltaAccum += normDelta) >= 120) {
+    wheelDeltaAccum = 0; lastWheelStepTime = nowMs; lastWheelDir = dir;
+    return updateHotbarSelection(selectedSlot < 0 ? (dir > 0 ? 0 : hotbarSlots.length - 1) : selectedSlot + dir);
+  }
+  return selectedSlot;
+}
+window.addEventListener('wheel', (e) => { if (isLocked) handleHotbarWheel(e.deltaY, performance.now(), e.deltaMode); });
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 
 let currentHit = null;

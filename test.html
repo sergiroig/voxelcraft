@@ -2881,6 +2881,60 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 50: Regresión de 3 Bugs Reportados (Hojas al Caminar, Scroll de 1 Slot y Brazo Único Vacío)
+      // =========================================================================
+      describe('50. Regresión de Bugs: Hojas Intactas al Caminar, Scroll de 1 Slot y Brazo Único sin Ítem', () => {
+        it('No rompe hojas solas al caminar: todas las hojas de los 5 tipos de árbol están conectadas a su tronco (hasNearbyWood)', () => {
+          const ch = vc.getChunkData(0, 0);
+          const backup = new Uint8Array(ch.data);
+          for (const treeType of ['oak', 'pine', 'jungle', 'acacia', 'swamp']) {
+            for (let x = 2; x <= 13; x++) {
+              for (let z = 2; z <= 13; z++) {
+                for (let y = 38; y <= 62; y++) ch.data[(z * 16 + x) * 64 + y] = vc.BLOCK.AIR;
+              }
+            }
+            vc.getGenerator().placeTreeInChunk(ch.data, 8, 42, 8, treeType, 0.5);
+            let totalLeaves = 0, disconnectedLeaves = 0;
+            for (let x = 2; x <= 13; x++) {
+              for (let z = 2; z <= 13; z++) {
+                for (let y = 40; y <= 60; y++) {
+                  const b = vc.getVoxelGlobal(x, y, z);
+                  if (b === vc.BLOCK.LEAVES || b === vc.BLOCK.SNOW_LEAVES) {
+                    totalLeaves++;
+                    if (!vc.hasNearbyWood(x, y, z)) disconnectedLeaves++;
+                  }
+                }
+              }
+            }
+            assert(totalLeaves > 10 && disconnectedLeaves === 0, `El árbol '${treeType}' no debe generar hojas desconectadas que se rompan solas al caminar (total=${totalLeaves}, desconectadas=${disconnectedLeaves})`);
+          }
+          ch.data.set(backup);
+        });
+
+        it('Avanza exactamente 1 slot en la barra rápida al hacer scroll (absorbiendo ráfagas de 5 sub-eventos de rueda)', () => {
+          const canvasEl = doc.getElementById('game-canvas');
+          Object.defineProperty(doc, 'pointerLockElement', { value: canvasEl, configurable: true });
+          doc.dispatchEvent(new win.Event('pointerlockchange'));
+          vc.updateHotbarSelection(0);
+          for (let i = 0; i < 5; i++) {
+            win.dispatchEvent(new win.WheelEvent('wheel', { deltaY: 24 }));
+          }
+          const slotAfterScrollDown = vc.getState().selectedSlot;
+          Object.defineProperty(doc, 'pointerLockElement', { value: null, configurable: true });
+          doc.dispatchEvent(new win.Event('pointerlockchange'));
+          assert(slotAfterScrollDown === 1, `Un giro de rueda (ráfaga de 5 eventos wheel) debe avanzar solo 1 slot (0 -> 1), pero avanzó a ${slotAfterScrollDown}`);
+        });
+
+        it('Muestra un único brazo 3D (handArmMesh) y oculta handMesh cuando se selecciona un slot vacío sin ítem', () => {
+          vc.updateHotbarSelection(-1);
+          assert(vc.handArmMesh.visible === true && vc.handMesh.visible === false, `Al seleccionar un slot sin ítem (BLOCK.AIR), handMesh.visible debe ser false para no duplicar el brazo (handArmMesh.visible=${vc.handArmMesh.visible}, handMesh.visible=${vc.handMesh.visible})`);
+          vc.hotbarSlots[0] = vc.BLOCK.TOOL_PICKAXE;
+          vc.updateHotbarSelection(0);
+          assert(vc.handArmMesh.visible === true && vc.handMesh.visible === true, 'Al equipar un ítem deben ser visibles tanto handMesh (icono) como handArmMesh (brazo)');
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;

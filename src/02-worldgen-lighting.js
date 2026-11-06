@@ -168,6 +168,7 @@ function createWorldGenerator(seed) {
     const setF = (x, y, z, bId, onlyAir = false) => {
       if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y <= 1 || y >= CHUNK_HEIGHT) return;
       const idx = (z * CHUNK_SIZE + x) * CHUNK_HEIGHT + y;
+      if (data[idx] === BLOCK.WOOD || data[idx] === BLOCK.LEAVES) return;
       if (!onlyAir || data[idx] === BLOCK.AIR) data[idx] = bId;
     };
     if (featureType === 'fallen_log') {
@@ -371,9 +372,37 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 4: Biome-Specific Trees, Environmental Formations & Surface Flora
+    // Step 4A: Procedural Structures per Biome (Rare Villages, Extremely Rare Cabins, Landmarks & Subterranean)
+    let surfaceStructType = null;
+    const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
+    if (notOriginChunk) {
+      const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8), centerY = surfaceMap[8 * CHUNK_SIZE + 8];
+      const validSurface = centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12 && data[(8 * CHUNK_SIZE + 8) * CHUNK_HEIGHT + centerY] !== BLOCK.AIR;
+      if (validSurface && isVillageChunk(cx, cz) && centerBiome !== 'Cumbres Heladas' && centerBiome !== 'Pantano' && centerBiome !== 'Jungla') {
+        placeStructureInChunk(data, surfaceMap, cx, cz, 'village');
+        surfaceStructType = 'village';
+      } else if (validSurface && isCabinChunk(cx, cz)) {
+        placeStructureInChunk(data, surfaceMap, cx, cz, 'cabin');
+        surfaceStructType = 'cabin';
+      } else if (validSurface && (structHash % 44 === 0)) {
+        const variant = (structHash >>> 4) & 3;
+        const sType = variant === 3 ? 'ruined_portal'
+          : ((centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
+          : ((centerBiome === 'Taiga Nevada' || centerBiome === 'Cumbres Heladas') ? (variant === 2 ? 'watchtower' : 'igloo')
+          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple' : 'watchtower')));
+        placeStructureInChunk(data, surfaceMap, cx, cz, sType);
+        surfaceStructType = sType;
+      }
+      if ((structHash % 14 === 2) && centerY > SEA_LEVEL) {
+        placeStructureInChunk(data, surfaceMap, cx, cz, (structHash & 1) ? 'mineshaft' : 'dungeon');
+      }
+    }
+
+    // Step 4B: Biome-Specific Trees, Environmental Formations & Surface Flora (skipping structure footprints)
     for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
       for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
+        if (surfaceStructType === 'village') continue;
+        if (surfaceStructType && lx >= 3 && lx <= 13 && lz >= 3 && lz <= 13) continue;
         const wx = wx0 + lx, wz = wz0 + lz, sy = surfaceMap[lz * CHUNK_SIZE + lx];
         if (sy <= SEA_LEVEL || sy >= CHUNK_HEIGHT - 11) continue;
         const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, topBlock = data[colOffset + sy];
@@ -392,7 +421,7 @@ function createWorldGenerator(seed) {
           }
         } else if (biome === 'Cumbres Heladas') {
           if (r > 0.986) placeEnvFeatureInChunk(data, lx, sy, lz, 'ice_spike');
-          else if (r > 0.980) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
+          else if (r > 0.980 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
         } else if (topBlock === BLOCK.GRASS || topBlock === BLOCK.SNOW) {
           const treeThr = biome === 'Jungla' ? 0.962 : (biome === 'Bosque' ? 0.974 : (biome === 'Taiga Nevada' ? 0.978 : (biome === 'Pantano' ? 0.980 : 0.988)));
           const treeType = (biome === 'Taiga Nevada') ? 'pine' : (biome === 'Jungla' ? 'jungle' : (biome === 'Sabana' ? 'acacia' : (biome === 'Pantano' ? 'swamp' : 'oak')));
@@ -412,28 +441,6 @@ function createWorldGenerator(seed) {
             else if (r < grassLim + 0.027) data[colOffset + sy + 1] = BLOCK.WHEAT_1;
           }
         }
-      }
-    }
-
-    // Step 4B: Procedural Structures per Biome (Rare Villages, Extremely Rare Cabins, Landmarks & Subterranean)
-    const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
-    if (notOriginChunk) {
-      const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8), centerY = surfaceMap[8 * CHUNK_SIZE + 8];
-      const validSurface = centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12 && data[(8 * CHUNK_SIZE + 8) * CHUNK_HEIGHT + centerY] !== BLOCK.AIR;
-      if (validSurface && isVillageChunk(cx, cz) && centerBiome !== 'Cumbres Heladas' && centerBiome !== 'Pantano' && centerBiome !== 'Jungla') {
-        placeStructureInChunk(data, surfaceMap, cx, cz, 'village');
-      } else if (validSurface && isCabinChunk(cx, cz)) {
-        placeStructureInChunk(data, surfaceMap, cx, cz, 'cabin');
-      } else if (validSurface && (structHash % 44 === 0)) {
-        const variant = (structHash >>> 4) & 3;
-        const sType = variant === 3 ? 'ruined_portal'
-          : ((centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
-          : ((centerBiome === 'Taiga Nevada' || centerBiome === 'Cumbres Heladas') ? (variant === 2 ? 'watchtower' : 'igloo')
-          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple' : 'watchtower')));
-        placeStructureInChunk(data, surfaceMap, cx, cz, sType);
-      }
-      if ((structHash % 14 === 2) && centerY > SEA_LEVEL) {
-        placeStructureInChunk(data, surfaceMap, cx, cz, (structHash & 1) ? 'mineshaft' : 'dungeon');
       }
     }
 

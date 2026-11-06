@@ -456,12 +456,13 @@ function updateHeldItemVisual() {
   const avHeld = typeof playerAvatar !== 'undefined' && playerAvatar.userData ? playerAvatar.userData.heldIcon : null;
   handArmMesh.visible = true;
   if (bId === BLOCK.AIR || typeof drawItemIcon !== 'function') {
+    handMesh.visible = false;
     handMesh.geometry = handGeo; handMat.map = null; handMat.color.setHex(0xf1c27d); handMat.needsUpdate = true;
-    handMesh.position.set(0, 0, 0); handMesh.scale.set(0.48, 0.48, 1.15); handMesh.rotation.set(0.35, -0.35, 0.12);
-    handArmMesh.position.set(0.05, -0.06, 0.09); handArmMesh.rotation.set(0.35, -0.35, 0.12);
+    handArmMesh.position.set(0.03, -0.05, 0.06); handArmMesh.rotation.set(0.35, -0.35, 0.12);
     if (avHeld) avHeld.visible = false;
     return;
   }
+  handMesh.visible = true;
   drawItemIcon(handIconCanvas, bId);
   handIconTex.needsUpdate = true;
   handMesh.geometry = handIconGeo; handMat.map = handIconTex; handMat.color.setHex(0xffffff); handMat.needsUpdate = true;

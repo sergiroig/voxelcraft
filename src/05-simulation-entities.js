@@ -61,52 +61,49 @@ function isWoodTouchingLeaves(wx, wy, wz) {
   let touchesLeaves = false, horizWood = 0;
   for (const [ox, oy, oz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
     const nb = getVoxelGlobal(wx + ox, wy + oy, wz + oz);
-    if (nb === BLOCK.PLANKS || nb === BLOCK.COBBLE || nb === BLOCK.GLASS) return false;
+    if (nb === BLOCK.PLANKS || nb === BLOCK.GLASS) return false;
     if (oy === 0 && nb === BLOCK.WOOD) horizWood++;
     if (nb === BLOCK.LEAVES || nb === BLOCK.SNOW_LEAVES) touchesLeaves = true;
   }
-  return touchesLeaves && horizWood < 2;
+  return touchesLeaves && horizWood < 4;
 }
 
 function hasNearbyWood(lx, ly, lz) {
-  for (let dy = -2; dy <= 1; dy++) {
+  for (let dy = -3; dy <= 4; dy++) {
     const wy = ly + dy;
     if (wy <= 0 || wy >= CHUNK_HEIGHT) continue;
-    for (let dz = -2; dz <= 2; dz++) {
-      for (let dx = -2; dx <= 2; dx++) {
-        if (getVoxelGlobal(lx + dx, wy, lz + dz) === BLOCK.WOOD && isWoodTouchingLeaves(lx + dx, wy, lz + dz)) return true;
-      }
+    for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+      if (getVoxelGlobal(lx + dx, wy, lz + dz) === BLOCK.WOOD && isWoodTouchingLeaves(lx + dx, wy, lz + dz)) return true;
     }
   }
   return false;
 }
 
 function enqueueLeafDecayAround(wx, wy, wz) {
-  for (let dy = -2; dy <= 5; dy++) {
+  for (let dy = -4; dy <= 5; dy++) {
     const ly = wy + dy;
     if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
-    for (let dz = -3; dz <= 3; dz++) {
-      for (let dx = -3; dx <= 3; dx++) {
-        const lx = wx + dx, lz = wz + dz;
-        const b = getVoxelGlobal(lx, ly, lz);
-        if ((b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) && !hasNearbyWood(lx, ly, lz)) {
-          const key = `${lx},${ly},${lz}`;
-          if (!leafDecayQueue.includes(key)) leafDecayQueue.push(key);
-        }
+    for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+      const lx = wx + dx, lz = wz + dz, b = getVoxelGlobal(lx, ly, lz);
+      if ((b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) && !hasNearbyWood(lx, ly, lz)) {
+        const key = `${lx},${ly},${lz}`;
+        if (!leafDecayQueue.includes(key)) leafDecayQueue.push(key);
       }
     }
   }
 }
 
 function scanNearbyFloatingLeaves() {
-  if (typeof player === 'undefined' || !player) return;
+  if (typeof player === 'undefined' || !player || typeof worldDeltas === 'undefined') return;
   const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
   for (let s = 0; s < 3; s++) {
     const dz = leafScanZ++;
     if (leafScanZ > 24) leafScanZ = -24;
-    const lz = pz + dz;
+    const lz = pz + dz, cz = Math.floor(lz / CHUNK_SIZE);
     for (let dx = -24; dx <= 24; dx++) {
-      const lx = px + dx;
+      const lx = px + dx, cx = Math.floor(lx / CHUNK_SIZE);
+      const dArr = worldDeltas[`${cx},${cz}`];
+      if (!dArr || dArr.length === 0) continue;
       for (let dy = -3; dy <= 8; dy++) {
         const ly = py + dy;
         if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
