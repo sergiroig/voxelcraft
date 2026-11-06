@@ -112,14 +112,24 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#5eead4'; ctx.fillRect(5, 5, 3, 3);
   } else if (itemId === BLOCK.ITEM_COMPASS) {
     ctx.fillStyle = '#475569'; ctx.fillRect(2, 3, 12, 10); ctx.fillRect(3, 2, 10, 12);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = '#ef4444'; ctx.fillRect(7, 4, 2, 4); ctx.fillStyle = '#1e293b'; ctx.fillRect(7, 8, 2, 4);
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(4, 4, 8, 8);
+    const tx = (typeof player !== 'undefined' && player.hasBedSpawn) ? player.spawnX : 0, tz = (typeof player !== 'undefined' && player.hasBedSpawn) ? player.spawnZ : 0;
+    const rel = (typeof player !== 'undefined') ? (Math.atan2(tx - player.x, -(tz - player.z)) - player.yaw) : 0;
+    const nx = Math.round(Math.sin(rel) * 2.6), ny = -Math.round(Math.cos(rel) * 2.6);
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(7 - nx, 7 - ny, 2, 2); ctx.fillStyle = '#ef4444'; ctx.fillRect(7, 7, 2, 2); ctx.fillRect(7 + nx, 7 + ny, 2, 2);
   } else if (itemId === BLOCK.ITEM_CLOCK) {
     ctx.fillStyle = '#b45309'; ctx.fillRect(2, 3, 12, 10); ctx.fillRect(3, 2, 10, 12);
-    ctx.fillStyle = '#facc15'; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = '#1d4ed8'; ctx.fillRect(5, 5, 6, 6); ctx.fillStyle = '#fef08a'; ctx.fillRect(7, 6, 2, 2);
+    ctx.fillStyle = '#facc15'; ctx.fillRect(3, 3, 10, 10);
+    const night = typeof isNight !== 'undefined' && isNight, ang = typeof celestialAngle !== 'undefined' ? celestialAngle : 0;
+    ctx.fillStyle = night ? '#0f172a' : '#1d4ed8'; ctx.fillRect(5, 5, 6, 6);
+    ctx.fillStyle = night ? '#e2e8f0' : '#fef08a'; ctx.fillRect(7 + Math.round(Math.sin(ang) * 1.6), 6, 2, 2);
   } else {
     const def = BLOCK_DEFS[itemId];
     const tileIndex = def.tiles[2];
     ctx.drawImage(atlasCanvas, tileIndex * TILE_PX, 0, TILE_PX, TILE_PX, 0, 0, 16, 16);
+  }
+  if (typeof getItemEnchantLevel === 'function' && getItemEnchantLevel(itemId) > 0) {
+    ctx.fillStyle = '#e879f9'; ctx.fillRect(11, 2, 2, 2); ctx.fillRect(3, 11, 2, 2); ctx.fillStyle = '#c084fc'; ctx.fillRect(12, 4, 1, 2);
   }
 }
 
@@ -468,12 +478,8 @@ function placeBlockAtCurrentTarget() {
   // 1. Prioritize interacting with targeted interactive world blocks (Chest, Crafting Table, Lever, Door, Trapdoor, Portal, Bed, Anvil, Enchanting Table)
   if (currentHit) {
     if (currentHit.block === BLOCK.PORTAL) { useVoxelPortal(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
-    if (currentHit.block === BLOCK.OBSIDIAN && (bId === BLOCK.AMETHYST || bId === BLOCK.TORCH || bId === BLOCK.TOOL_FLINT_AND_STEEL)) {
-      activateObsidianPortal(currentHit.x, currentHit.y + 1, currentHit.z); player.swingTime = 1.0; return true;
-    }
-    if (currentHit.block === BLOCK.TNT && bId === BLOCK.TOOL_FLINT_AND_STEEL) {
-      igniteTNT(currentHit.x, currentHit.y, currentHit.z, 2.6); player.swingTime = 1.0; return true;
-    }
+    if (currentHit.block === BLOCK.OBSIDIAN && (bId === BLOCK.AMETHYST || bId === BLOCK.TORCH || bId === BLOCK.TOOL_FLINT_AND_STEEL)) { activateObsidianPortal(currentHit.x, currentHit.y + 1, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.TNT && bId === BLOCK.TOOL_FLINT_AND_STEEL) { igniteTNT(currentHit.x, currentHit.y, currentHit.z, 2.6); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) { toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.DOOR_CLOSED || currentHit.block === BLOCK.DOOR_OPEN) { toggleVoxelDoor(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.TRAPDOOR_CLOSED || currentHit.block === BLOCK.TRAPDOOR_OPEN) { toggleVoxelTrapdoor(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
@@ -483,18 +489,23 @@ function placeBlockAtCurrentTarget() {
     if (currentHit.block === BLOCK.BED) { sleepInBed(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.ANVIL) { useAnvilAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.ENCHANTING_TABLE) { useEnchantingTableAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
-    if (currentHit.block === BLOCK.CAKE) {
-      if (gameMode === 'survival' && (player.hunger ?? 10) >= (player.maxHunger || 10)) return false;
-      setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR);
-      player.hunger = Math.min(player.maxHunger || 10, (player.hunger ?? 10) + 6);
-      player.saturation = Math.min(player.hunger, (player.saturation || 0) + 3.6);
-      player.exhaustion = 0; player.starveTimer = 0;
-      renderHeartsUI(); sfx.play('eat'); player.swingTime = 1.0; return true;
-    }
+    if (currentHit.block === BLOCK.CAKE) return eatCakeSliceAt(currentHit.x, currentHit.y, currentHit.z, 1);
     if (bId === BLOCK.ITEM_BONE_MEAL && applyBoneMealAt(currentHit.x, currentHit.y, currentHit.z)) return true;
   }
 
-  // 2. Consumables, Armor, Fishing Rod, Ender Pearl, Bone (Wolf Taming), Compass, Clock, Bow, Grappling Hook or Sword Shield
+  // 2. Consumables, Shears, Flint & Steel, Armor, Fishing Rod, Ender Pearl, Bone, Compass, Clock, Bow, Grappling Hook or Sword Shield
+  if (bId === BLOCK.TOOL_SHEARS) {
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+    const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 5.2);
+    const sheep = (hitMob && hitMob.type === 'sheep' && !hitMob.sheared) ? hitMob : mobs.find(m => m.type === 'sheep' && !m.sheared && Math.hypot(m.x - player.x, m.y - player.y, m.z - player.z) < 4.8);
+    if (sheep && shearSheep(sheep)) return true;
+  }
+  if (bId === BLOCK.TOOL_FLINT_AND_STEEL) {
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+    const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 4.8);
+    if (hitMob && igniteMobWithFire(hitMob)) { player.swingTime = 1.0; return true; }
+    if (currentHit && useFlintAndSteelAt(currentHit.x, currentHit.y, currentHit.z, currentHit.nx, currentHit.ny, currentHit.nz)) return true;
+  }
   if (bId === BLOCK.ITEM_BONE) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 5.2);
@@ -503,13 +514,14 @@ function placeBlockAtCurrentTarget() {
   }
   if (isFoodItem(bId)) return eatHeldApple(bId);
   if (isArmorItem(bId)) return equipArmorItem(bId);
-  if (bId === BLOCK.TOOL_FISHING_ROD) return !!useFishingRod(currentHit ? currentHit.x : undefined, currentHit ? currentHit.y : undefined, currentHit ? currentHit.z : undefined);
+  if (bId === BLOCK.TOOL_FISHING_ROD) return !!useFishingRod(currentHit ? currentHit.x : undefined, currentHit ? currentHit.y : undefined, currentHit ? currentHit.z : undefined, { requireWater: true });
   if (bId === BLOCK.ITEM_ENDER_PEARL) return throwEnderPearl();
   if (bId === BLOCK.ITEM_COMPASS) {
-    if (blockLabelEl) blockLabelEl.textContent = `🧭 Brújula: Origen (0, 0) a ${Math.round(Math.hypot(player.x, player.z))}m • Pos: (${Math.round(player.x)}, ${Math.round(player.y)}, ${Math.round(player.z)})`;
+    const bedTxt = player.hasBedSpawn ? `Cama (${Math.floor(player.spawnX)}, ${Math.floor(player.spawnZ)}) a ${Math.round(Math.hypot(player.x - player.spawnX, player.z - player.spawnZ))}m • ` : '';
+    if (blockLabelEl) blockLabelEl.textContent = `🧭 Brújula: ${bedTxt}Origen (0, 0) a ${Math.round(Math.hypot(player.x, player.z))}m • Pos: (${Math.round(player.x)}, ${Math.round(player.y)}, ${Math.round(player.z)})`;
     sfx.play('waypoint'); return true;
   }
-  if (bId === BLOCK.ITEM_CLOCK) { toggleDayNight(); sfx.play('chime'); return true; }
+  if (bId === BLOCK.ITEM_CLOCK) { toggleDayNight(); if (typeof updateHeldItemVisual === 'function') updateHeldItemVisual(); sfx.play('chime'); return true; }
   if (bId === BLOCK.TOOL_BOW) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
@@ -726,11 +738,8 @@ function teleportToBiome(targetBiome) {
 // ============================================================================
 // 12A-2. REAL-TIME 2D TOPOGRAPHIC RADAR MINIMAP (10 Hz, ZERO GC)
 // ============================================================================
-const minimapCanvas = document.getElementById('minimap-canvas');
-const minimapCtx = minimapCanvas.getContext('2d', { willReadFrequently: true });
-const MAP_SIZE = 68;
-const minimapImgData = minimapCtx.createImageData(MAP_SIZE, MAP_SIZE);
-const minimapPixels32 = new Uint32Array(minimapImgData.data.buffer);
+const minimapCanvas = document.getElementById('minimap-canvas'), minimapCtx = minimapCanvas.getContext('2d', { willReadFrequently: true });
+const MAP_SIZE = 68, minimapImgData = minimapCtx.createImageData(MAP_SIZE, MAP_SIZE), minimapPixels32 = new Uint32Array(minimapImgData.data.buffer);
 const EMPTY_MAP_PIXEL = (255 << 24) | (42 << 16) | (23 << 8) | 15;
 let minimapAccum = 0, minimapUpdatesCount = 0;
 
@@ -739,24 +748,20 @@ function updateMinimap(dt, forceRender = false) {
   if (!forceRender && minimapAccum < 0.10) return false;
   minimapAccum = 0; minimapUpdatesCount++;
   const px = Math.floor(player.x), pz = Math.floor(player.z), half = MAP_SIZE >> 1;
-
   for (let mz = 0; mz < MAP_SIZE; mz++) {
     const wz = pz + (mz - half), cz = Math.floor(wz / CHUNK_SIZE), lz = wz - cz * CHUNK_SIZE, rowOff = mz * MAP_SIZE;
     let cachedCx = 999999, cachedColors = null;
     for (let mx = 0; mx < MAP_SIZE; mx++) {
       const wx = px + (mx - half), cx = Math.floor(wx / CHUNK_SIZE);
       if (cx !== cachedCx) {
-        cachedCx = cx;
-        const ch = chunks.get(`${cx},${cz}`);
+        cachedCx = cx; const ch = chunks.get(`${cx},${cz}`);
         if (ch && !ch.mapColors) computeChunkLighting(ch, getChunkIfLoaded);
         cachedColors = ch ? ch.mapColors : null;
       }
-      const lx = wx - cx * CHUNK_SIZE;
-      minimapPixels32[rowOff + mx] = cachedColors ? cachedColors[lz * CHUNK_SIZE + lx] : EMPTY_MAP_PIXEL;
+      minimapPixels32[rowOff + mx] = cachedColors ? cachedColors[lz * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)] : EMPTY_MAP_PIXEL;
     }
   }
   minimapCtx.putImageData(minimapImgData, 0, 0);
-
   for (let i = 0; i < mobs.length; i++) {
     const m = mobs[i], rx = Math.round(half + (m.x - player.x)), rz = Math.round(half + (m.z - player.z));
     if (rx >= 1 && rx < MAP_SIZE - 1 && rz >= 1 && rz < MAP_SIZE - 1) {
@@ -766,17 +771,13 @@ function updateMinimap(dt, forceRender = false) {
   }
   if (gameMode === 'creative') {
     for (let i = 0; i < waypoints.length; i++) {
-      const wp = waypoints[i];
-      const rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x))));
-      const rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
+      const wp = waypoints[i], rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x)))), rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
       minimapCtx.fillStyle = '#0f172a'; minimapCtx.fillRect(rx - 2, rz - 2, 5, 5);
       minimapCtx.fillStyle = wp.color || '#f43f5e'; minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
     }
   }
   minimapCtx.strokeStyle = '#38bdf8'; minimapCtx.lineWidth = 1.5;
-  minimapCtx.beginPath(); minimapCtx.moveTo(half, half);
-  minimapCtx.lineTo(half - Math.sin(player.yaw) * 8, half - Math.cos(player.yaw) * 8);
-  minimapCtx.stroke();
+  minimapCtx.beginPath(); minimapCtx.moveTo(half, half); minimapCtx.lineTo(half - Math.sin(player.yaw) * 8, half - Math.cos(player.yaw) * 8); minimapCtx.stroke();
   minimapCtx.fillStyle = '#facc15'; minimapCtx.fillRect(half - 1, half - 1, 3, 3);
   return true;
 }
@@ -785,8 +786,7 @@ btnReset.addEventListener('click', () => { applyWorldSeed(Math.floor(Math.random
 const btnApplySeed = document.getElementById('btn-apply-seed'), seedInputEl = document.getElementById('seed-input');
 if (seedInputEl) seedInputEl.value = `${worldSeed}`;
 if (btnApplySeed) btnApplySeed.addEventListener('click', () => { applyWorldSeed(seedInputEl ? parseInt(seedInputEl.value, 10) : 0); startGameplay(); });
-const btnTpDesert = document.getElementById('btn-tp-desert'), btnTpSnow = document.getElementById('btn-tp-snow');
-const btnTpBiome = document.getElementById('btn-tp-biome'), biomeSelectEl = document.getElementById('biome-select');
+const btnTpDesert = document.getElementById('btn-tp-desert'), btnTpSnow = document.getElementById('btn-tp-snow'), btnTpBiome = document.getElementById('btn-tp-biome'), biomeSelectEl = document.getElementById('biome-select');
 if (btnTpDesert) btnTpDesert.addEventListener('click', () => { teleportToBiome('Desierto'); startGameplay(); });
 if (btnTpSnow) btnTpSnow.addEventListener('click', () => { teleportToBiome('Taiga Nevada'); startGameplay(); });
 if (btnTpBiome && biomeSelectEl) btnTpBiome.addEventListener('click', () => { teleportToBiome(biomeSelectEl.value || 'Llanura'); startGameplay(); });

@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=47"></iframe>
+    <iframe id="game-frame" src="./index.html?v=50"></iframe>
   </div>
 
   <script>
@@ -2062,12 +2062,12 @@
           assert(smeltPork && smeltPork.outId === vc.BLOCK.ITEM_COOKED_PORKCHOP, 'El Horno debe asar Chuleta Cruda en Chuleta Asada (ITEM_COOKED_PORKCHOP)');
           vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.AIR);
 
-          // Colocar y comer una Tarta Dulce (BLOCK.CAKE) haciendo clic derecho sobre ella (+6🍗)
+          // Colocar y comer una Tarta Dulce (BLOCK.CAKE) por porciones (6 bocados de +1🍗 = +6🍗)
           vc.player.hunger = 3;
           vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.CAKE);
           vc.setCurrentHit({ x: fx, y: fy, z: fz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.CAKE });
-          vc.placeBlockAtCurrentTarget();
-          assert(vc.getVoxelGlobal(fx, fy, fz) === vc.BLOCK.AIR && vc.player.hunger === 9, `Hacer clic derecho sobre BLOCK.CAKE debe comerla y restaurar +6🍗 de hambre (hunger=${vc.player.hunger})`);
+          for (let s = 0; s < 6; s++) vc.placeBlockAtCurrentTarget();
+          assert(vc.getVoxelGlobal(fx, fy, fz) === vc.BLOCK.AIR && vc.player.hunger === 9, `Comer las 6 porciones de BLOCK.CAKE debe agotarla y restaurar +6🍗 de hambre (hunger=${vc.player.hunger})`);
 
           // Verificar que los 17 bloques/objetos de la Fase 2 tienen definición e icono 16×16 válido
           const phase2Ids = [
@@ -2755,6 +2755,129 @@
           const wFrag = shaders.waterShaderRef.fragmentShader;
           assert(sFrag.includes('dFdx(vWorldPos)') && sFrag.includes('uLightDir') && sFrag.includes('selfShadow') && sFrag.includes('cloudShadow'), 'El fragment shader sólido debe calcular normales geométricas (dFdx/dFdy), sombreado direccional (uLightDir), sombras estiradas (selfShadow) y sombras de nubes (cloudShadow)');
           assert(wFrag.includes('uLightDir') && wFrag.includes('halfVec') && wFrag.includes('spec') && wFrag.includes('fresnel'), 'El fragment shader del agua debe calcular reflejo especular Blinn-Phong (spec) y Fresnel hacia el Sol/Luna');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 49: Mecánicas Completas de Objetos estilo Minecraft (8 Items Completos)
+      // =========================================================================
+      describe('49. Mecánicas Completas de Objetos estilo Minecraft: Tijeras, Pesca en Agua, Cama+Respawn, Encantamientos+Estanterías, Yunque, Tarta por Porciones, Mechero y Niveles de Pico', () => {
+        it('Esquila Ovejas vivas con Tijeras (con regeneración de lana al pastar), pesca en Agua real con Flotador 3D y Tesoros, come Tarta por 6 porciones y prende fuego con Mechero', () => {
+          vc.toggleGameMode('survival');
+
+          // 1) Tijeras (BLOCK.TOOL_SHEARS): esquilar oveja viva sin dañarla (+2× Lana) y regenerar lana en césped
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          vc.setVoxelGlobal(10, 49, 10, vc.BLOCK.GRASS);
+          const sheep = vc.spawnMob('sheep', 10.5, 50, 10.5);
+          const hpBefore = sheep.hp;
+          const woolBefore = vc.inventoryCounts[vc.BLOCK.WOOL] || 0;
+          const shearedOk = vc.shearSheep(sheep);
+          assert(shearedOk === true && sheep.sheared === true && sheep.hp === hpBefore, 'shearSheep debe esquilar a la Oveja sin reducir su salud');
+          assert((vc.inventoryCounts[vc.BLOCK.WOOL] || 0) === woolBefore + 2, 'Esquilar una Oveja debe entregar +2× Lana Blanca (BLOCK.WOOL)');
+          assert(vc.shearSheep(sheep) === false, 'Una Oveja recién esquilada no debe poderse esquilar de nuevo hasta que regenere su lana');
+          sheep.regrowTimer = 0.05;
+          vc.updateMobs(0.1);
+          assert(sheep.sheared === false, 'La Oveja esquilada debe regenerar su lana al pastar sobre BLOCK.GRASS');
+          assert(vc.getDropItemForBlock(vc.BLOCK.LEAVES, vc.BLOCK.TOOL_SHEARS) === vc.BLOCK.LEAVES && vc.getDropItemForBlock(vc.BLOCK.TALL_GRASS, vc.BLOCK.TOOL_SHEARS) === vc.BLOCK.TALL_GRASS, 'Cortar Hojas o Hierba Alta con Tijeras debe devolver el bloque intacto');
+
+          // 2) Caña de Pescar (BLOCK.TOOL_FISHING_ROD): exige BLOCK.WATER con requireWater=true, muestra flotador 3D y tabla de tesoros
+          vc.setVoxelGlobal(14, 52, 14, vc.BLOCK.STONE);
+          assert(vc.useFishingRod(14, 52, 14, { requireWater: true }) === null, 'Con requireWater=true la Caña de Pescar no debe pescar en tierra seca');
+          vc.setVoxelGlobal(14, 52, 14, vc.BLOCK.WATER);
+          const emBefore = vc.inventoryCounts[vc.BLOCK.ITEM_EMERALD] || 0;
+          const treasureId = vc.useFishingRod(14, 52, 14, { requireWater: true, roll: 0.92 });
+          assert(treasureId === vc.BLOCK.ITEM_EMERALD && (vc.inventoryCounts[vc.BLOCK.ITEM_EMERALD] || 0) === emBefore + 1, 'La tabla de botín de pesca debe permitir pescar tesoros raros como Esmeralda (ITEM_EMERALD)');
+          assert(vc.fishingBobber && vc.fishingBobber.active === true && vc.fishingBobber.mesh.visible === true, 'Lanzar la Caña al agua debe desplegar el flotador 3D (fishingBobber)');
+          vc.setVoxelGlobal(14, 52, 14, vc.BLOCK.AIR);
+
+          // 3) Tarta por Porciones (BLOCK.CAKE): 6 bocados individuales (+1🍗 cada uno)
+          const cx = 12, cy = 52, cz = 12;
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.CAKE);
+          delete vc.cakeSlicesMap[`${cx},${cy},${cz}`];
+          vc.player.hunger = 4;
+          assert(vc.getCakeSlicesAt(cx, cy, cz) === 6, 'Una Tarta recién colocada debe tener 6 porciones');
+          vc.eatCakeSliceAt(cx, cy, cz, 1);
+          assert(vc.getCakeSlicesAt(cx, cy, cz) === 5 && vc.player.hunger === 5 && vc.getVoxelGlobal(cx, cy, cz) === vc.BLOCK.CAKE, 'Un clic derecho sobre la Tarta debe comer 1 porción (+1🍗) y dejar 5/6 porciones');
+          vc.eatCakeSliceAt(cx, cy, cz, 5);
+          assert(vc.getVoxelGlobal(cx, cy, cz) === vc.BLOCK.AIR && vc.player.hunger === 10, 'Al comer la última porción el bloque BLOCK.CAKE debe consumirse por completo');
+
+          // 4) Mechero de Pedernal (BLOCK.TOOL_FLINT_AND_STEEL): incendiar mobs hostiles y encender llama sobre Netherrack
+          const zomb = vc.spawnMob('zombie', 11.5, 50, 11.5);
+          const zHp0 = zomb.hp;
+          vc.igniteMobWithFire(zomb);
+          assert(zomb.onFireTimer > 4.0 && zomb.hp < zHp0, 'igniteMobWithFire debe prender fuego al Zombi e infligir daño ígneo inicial');
+          const zHp1 = zomb.hp;
+          vc.updateMobs(0.95);
+          assert(zomb.hp < zHp1, 'El Zombi en llamas debe sufrir daño periódico por quemadura en updateMobs');
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.NETHERRACK);
+          vc.setVoxelGlobal(cx, cy + 1, cz, vc.BLOCK.AIR);
+          vc.useFlintAndSteelAt(cx, cy, cz, 0, 1, 0);
+          assert(vc.getVoxelGlobal(cx, cy + 1, cz) === vc.BLOCK.TORCH, 'Usar el Mechero sobre Netherrack debe prender una llama en la cara superior');
+          vc.setVoxelGlobal(cx, cy + 1, cz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.AIR);
+        });
+
+        it('Fija Respawn Point en Cama (horario nocturno y reaparición al morir), escala Encantamientos I-III con Estanterías, aplica gravedad al Yunque y exige Nivel de Pico por Mineral', () => {
+          vc.toggleGameMode('survival');
+          const bx = 14, by = 52, bz = 14;
+
+          // 1) Cama (BLOCK.BED): de día fija Respawn Point sin saltar tiempo; de noche duerme; al morir reaparece en la Cama
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.BED);
+          vc.setTimeOfDay(0.0); // Mediodía soleado
+          vc.toggleWeather('clear');
+          const daySleep = vc.sleepInBed(bx, by, bz);
+          assert(daySleep === 'spawn_only' && vc.player.hasBedSpawn === true && Math.abs(vc.player.spawnX - (bx + 0.5)) < 0.01, 'Hacer clic en la Cama de día debe fijar el punto de reaparición (spawn_only) sin dormir');
+          vc.player.x = 40; vc.player.y = 50; vc.player.z = 40; vc.player.health = 2; vc.player.flying = false; vc.armorSlots.fill(0);
+          vc.damagePlayer(10); // Daño letal -> reaparece en la Cama con salud máxima
+          assert(Math.hypot(vc.player.x - (bx + 0.5), vc.player.z - (bz + 0.5)) < 0.2 && vc.player.health === vc.player.maxHealth, 'Sufrir daño letal con Cama registrada debe reaparecer al jugador en su Cama con 10❤');
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
+
+          // 2) Mesa de Encantamientos + Estanterías (BLOCK.BOOKSHELF): 6 estanterías otorgan Nivel III (+90% minado, +3 daño y brillo mágico en icono)
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.ENCHANTING_TABLE);
+          for (let i = -2; i <= 2; i++) vc.setVoxelGlobal(bx + i, by, bz - 2, vc.BLOCK.BOOKSHELF);
+          vc.setVoxelGlobal(bx - 2, by, bz - 1, vc.BLOCK.BOOKSHELF);
+          assert(vc.countNearbyBookshelves(bx, by, bz) >= 6, 'countNearbyBookshelves debe detectar las 6 Estanterías alrededor de la Mesa de Encantamientos');
+          vc.inventoryCounts[vc.BLOCK.TOOL_PICKAXE] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.TOOL_PICKAXE; vc.hotbarCounts[0] = 1;
+          vc.updateHotbarSelection(0);
+          vc.useEnchantingTableAt(bx, by, bz);
+          assert(vc.getItemEnchantLevel(vc.BLOCK.TOOL_PICKAXE) === 3, 'Con >=6 Estanterías la Mesa de Encantamientos debe encantar la herramienta equipada a Nivel III (3)');
+          const enchCv = doc.createElement('canvas'); enchCv.width = 16; enchCv.height = 16;
+          vc.drawItemIcon(enchCv, vc.BLOCK.TOOL_PICKAXE);
+          const glintPx = enchCv.getContext('2d').getImageData(11, 2, 1, 1).data;
+          assert(glintPx[0] > 200 && glintPx[2] > 200 && glintPx[3] === 255, 'El icono 16×16 de una herramienta encantada debe mostrar el destello mágico violeta (#e879f9)');
+          delete vc.enchantedItems[vc.BLOCK.TOOL_PICKAXE];
+          for (let i = -2; i <= 2; i++) vc.setVoxelGlobal(bx + i, by, bz - 2, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(bx - 2, by, bz - 1, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
+
+          // 3) Yunque (BLOCK.ANVIL): cae por gravedad y aplasta criaturas debajo, y forja Armadura de Hierro a Diamante
+          while (vc.mobs.length > 0) vc.removeMobAt(0);
+          vc.setVoxelGlobal(bx, by - 2, bz, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(bx, by - 1, bz, vc.BLOCK.AIR);
+          const targetMob = vc.spawnMob('zombie', bx + 0.5, by - 1, bz + 0.5);
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.ANVIL);
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(bx, by - 1, bz) === vc.BLOCK.ANVIL && !vc.mobs.includes(targetMob), 'El Yunque (BLOCK.ANVIL) debe caer por gravedad y aplastar a la criatura situada debajo');
+          vc.setVoxelGlobal(bx, by - 1, bz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(bx, by - 2, bz, vc.BLOCK.AIR);
+
+          // 4) Progresión de Nivel de Pico por Mineral (canHarvestBlockWithTool) y Reloj/Brújula dinámicos
+          assert(vc.canHarvestBlockWithTool(vc.BLOCK.COAL_ORE, vc.BLOCK.AIR) === false && vc.canHarvestBlockWithTool(vc.BLOCK.COAL_ORE, vc.BLOCK.TOOL_WOOD_PICKAXE) === true, 'La Mena de Carbón requiere al menos Pico de Madera');
+          assert(vc.canHarvestBlockWithTool(vc.BLOCK.IRON_ORE, vc.BLOCK.TOOL_WOOD_PICKAXE) === false && vc.canHarvestBlockWithTool(vc.BLOCK.IRON_ORE, vc.BLOCK.TOOL_STONE_PICKAXE) === true, 'La Mena de Hierro requiere al menos Pico de Piedra');
+          assert(vc.canHarvestBlockWithTool(vc.BLOCK.DIAMOND_ORE, vc.BLOCK.TOOL_STONE_PICKAXE) === false && vc.canHarvestBlockWithTool(vc.BLOCK.DIAMOND_ORE, vc.BLOCK.TOOL_IRON_PICKAXE) === true, 'La Mena de Diamante requiere al menos Pico de Hierro');
+          assert(vc.canHarvestBlockWithTool(vc.BLOCK.OBSIDIAN, vc.BLOCK.TOOL_IRON_PICKAXE) === false && vc.canHarvestBlockWithTool(vc.BLOCK.OBSIDIAN, vc.BLOCK.TOOL_PICKAXE) === true, 'La Obsidiana requiere Pico de Diamante');
+
+          const clkDay = doc.createElement('canvas'), clkNight = doc.createElement('canvas');
+          clkDay.width = clkNight.width = 16; clkDay.height = clkNight.height = 16;
+          vc.setTimeOfDay(0.0); vc.drawItemIcon(clkDay, vc.BLOCK.ITEM_CLOCK);
+          vc.setTimeOfDay(Math.PI); vc.drawItemIcon(clkNight, vc.BLOCK.ITEM_CLOCK);
+          const dayDial = clkDay.getContext('2d').getImageData(5, 5, 1, 1).data;
+          const nightDial = clkNight.getContext('2d').getImageData(5, 5, 1, 1).data;
+          assert(dayDial[2] > nightDial[2] + 80, 'El icono 16×16 del Reloj Solar debe cambiar dinámicamente su esfera entre el cielo diurno y nocturno');
+          vc.setTimeOfDay(5.82);
         });
       });
 

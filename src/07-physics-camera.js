@@ -40,136 +40,9 @@ const player = {
   yaw: 0, pitch: -0.15, radius: 0.3, height: 1.75, eyeHeight: 1.58,
   onGround: false, flying: false, stepAccum: 0, bobTime: 0, swingTime: 0,
   health: 10, maxHealth: 10, regenTimer: 0, hunger: 10, maxHunger: 10, saturation: 5.0, exhaustion: 0, starveTimer: 0,
-  air: 10, maxAir: 10, airTimer: 0, wasInFluid: false, maxFallVel: 0, portalCooldown: 0
+  air: 10, maxAir: 10, airTimer: 0, wasInFluid: false, maxFallVel: 0, portalCooldown: 0,
+  spawnX: 8.5, spawnY: 42, spawnZ: 8.5, hasBedSpawn: false
 };
-
-let isShieldBlocking = false;
-const armorSlots = [0, 0, 0, 0]; // [Helmet, Chestplate, Leggings, Boots]
-
-function getArmorDefenseRatio() {
-  let def = 0;
-  for (let i = 0; i < 4; i++) {
-    const id = armorSlots[i];
-    if (id >= BLOCK.ARMOR_DIAMOND_HELMET && id <= BLOCK.ARMOR_DIAMOND_BOOTS) def += 0.18;
-    else if (id >= BLOCK.ARMOR_IRON_HELMET && id <= BLOCK.ARMOR_IRON_BOOTS) def += 0.12;
-  }
-  return Math.min(0.75, def);
-}
-
-function equipArmorItem(itemId) {
-  const sIdx = getArmorSlotForItem(itemId);
-  if (sIdx < 0) return false;
-  if (gameMode === 'survival' && (inventoryCounts[itemId] || 0) <= 0) return false;
-  const prevId = armorSlots[sIdx];
-  if (prevId > 0 && gameMode === 'survival') inventoryCounts[prevId] = (inventoryCounts[prevId] || 0) + 1;
-  if (gameMode === 'survival') {
-    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === itemId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
-    inventoryCounts[itemId] = Math.max(0, (inventoryCounts[itemId] || 1) - 1);
-    if (inventoryCounts[itemId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === itemId) hotbarSlots[selectedSlot] = BLOCK.AIR;
-  }
-  armorSlots[sIdx] = itemId;
-  sfx.play('shield');
-  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
-  if (typeof saveWorldData === 'function') saveWorldData();
-  return true;
-}
-
-function applyBoneMealAt(wx, wy, wz) {
-  if (gameMode === 'survival' && (inventoryCounts[BLOCK.ITEM_BONE_MEAL] || 0) <= 0) return false;
-  const b = getVoxelGlobal(wx, wy, wz);
-  let applied = false;
-  if (b === BLOCK.WHEAT_1 || b === BLOCK.WHEAT_2) {
-    setVoxelGlobal(wx, wy, wz, BLOCK.WHEAT_3); applied = true;
-  } else if (b === BLOCK.SAPLING) {
-    growTreeAt(wx, wy, wz); applied = true;
-  } else if (b === BLOCK.GRASS || b === BLOCK.DIRT) {
-    if (b === BLOCK.DIRT) setVoxelGlobal(wx, wy, wz, BLOCK.GRASS);
-    if (getVoxelGlobal(wx, wy + 1, wz) === BLOCK.AIR) setVoxelGlobal(wx, wy + 1, wz, BLOCK.TALL_GRASS);
-    applied = true;
-  }
-  if (!applied) return false;
-  if (gameMode === 'survival') {
-    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_BONE_MEAL && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
-    inventoryCounts[BLOCK.ITEM_BONE_MEAL] = Math.max(0, (inventoryCounts[BLOCK.ITEM_BONE_MEAL] || 1) - 1);
-    if (inventoryCounts[BLOCK.ITEM_BONE_MEAL] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_BONE_MEAL) hotbarSlots[selectedSlot] = BLOCK.AIR;
-  }
-  spawnBlockParticles(wx, wy + 0.5, wz, BLOCK.SAPLING, 14);
-  sfx.play('chime'); player.swingTime = 1.0;
-  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
-  if (typeof saveWorldData === 'function') saveWorldData();
-  return true;
-}
-
-function useFishingRod(wx, wy, wz) {
-  const tx = wx !== undefined ? wx : Math.floor(player.x - Math.sin(player.yaw) * 2.5);
-  const ty = wy !== undefined ? wy : Math.floor(player.y), tz = wz !== undefined ? wz : Math.floor(player.z - Math.cos(player.yaw) * 2.5);
-  spawnBlockParticles(tx, ty + 0.5, tz, BLOCK.WATER, 16); sfx.play('splash'); player.swingTime = 1.0;
-  addInventoryItem(BLOCK.ITEM_RAW_FISH, 1);
-  const lbl = document.getElementById('block-label');
-  if (lbl) lbl.textContent = '🎣 ¡Has pescado 1× Pescado Crudo (+2❤)!';
-  return BLOCK.ITEM_RAW_FISH;
-}
-
-function sleepInBed(wx, wy, wz) {
-  if (typeof setTimeOfDay === 'function') setTimeOfDay(0.25);
-  player.health = Math.min(player.maxHealth, player.health + 4);
-  renderHeartsUI(); sfx.play('chime');
-  if (wx !== undefined) spawnBlockParticles(wx, wy + 0.5, wz, BLOCK.BED, 12);
-  const lbl = document.getElementById('block-label');
-  if (lbl) lbl.textContent = '🛏 ¡Has descansado en la Cama! Amanece y recuperas +4❤';
-  return true;
-}
-
-function useAnvilAt(wx, wy, wz) {
-  const held = getActiveHeldItem();
-  const upMap = { [BLOCK.TOOL_WOOD_PICKAXE]: BLOCK.TOOL_STONE_PICKAXE, [BLOCK.TOOL_STONE_PICKAXE]: BLOCK.TOOL_IRON_PICKAXE, [BLOCK.TOOL_IRON_PICKAXE]: BLOCK.TOOL_PICKAXE, [BLOCK.TOOL_WOOD_SWORD]: BLOCK.TOOL_STONE_SWORD, [BLOCK.TOOL_STONE_SWORD]: BLOCK.TOOL_IRON_SWORD, [BLOCK.TOOL_IRON_SWORD]: BLOCK.TOOL_SWORD };
-  const upgraded = upMap[held] || BLOCK.ITEM_DIAMOND;
-  if (upMap[held] && selectedSlot >= 0) {
-    hotbarSlots[selectedSlot] = upgraded;
-    inventoryCounts[upgraded] = (inventoryCounts[upgraded] || 0) + 1;
-  } else {
-    addInventoryItem(BLOCK.ITEM_IRON_INGOT, 1);
-  }
-  if (wx !== undefined) spawnBlockParticles(wx, wy + 0.6, wz, BLOCK.IRON_BLOCK, 14);
-  sfx.play('shield');
-  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
-  return upgraded;
-}
-
-function useEnchantingTableAt(wx, wy, wz) {
-  player.health = player.maxHealth; renderHeartsUI();
-  addInventoryItem(BLOCK.ITEM_ENDER_PEARL, 1);
-  if (wx !== undefined) spawnBlockParticles(wx, wy + 0.8, wz, BLOCK.AMETHYST, 18);
-  sfx.play('chime');
-  const lbl = document.getElementById('block-label');
-  if (lbl) lbl.textContent = '✨ ¡Mesa de Encantamientos activada! Salud al máximo + 1× Perla de Ender';
-  return BLOCK.ITEM_ENDER_PEARL;
-}
-
-function throwEnderPearl() {
-  if (gameMode === 'survival' && (inventoryCounts[BLOCK.ITEM_ENDER_PEARL] || 0) <= 0) return false;
-  if (gameMode === 'survival') {
-    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_ENDER_PEARL && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
-    inventoryCounts[BLOCK.ITEM_ENDER_PEARL] = Math.max(0, (inventoryCounts[BLOCK.ITEM_ENDER_PEARL] || 1) - 1);
-    if (inventoryCounts[BLOCK.ITEM_ENDER_PEARL] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_ENDER_PEARL) hotbarSlots[selectedSlot] = BLOCK.AIR;
-  }
-  const destX = currentHit ? currentHit.x + currentHit.nx + 0.5 : player.x - Math.sin(player.yaw) * 8.0;
-  const destZ = currentHit ? currentHit.z + currentHit.nz + 0.5 : player.z - Math.cos(player.yaw) * 8.0;
-  const destY = currentHit ? currentHit.y + Math.max(1, currentHit.ny) + 0.2 : findSpawnHeight(destX, destZ);
-  player.x = destX; player.y = destY; player.z = destZ;
-  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
-  spawnBlockParticles(destX, destY, destZ, BLOCK.PORTAL, 20);
-  sfx.play('portal');
-  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
-  return true;
-}
-
-function toggleShieldBlock(forceState) {
-  const next = typeof forceState === 'boolean' ? forceState : !isShieldBlocking;
-  if (next !== isShieldBlocking && next) sfx.play('shield');
-  isShieldBlocking = next;
-  return isShieldBlocking;
-}
 
 const heartsRowEl = document.getElementById('hearts-row');
 const hungerRowEl = document.getElementById('hunger-row');
@@ -210,6 +83,10 @@ function damagePlayer(amount) {
   if (isShieldBlocking) { sfx.play('shield'); amount = Math.floor(amount * 0.2); if (amount <= 0) return; }
   const armorDef = getArmorDefenseRatio();
   if (armorDef > 0) amount = Math.max(1, Math.round(amount * (1 - armorDef)));
+  if (player.health - amount <= 0 && player.hasBedSpawn && typeof respawnPlayerAtBed === 'function') {
+    respawnPlayerAtBed();
+    return;
+  }
   player.health = Math.max(1, player.health - amount);
   renderHeartsUI(); sfx.play('hurt');
   const hurtEl = document.getElementById('hurt-overlay');
@@ -630,6 +507,8 @@ function updateMining(dt, currentHit) {
   } else if (heldId === BLOCK.TOOL_AXE && isWoodLike) speedMult = 3.8;
   else if (heldId === BLOCK.TOOL_SHOVEL && isEarthLike) speedMult = 3.8;
   else if (heldId === BLOCK.TOOL_SHEARS && isFoliage) speedMult = 8.0;
+  const enchLvl = typeof getItemEnchantLevel === 'function' ? getItemEnchantLevel(heldId) : 0;
+  if (enchLvl > 0) speedMult *= (1.0 + 0.30 * enchLvl);
   const duration = Math.max(0.05, def.hardness / speedMult);
 
   mineProgress += dt / duration;
@@ -646,7 +525,12 @@ function updateMining(dt, currentHit) {
     if (setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR)) {
       sfx.play(brokenId === BLOCK.AMETHYST ? 'chime' : 'break');
       spawnBlockParticles(currentHit.x, currentHit.y, currentHit.z, brokenId, 18);
-      spawnItemDrop(currentHit.x, currentHit.y, currentHit.z, brokenId, 1);
+      if (gameMode === 'creative' || canHarvestBlockWithTool(brokenId, heldId)) {
+        spawnItemDrop(currentHit.x, currentHit.y, currentHit.z, brokenId, 1, 0.22, heldId);
+      } else {
+        const lbl = document.getElementById('block-label');
+        if (lbl) lbl.textContent = '⚠ Necesitas un pico de mayor nivel para extraer este mineral';
+      }
       addHungerExhaustion(0.12);
     }
     mineProgress = 0; mineTargetKey = '';

@@ -58,8 +58,10 @@ function triggerPrimaryAttackOrMine() {
   if (heldId === BLOCK.TOOL_GRAPPLING_HOOK) { shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
   const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 4.3);
   if (hitMob) {
-    const dmg = heldId === BLOCK.TOOL_SWORD ? 5 : (isSwordItem(heldId) || heldId === BLOCK.TOOL_AXE ? 4 : (isPickaxeItem(heldId) ? 3 : 1));
-    damageMob(hitMob, dmg, dir.x, dir.z); isMiningHeld = false; return;
+    if (heldId === BLOCK.TOOL_SHEARS && hitMob.type === 'sheep' && !hitMob.sheared) { shearSheep(hitMob); isMiningHeld = false; return; }
+    if (heldId === BLOCK.TOOL_FLINT_AND_STEEL) { igniteMobWithFire(hitMob); isMiningHeld = false; return; }
+    const baseDmg = heldId === BLOCK.TOOL_SWORD ? 5 : (isSwordItem(heldId) || heldId === BLOCK.TOOL_AXE ? 4 : (isPickaxeItem(heldId) ? 3 : 1));
+    damageMob(hitMob, baseDmg + getItemEnchantLevel(heldId), dir.x, dir.z); isMiningHeld = false; return;
   }
   if (!currentHit) sfx.play('step');
   isMiningHeld = true;
@@ -760,7 +762,7 @@ requestAnimationFrame(animate);
 window.__VOXELCRAFT__ = {
   BLOCK, BLOCK_DEFS, BIOME_LIST, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, SMELT_RECIPES, recipeBookState, setRecipeBookFilter, getRecipeCategory, buildMiniPatternHTML, normalizeCraftingId, areCraftingItemsEquivalent, getAvailIngredientCount, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
   isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isArmorItem, getArmorSlotForItem, isFoodItem, isNonStackTool,
-  getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, sleepInBed, useAnvilAt, useEnchantingTableAt, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
+  getArmorDefenseRatio, equipArmorItem, shearSheep, applyBoneMealAt, fishingBobber, FISHING_LOOT_TABLE, findWaterForFishing, useFishingRod, sleepInBed, respawnPlayerAtBed, useAnvilAt, enchantedItems, getItemEnchantLevel, countNearbyBookshelves, useEnchantingTableAt, cakeSlicesMap, getCakeSlicesAt, eatCakeSliceAt, igniteMobWithFire, useFlintAndSteelAt, getPickaxeTier, getRequiredPickaxeTier, canHarvestBlockWithTool, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
   handGroup, handMesh, handMat, handArmMesh, handSleeveMesh, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,

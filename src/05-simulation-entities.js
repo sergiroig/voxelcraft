@@ -169,12 +169,19 @@ function updateVoxelSimulation(dt) {
     if (wy <= 1 || wy >= CHUNK_HEIGHT) continue;
     const b = getVoxelGlobal(wx, wy, wz);
 
-    if (b === BLOCK.SAND || b === BLOCK.GRAVEL) {
+    if (b === BLOCK.SAND || b === BLOCK.GRAVEL || b === BLOCK.ANVIL) {
       const below = getVoxelGlobal(wx, wy - 1, wz);
       if (below === BLOCK.AIR || below === BLOCK.WATER) {
         setVoxelRawNoRebuild(wx, wy, wz, below === BLOCK.WATER ? BLOCK.WATER : BLOCK.AIR, dirtySet);
         setVoxelRawNoRebuild(wx, wy - 1, wz, b, dirtySet);
         movedThisTick.add(`${wx},${wy - 1},${wz}`);
+        if (b === BLOCK.ANVIL) {
+          sfx.play('shield');
+          for (let mi = mobs.length - 1; mi >= 0; mi--) {
+            const m = mobs[mi];
+            if (m && Math.hypot(m.x - (wx + 0.5), m.z - (wz + 0.5)) < 1.1 && Math.abs(m.y - (wy - 1)) < 1.6) damageMob(m, 10, 0, 0);
+          }
+        }
       }
     } else if (b === BLOCK.WATER) {
       const below = getVoxelGlobal(wx, wy - 1, wz);

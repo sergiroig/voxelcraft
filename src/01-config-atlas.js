@@ -363,14 +363,18 @@ function autoEquipToHotbar(itemId) {
   if (emptyIdx !== -1) hotbarSlots[emptyIdx] = itemId;
 }
 
-function getDropItemForBlock(blockId) {
+function getDropItemForBlock(blockId, toolId) {
+  if (toolId === BLOCK.TOOL_SHEARS) {
+    if (blockId === BLOCK.LEAVES || blockId === BLOCK.SNOW_LEAVES) return BLOCK.LEAVES;
+    if (blockId === BLOCK.TALL_GRASS || blockId === BLOCK.FLOWER_RED || blockId === BLOCK.FLOWER_YELLOW || blockId === BLOCK.LILY_PAD) return blockId;
+  }
   if (blockId === BLOCK.STONE) return BLOCK.COBBLE;
   if (blockId === BLOCK.LEVER_ON) return BLOCK.LEVER_OFF;
   if (blockId === BLOCK.REDSTONE_LAMP_ON) return BLOCK.REDSTONE_LAMP_OFF;
   if (blockId === BLOCK.DOOR_OPEN) return BLOCK.DOOR_CLOSED;
   if (blockId === BLOCK.TRAPDOOR_OPEN) return BLOCK.TRAPDOOR_CLOSED;
   if (blockId === BLOCK.WHEAT_2) return BLOCK.WHEAT_1;
-  if (blockId === BLOCK.LEAVES) {
+  if (blockId === BLOCK.LEAVES || blockId === BLOCK.SNOW_LEAVES) {
     const r = Math.random();
     if (r < 0.25) return BLOCK.ITEM_APPLE;
     if (r < 0.55) return BLOCK.SAPLING;

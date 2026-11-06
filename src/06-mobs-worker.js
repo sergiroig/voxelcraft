@@ -387,12 +387,30 @@ function updateMobs(dt) {
     const shade = Math.max(0.14, Math.min(1.0, Math.max(((packedL >> 4) / 15) * sunFactor, (packedL & 15) / 15)));
 
     if (m.hurtTimer > 0) m.hurtTimer -= dt;
-    else if (m.type === 'creeper' && m.fuseTimer > 0 && Math.floor(m.fuseTimer * 12) % 2 === 0) {
+    else if (m.onFireTimer > 0 && Math.floor(m.onFireTimer * 10) % 2 === 0) {
+      for (const entry of m.mats) entry.mat.color.setHex(0xf97316);
+    } else if (m.type === 'creeper' && m.fuseTimer > 0 && Math.floor(m.fuseTimer * 12) % 2 === 0) {
       for (const entry of m.mats) entry.mat.color.setHex(0xffffff);
     } else {
       for (const entry of m.mats) entry.mat.color.setHex(entry.baseHex).multiplyScalar(shade);
     }
 
+    if (m.onFireTimer > 0) {
+      if (getVoxelGlobal(Math.floor(m.x), Math.floor(m.y + 0.2), Math.floor(m.z)) === BLOCK.WATER) {
+        m.onFireTimer = 0;
+      } else {
+        m.onFireTimer = Math.max(0, m.onFireTimer - dt);
+        m.fireTick = (m.fireTick || 0) + dt;
+        if (m.fireTick >= 0.85) { m.fireTick = 0; spawnBlockParticles(m.x, m.y + 0.5, m.z, BLOCK.LAVA, 6); damageMob(m, 1, 0, 0); if (!mobs.includes(m)) continue; }
+      }
+    }
+    if (m.type === 'sheep' && m.sheared) {
+      m.regrowTimer = (m.regrowTimer || 20) - dt;
+      if (m.regrowTimer <= 0 && getVoxelGlobal(Math.floor(m.x), Math.floor(m.y - 0.2), Math.floor(m.z)) === BLOCK.GRASS) {
+        m.sheared = false; if (m.root && m.root.children[0]) m.root.children[0].scale.set(1, 1, 1);
+        for (const entry of m.mats) entry.baseHex = 0xffffff;
+      }
+    }
     if ((m.type === 'zombie' || m.type === 'skeleton') && sunFactor > 0.8 && (packedL >> 4) >= 14) {
       m.burnTimer = (m.burnTimer || 0) + dt;
       if (m.burnTimer > 1.2) { m.burnTimer = 0; damageMob(m, 1, 0, 0); if (!mobs.includes(m)) continue; }

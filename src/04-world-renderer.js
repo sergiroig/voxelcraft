@@ -525,8 +525,8 @@ for (let i = 0; i < MAX_DROPS; i++) {
 }
 let dropCursor = 0;
 
-function spawnItemDrop(wx, wy, wz, blockOrItemId, count = 1, pickupDelay = 0.22) {
-  const itemId = getDropItemForBlock(blockOrItemId);
+function spawnItemDrop(wx, wy, wz, blockOrItemId, count = 1, pickupDelay = 0.22, toolId) {
+  const itemId = getDropItemForBlock(blockOrItemId, toolId);
   if (itemId === BLOCK.AIR || itemId === BLOCK.WATER || itemId === BLOCK.BEDROCK) return null;
   const d = itemDrops[dropCursor], idx = dropCursor;
   dropCursor = (dropCursor + 1) % MAX_DROPS;
