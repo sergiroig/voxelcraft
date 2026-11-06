@@ -302,7 +302,8 @@ function startGameplay() {
 function togglePauseMenu(forceOpen) {
   const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !menuOpen;
   if (nextOpen) {
-    menuOpen = true; isMiningHeld = false; invOpen = false; chestOpen = false;
+    menuOpen = true; isLocked = false; isMiningHeld = false; invOpen = false; chestOpen = false; player.vx = 0; player.vz = 0;
+    if (sfx.ctx && sfx.windGain) sfx.windGain.gain.setTargetAtTime(0, sfx.ctx.currentTime, 0.05);
     if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
     for (const k in keys) keys[k] = false;
     invModalEl.classList.add('hidden');

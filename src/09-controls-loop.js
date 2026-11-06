@@ -11,14 +11,12 @@ window.addEventListener('mousemove', (e) => {
 
 window.addEventListener('keydown', (e) => {
   const isInputFocused = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
-  if (isInputFocused) {
-    if (e.code === 'Enter' && menuOpen) { e.preventDefault(); if (e.target === seedInputEl) applyWorldSeed(parseInt(seedInputEl.value, 10) || 0); togglePauseMenu(false); }
-    return;
-  }
+  if (e.code === 'KeyP' && (!isInputFocused || e.target !== recipeSearchEl)) { e.preventDefault(); togglePauseMenu(); return; }
+  if (isInputFocused) { if (e.code === 'Enter' && menuOpen) { e.preventDefault(); if (e.target === seedInputEl) applyWorldSeed(parseInt(seedInputEl.value, 10) || 0); togglePauseMenu(false); } return; }
   if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur(); }
-  keys[e.code] = true;
-  if (e.code === 'KeyP') { e.preventDefault(); togglePauseMenu(); return; }
   if (e.code === 'Enter' && menuOpen) { e.preventDefault(); togglePauseMenu(false); return; }
+  if (menuOpen) return;
+  keys[e.code] = true;
   if (e.code === 'KeyE') { if (chestOpen) closeChestModal(); else if (isGameActive() || invOpen) toggleInventory(); return; }
   if (e.code === 'Escape') return;
   if (e.code === 'F2' || e.code === 'KeyK') { e.preventDefault(); takeGameScreenshot(); return; }
@@ -224,19 +222,20 @@ function animate(now) {
   const dt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
 
-  if (isGameActive()) {
-    updateMinecarts(dt); updateBoats(dt); updatePlayerPhysics(dt);
-    updateVoxelSimulation(dt); updateMobs(dt);
+  if (!menuOpen) {
+    if (isGameActive()) {
+      updateMinecarts(dt); updateBoats(dt); updatePlayerPhysics(dt);
+      updateVoxelSimulation(dt); updateMobs(dt);
+    }
+    updateDynamicSky(dt); updateGPUShaders(dt); updateAmbientAudio(dt);
+    rayDir.set(0, 0, -1).applyEuler(camera.rotation);
+    currentHit = raycastVoxel(player.x, player.y + player.eyeHeight, player.z, rayDir.x, rayDir.y, rayDir.z, 6.5);
+    if (currentHit) { highlightBox.position.set(currentHit.x + 0.5, currentHit.y + 0.5, currentHit.z + 0.5); highlightBox.visible = true; }
+    else highlightBox.visible = false;
+    updateMining(dt, currentHit); updateParticles(dt); updateItemDrops(dt);
+    updateArrows(dt); updateWeather(dt); updateMinimap(dt);
   }
-  updateDynamicSky(dt); updateGPUShaders(dt); updateAmbientAudio(dt); updateChunkStreaming();
-
-  rayDir.set(0, 0, -1).applyEuler(camera.rotation);
-  currentHit = raycastVoxel(player.x, player.y + player.eyeHeight, player.z, rayDir.x, rayDir.y, rayDir.z, 6.5);
-  if (currentHit) { highlightBox.position.set(currentHit.x + 0.5, currentHit.y + 0.5, currentHit.z + 0.5); highlightBox.visible = true; }
-  else highlightBox.visible = false;
-
-  updateMining(dt, currentHit); updateParticles(dt); updateItemDrops(dt);
-  updateArrows(dt); updateWeather(dt); updateMinimap(dt); updateFrustumCulling();
+  updateChunkStreaming(); updateFrustumCulling();
   updateShadowMapPass();
   renderer.render(scene, camera);
 

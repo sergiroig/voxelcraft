@@ -201,7 +201,7 @@ let isLocked = false, isTouchMode = ('ontouchstart' in window) || (navigator.max
 let menuOpen = true, lastPointerLockExitTime = 0, invOpen = false, chestOpen = false, activeChestKey = null;
 let selectedSlot = 0, renderDistance = 5, isNight = false, hudVisible = true;
 let joyX = 0, joyY = 0, joySprint = false, touchJump = false, touchDown = false;
-const isGameActive = () => (!menuOpen || isLocked || touchPlaying) && !invOpen && !chestOpen;
+const isGameActive = () => !menuOpen && !invOpen && !chestOpen;
 let isMiningHeld = false, mineTargetKey = '', mineProgress = 0, mineHitTimer = 0;
 
 function checkAABBCollision(px, py, pz) {

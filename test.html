@@ -540,7 +540,7 @@
           // 2. Pulsar P desde el juego -> debe volver a mostrar el menú (#overlay)
           win.dispatchEvent(new win.KeyboardEvent('keydown', { code: 'KeyP', bubbles: true }));
           assert(
-            !overlay.classList.contains('hidden') && vc.getState().menuOpen === true,
+            !overlay.classList.contains('hidden') && vc.getState().menuOpen === true && vc.isGameActive() === false,
             'Pulsar P desde el juego debe volver a mostrar el menú (#overlay)'
           );
 
