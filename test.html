@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=40"></iframe>
+    <iframe id="game-frame" src="./index.html?v=41"></iframe>
   </div>
 
   <script>
@@ -2466,6 +2466,69 @@
           vc.toggleWeather('clear');
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.updateChunkStreaming(true);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 44: Sistema de Hambre estilo Minecraft (#hunger-row, Desgaste, Inanición y HUD de Oxígeno)
+      // =========================================================================
+      describe('44. Sistema de Hambre estilo Minecraft (#hunger-row, Desgaste, Inanición y HUD de Oxígeno)', () => {
+        it('Renderiza la barra de Hambre (10 muslitos #hunger-row) y de Oxígeno (#air-row al bucear), y reduce el hambre por desgaste', () => {
+          vc.toggleGameMode('survival');
+          vc.player.flying = false;
+          vc.player.hunger = 10;
+          vc.player.exhaustion = 0;
+          vc.player.air = 10;
+          vc.renderHeartsUI();
+
+          const allDrums = doc.querySelectorAll('#hunger-row .drumstick');
+          assert(allDrums.length === 10, `Deben renderizarse 10 iconos de hambre en #hunger-row (actual=${allDrums.length})`);
+          assert(doc.querySelectorAll('#hunger-row .drumstick.empty').length === 0, 'Con hunger=10 no debe haber muslitos vacíos');
+
+          // Acumular 8.5 de desgaste -> debe consumir 2 puntos de hambre (10 -> 8)
+          vc.addHungerExhaustion(8.5);
+          assert(vc.player.hunger === 8, `Tras 8.5 de desgaste el hambre debe bajar a 8 (actual=${vc.player.hunger})`);
+          assert(doc.querySelectorAll('#hunger-row .drumstick.empty').length === 2, 'En el HUD deben mostrarse 2 muslitos vacíos');
+
+          // Al bajar el oxígeno por debajo de 10 debe mostrarse #air-row con burbujas
+          vc.player.air = 7;
+          vc.renderHeartsUI();
+          assert(doc.querySelectorAll('#air-row .bubble').length === 10 && doc.querySelectorAll('#air-row .bubble.empty').length === 3, 'Con air=7 deben mostrarse 10 burbujas en #air-row (3 vacías)');
+          vc.player.air = 10;
+          vc.renderHeartsUI();
+        });
+
+        it('Aplica las reglas de Supervivencia: impide esprintar con hunger<=3, bloquea regeneración si hunger<8, daña por inanición y permite comer con vida llena', () => {
+          vc.toggleGameMode('survival');
+          vc.player.flying = false;
+          vc.armorSlots.fill(0);
+
+          // 1) Con hunger <= 3 no permite esprintar y tampoco regenera vida pasivamente
+          vc.player.hunger = 3;
+          vc.player.health = 6;
+          vc.player.regenTimer = 3.9;
+          vc.keys['KeyW'] = true; vc.keys['ShiftLeft'] = true;
+          vc.updatePlayerPhysics(0.2);
+          vc.keys['KeyW'] = false; vc.keys['ShiftLeft'] = false;
+          const speedHungry = Math.hypot(vc.player.vx, vc.player.vz);
+          assert(speedHungry < 5.2, `Con hunger=3 no debe permitir esprintar a 7.2 m/s (speed=${speedHungry.toFixed(2)})`);
+          assert(vc.player.health === 6, 'Con hunger=3 (<8) no debe regenerar salud pasivamente aunque regenTimer supere 4.0s');
+
+          // 2) Con hunger === 0 sufre 1❤ de daño por inanición tras 4.0s
+          vc.player.hunger = 0;
+          vc.player.starveTimer = 3.95;
+          vc.updatePlayerPhysics(0.1);
+          assert(vc.player.health === 5, `Con hunger=0 durante >4s en Supervivencia debe perder 1❤ por inanición (HP=${vc.player.health})`);
+
+          // 3) Permite comer con la vida llena (health === 10) si tiene hambre (hunger < 10)
+          vc.player.health = 10;
+          vc.player.hunger = 4;
+          vc.inventoryCounts[vc.BLOCK.ITEM_BREAD] = 2;
+          const ate = vc.eatHeldApple(vc.BLOCK.ITEM_BREAD);
+          assert(ate === true && vc.player.hunger === 9, `Debe permitir comer Pan con vida llena cuando hunger=4, subiendo hunger a 9 (actual=${vc.player.hunger})`);
+
+          vc.player.health = 10; vc.player.hunger = 10; vc.player.exhaustion = 0; vc.player.starveTimer = 0;
+          vc.renderHeartsUI();
         });
       });
 

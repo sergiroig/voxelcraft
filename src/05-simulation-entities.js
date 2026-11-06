@@ -463,12 +463,15 @@ function eatHeldApple(foodItemOverride) {
   const heldId = foodItemOverride || (isFoodItem(getActiveHeldItem()) ? getActiveHeldItem() : BLOCK.ITEM_APPLE);
   const healAmount = FOOD_HEAL_MAP[heldId] || 4;
   if (gameMode === 'survival' && (inventoryCounts[heldId] || 0) <= 0) return false;
-  if (player.health >= player.maxHealth && gameMode === 'survival' && heldId !== BLOCK.ITEM_GOLDEN_APPLE) return false;
+  const maxH = player.maxHunger || 10, curH = player.hunger !== undefined ? player.hunger : maxH;
+  if (player.health >= player.maxHealth && curH >= maxH && gameMode === 'survival' && heldId !== BLOCK.ITEM_GOLDEN_APPLE) return false;
   if (gameMode === 'survival') {
     if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
     inventoryCounts[heldId] = Math.max(0, (inventoryCounts[heldId] || 1) - 1);
     if (inventoryCounts[heldId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId) hotbarSlots[selectedSlot] = BLOCK.AIR;
   }
+  player.hunger = Math.min(maxH, curH + healAmount);
+  player.exhaustion = 0; player.starveTimer = 0;
   player.health = Math.min(player.maxHealth, player.health + healAmount);
   renderHeartsUI(); refreshInventoryCountsUI(); saveWorldData();
   player.swingTime = 1.0; sfx.play('eat');

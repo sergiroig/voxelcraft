@@ -189,18 +189,27 @@ html, body {
   pointer-events: none;
   z-index: 15;
 }
-#hearts-row {
+#hearts-row, #hunger-row, #air-row {
   display: flex;
-  gap: 3px;
-  font-size: 16px;
+  gap: 2px;
+  font-size: 15px;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8));
 }
 .heart {
   color: #ef4444;
   transition: transform 0.15s;
 }
-.heart.empty {
+.drumstick {
+  color: #f59e0b;
+  transition: transform 0.15s;
+}
+.bubble {
+  color: #38bdf8;
+  font-size: 13px;
+}
+.heart.empty, .drumstick.empty, .bubble.empty {
   color: rgba(255, 255, 255, 0.22);
+  opacity: 0.35;
 }
 #block-label {
   background: rgba(0, 0, 0, 0.68);

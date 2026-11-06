@@ -485,6 +485,7 @@ function placeBlockAtCurrentTarget() {
     if (currentHit.block === BLOCK.ENCHANTING_TABLE) { useEnchantingTableAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.CAKE) {
       setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR);
+      player.hunger = Math.min(player.maxHunger || 10, (player.hunger ?? 10) + 6); player.exhaustion = 0;
       player.health = Math.min(player.maxHealth, player.health + 6);
       renderHeartsUI(); sfx.play('eat'); player.swingTime = 1.0; return true;
     }
@@ -688,7 +689,7 @@ function applyWorldSeed(newSeed) {
   activeTNTs.length = 0; lastPlayerChunkX = null;
 
   player.x = 8.5; player.z = 8.5; player.y = findSpawnHeight(player.x, player.z);
-  player.health = player.maxHealth; renderHeartsUI();
+  player.health = player.maxHealth; player.hunger = player.maxHunger || 10; player.exhaustion = 0; renderHeartsUI();
   const seedInputEl = document.getElementById('seed-input');
   if (seedInputEl) seedInputEl.value = `${worldSeed}`;
   return worldSeed;

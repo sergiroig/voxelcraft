@@ -56,8 +56,8 @@ const player = {
   x: 8.5, y: 42, z: 8.5, vx: 0, vy: 0, vz: 0, iceVx: 0, iceVz: 0,
   yaw: 0, pitch: -0.15, radius: 0.3, height: 1.75, eyeHeight: 1.58,
   onGround: false, flying: false, stepAccum: 0, bobTime: 0, swingTime: 0,
-  health: 10, maxHealth: 10, regenTimer: 0, air: 10, maxAir: 10, airTimer: 0,
-  wasInFluid: false, maxFallVel: 0, portalCooldown: 0
+  health: 10, maxHealth: 10, regenTimer: 0, hunger: 10, maxHunger: 10, exhaustion: 0, starveTimer: 0,
+  air: 10, maxAir: 10, airTimer: 0, wasInFluid: false, maxFallVel: 0, portalCooldown: 0
 };
 
 let isShieldBlocking = false;
@@ -189,12 +189,35 @@ function toggleShieldBlock(forceState) {
 }
 
 const heartsRowEl = document.getElementById('hearts-row');
+const hungerRowEl = document.getElementById('hunger-row');
+const airRowEl = document.getElementById('air-row');
 function renderHeartsUI() {
-  let html = '';
-  for (let i = 0; i < player.maxHealth; i++) {
-    html += `<span class="heart ${i < player.health ? '' : 'empty'}">❤</span>`;
+  let hHtml = '', fHtml = '', aHtml = '';
+  for (let i = 0; i < player.maxHealth; i++) hHtml += `<span class="heart ${i < player.health ? '' : 'empty'}">❤</span>`;
+  heartsRowEl.innerHTML = hHtml;
+  if (hungerRowEl) {
+    const maxF = player.maxHunger || 10, curF = player.hunger !== undefined ? player.hunger : maxF;
+    for (let i = 0; i < maxF; i++) fHtml += `<span class="drumstick ${i < curF ? '' : 'empty'}">🍗</span>`;
+    hungerRowEl.innerHTML = fHtml;
   }
-  heartsRowEl.innerHTML = html;
+  if (airRowEl) {
+    const maxA = player.maxAir || 10, curA = player.air !== undefined ? player.air : maxA;
+    if (curA < maxA) {
+      for (let i = 0; i < maxA; i++) aHtml += `<span class="bubble ${i < curA ? '' : 'empty'}">🫧</span>`;
+    }
+    airRowEl.innerHTML = aHtml;
+  }
+}
+function addHungerExhaustion(amount) {
+  if (gameMode !== 'survival' || player.flying) return player.hunger;
+  player.exhaustion = (player.exhaustion || 0) + amount;
+  let changed = false;
+  while (player.exhaustion >= 4.0) {
+    player.exhaustion -= 4.0;
+    if (player.hunger > 0) { player.hunger--; changed = true; }
+  }
+  if (changed) renderHeartsUI();
+  return player.hunger;
 }
 renderHeartsUI();
 
@@ -232,17 +255,13 @@ const portals = [];
 function registerPortalAt(wx, wy, wz) {
   const bx = Math.floor(wx), by = Math.floor(wy), bz = Math.floor(wz);
   let existing = portals.find(p => Math.hypot(p.x - bx, p.y - by, p.z - bz) < 2.5);
-  if (!existing) {
-    existing = { x: bx, y: by, z: bz };
-    portals.push(existing);
-  }
+  if (!existing) { existing = { x: bx, y: by, z: bz }; portals.push(existing); }
   return existing;
 }
 
 function activateObsidianPortal(wx, wy, wz) {
   const bx = Math.floor(wx), by = Math.floor(wy), bz = Math.floor(wz);
-  setVoxelGlobal(bx, by, bz, BLOCK.PORTAL);
-  sfx.play('portal');
+  setVoxelGlobal(bx, by, bz, BLOCK.PORTAL); sfx.play('portal');
   spawnBlockParticles(bx, by, bz, BLOCK.AMETHYST, 20);
   return registerPortalAt(bx, by, bz);
 }
@@ -252,19 +271,14 @@ function useVoxelPortal(wx, wy, wz) {
   registerPortalAt(bx, by, bz);
   let target = portals.find(p => Math.hypot(p.x - bx, p.y - by, p.z - bz) >= 4.0);
   if (!target) {
-    const destX = bx + 32, destZ = bz + 32;
-    const destY = Math.max(SEA_LEVEL + 4, Math.floor(findSpawnHeight(destX, destZ)));
+    const destX = bx + 32, destZ = bz + 32, destY = Math.max(SEA_LEVEL + 4, Math.floor(findSpawnHeight(destX, destZ)));
     setVoxelGlobal(destX, destY - 1, destZ, BLOCK.OBSIDIAN);
     setVoxelGlobal(destX, destY, destZ, BLOCK.PORTAL);
     target = registerPortalAt(destX, destY, destZ);
   }
-  player.x = target.x + 0.5;
-  player.y = target.y + 0.1;
-  player.z = target.z + 1.2;
-  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
-  player.portalCooldown = 2.0;
-  sfx.play('portal');
-  spawnBlockParticles(target.x, target.y, target.z, BLOCK.PORTAL, 24);
+  player.x = target.x + 0.5; player.y = target.y + 0.1; player.z = target.z + 1.2;
+  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0; player.portalCooldown = 2.0;
+  sfx.play('portal'); spawnBlockParticles(target.x, target.y, target.z, BLOCK.PORTAL, 24);
   if (typeof updateMinimap === 'function') updateMinimap(0, true);
   return target;
 }
@@ -283,10 +297,7 @@ function spawnBoat(wx, wy, wz) {
   const hull = new THREE.Mesh(cartOuterGeo, boatMatOak); hull.scale.set(1.15, 0.75, 1.35); hull.position.y = 0.22; root.add(hull);
   const deck = new THREE.Mesh(cartInnerGeo, boatMatTrim); deck.scale.set(1.05, 0.55, 1.20); deck.position.y = 0.28; root.add(deck);
   const boat = { x: bx + 0.5, y: by + 0.65, z: bz + 0.5, vx: 0, vz: 0, yaw: player.yaw, splashTimer: 0, root };
-  root.position.set(boat.x, boat.y, boat.z);
-  scene.add(root);
-  boats.push(boat);
-  sfx.play('splash');
+  root.position.set(boat.x, boat.y, boat.z); scene.add(root); boats.push(boat); sfx.play('splash');
   return boat;
 }
 
@@ -295,25 +306,15 @@ function toggleRideBoat(boatOverride) {
   if (ridingBoat) {
     ridingBoat.vx = 0; ridingBoat.vz = 0; ridingBoat = null; player.vy = 4.5;
     if (btn) btn.classList.remove('toggled');
-    sfx.play('splash');
-    return false;
+    sfx.play('splash'); return false;
   }
-  let targetBoat = boatOverride || null;
-  if (!targetBoat) {
-    for (const b of boats) {
-      if (Math.hypot(b.x - player.x, b.y - player.y, b.z - player.z) < 4.5) { targetBoat = b; break; }
-    }
-  }
-  if (!targetBoat) targetBoat = spawnBoat(player.x, player.y, player.z);
-  ridingBoat = targetBoat;
-  targetBoat.yaw = player.yaw;
-  targetBoat.vx = -Math.sin(player.yaw) * 9.5;
-  targetBoat.vz = -Math.cos(player.yaw) * 9.5;
+  let targetBoat = boatOverride || boats.find(b => Math.hypot(b.x - player.x, b.y - player.y, b.z - player.z) < 4.5) || spawnBoat(player.x, player.y, player.z);
+  ridingBoat = targetBoat; targetBoat.yaw = player.yaw;
+  targetBoat.vx = -Math.sin(player.yaw) * 9.5; targetBoat.vz = -Math.cos(player.yaw) * 9.5;
   player.x = targetBoat.x; player.y = targetBoat.y + 0.35; player.z = targetBoat.z;
   player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
   if (btn) btn.classList.add('toggled');
-  sfx.play('splash');
-  return true;
+  sfx.play('splash'); return true;
 }
 
 function updateBoats(dt) {
@@ -322,54 +323,30 @@ function updateBoats(dt) {
     if (ridingBoat === b) {
       const fwd = (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) + joyY;
       b.yaw = player.yaw;
-      if (Math.abs(fwd) > 0.05) {
-        b.vx = -Math.sin(b.yaw) * 9.5 * Math.sign(fwd);
-        b.vz = -Math.cos(b.yaw) * 9.5 * Math.sign(fwd);
-      }
+      if (Math.abs(fwd) > 0.05) { b.vx = -Math.sin(b.yaw) * 9.5 * Math.sign(fwd); b.vz = -Math.cos(b.yaw) * 9.5 * Math.sign(fwd); }
     }
     const speed = Math.hypot(b.vx, b.vz);
     if (speed > 0.05) {
       const nx = b.x + b.vx * dt, nz = b.z + b.vz * dt;
-      if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(nx), Math.floor(b.y + 0.2), Math.floor(nz))].solid) {
-        b.x = nx; b.z = nz;
-      } else {
-        b.vx = 0; b.vz = 0;
-      }
-      b.vx *= Math.max(0.85, 1.0 - dt * 1.2);
-      b.vz *= Math.max(0.85, 1.0 - dt * 1.2);
+      if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(nx), Math.floor(b.y + 0.2), Math.floor(nz))].solid) { b.x = nx; b.z = nz; }
+      else { b.vx = 0; b.vz = 0; }
+      b.vx *= Math.max(0.85, 1.0 - dt * 1.2); b.vz *= Math.max(0.85, 1.0 - dt * 1.2);
       b.splashTimer += dt;
       if (b.splashTimer > 0.35) { b.splashTimer = 0; sfx.play('splash'); }
     }
     b.root.position.set(b.x, b.y + Math.sin(gpuShaderUniforms.uTime.value * 3.0 + i) * 0.04, b.z);
     b.root.rotation.y = b.yaw;
-    if (ridingBoat === b) {
-      player.x = b.x; player.y = b.y + 0.35; player.z = b.z;
-      player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
-    }
+    if (ridingBoat === b) { player.x = b.x; player.y = b.y + 0.35; player.z = b.z; player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0; }
   }
 }
 
 const keys = {};
-let isLocked = false;
-let isTouchMode = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-let touchPlaying = false;
-let menuOpen = true;
-let lastPointerLockExitTime = 0;
-let invOpen = false;
-let chestOpen = false;
-let activeChestKey = null;
-let selectedSlot = 0;
-let renderDistance = 5;
-let isNight = false;
-let hudVisible = true;
-
+let isLocked = false, isTouchMode = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0), touchPlaying = false;
+let menuOpen = true, lastPointerLockExitTime = 0, invOpen = false, chestOpen = false, activeChestKey = null;
+let selectedSlot = 0, renderDistance = 5, isNight = false, hudVisible = true;
 let joyX = 0, joyY = 0, joySprint = false, touchJump = false, touchDown = false;
 const isGameActive = () => (!menuOpen || isLocked || touchPlaying) && !invOpen && !chestOpen;
-
-let isMiningHeld = false;
-let mineTargetKey = '';
-let mineProgress = 0;
-let mineHitTimer = 0;
+let isMiningHeld = false, mineTargetKey = '', mineProgress = 0, mineHitTimer = 0;
 
 function checkAABBCollision(px, py, pz) {
   const minX = Math.floor(px - player.radius), maxX = Math.floor(px + player.radius);
@@ -497,7 +474,10 @@ function updatePlayerPhysics(dt) {
     sfx.play(inLava ? 'hiss' : 'splash');
     spawnBlockParticles(player.x, player.y + 0.5, player.z, inLava ? BLOCK.LAVA : BLOCK.WATER, 10);
   }
-  const wantJump = keys['Space'] || touchJump, wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown, sprint = keys['ShiftLeft'] || keys['ShiftRight'] || joySprint;
+  const wantJump = keys['Space'] || touchJump, wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown;
+  const canSprint = gameMode === 'creative' || player.flying || (player.hunger === undefined || player.hunger > 3);
+  const sprint = canSprint && (keys['ShiftLeft'] || keys['ShiftRight'] || joySprint);
+  if (moveMag > 0.15) addHungerExhaustion(dt * (sprint ? 0.25 : (inWater ? 0.15 : 0.06)));
 
   const groundBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z));
   const onIce = !player.flying && !inWater && !inLava && (groundBlock === BLOCK.ICE || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.55), Math.floor(player.z)) === BLOCK.ICE);
@@ -580,7 +560,7 @@ function updatePlayerPhysics(dt) {
       if (wantJump && player.onGround) {
         if (groundBlock === BLOCK.SLIME) { player.vy = 12.8; sfx.play('boing'); }
         else player.vy = 8.6;
-        player.onGround = false;
+        player.onGround = false; addHungerExhaustion(0.08);
       }
     }
 
@@ -611,11 +591,15 @@ function updatePlayerPhysics(dt) {
     }
   }
 
-  // Passive health regeneration
-  if (player.health < player.maxHealth) {
+  // Passive health regeneration (requires hunger >= 8 in Survival) & starvation damage (hunger === 0)
+  if (player.health < player.maxHealth && (gameMode === 'creative' || (player.hunger ?? 10) >= 8)) {
     player.regenTimer += dt;
-    if (player.regenTimer > 4.0) { player.regenTimer = 0; player.health++; renderHeartsUI(); }
+    if (player.regenTimer > 4.0) { player.regenTimer = 0; player.health++; addHungerExhaustion(1.5); renderHeartsUI(); }
   }
+  if (gameMode === 'survival' && !player.flying && player.hunger <= 0) {
+    player.starveTimer = (player.starveTimer || 0) + dt;
+    if (player.starveTimer >= 4.0) { player.starveTimer = 0; if (player.health > 1) damagePlayer(1); }
+  } else player.starveTimer = 0;
 
   // 1st-person hand bobbing, shield block pose & 3D arm+item attack/swing animation
   if (moveMag > 0.1 && (player.onGround || player.flying || inWater || inLava)) player.bobTime += dt * speed * moveMag * 1.6;
@@ -661,9 +645,10 @@ function updatePlayerPhysics(dt) {
   const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
   if (headBlock === BLOCK.WATER && gameMode === 'survival' && !player.flying) {
     player.airTimer = (player.airTimer || 0) + dt;
-    if (player.airTimer >= 1.5) { player.airTimer = 0; if (player.air > 0) player.air--; else damagePlayer(1); }
+    if (player.airTimer >= 1.5) { player.airTimer = 0; if (player.air > 0) { player.air--; renderHeartsUI(); } else damagePlayer(1); }
   } else {
-    player.air = player.maxAir || 10; player.airTimer = 0;
+    if (player.air < (player.maxAir || 10)) { player.air = player.maxAir || 10; renderHeartsUI(); }
+    player.airTimer = 0;
   }
   const wOv = document.getElementById('water-overlay');
   wOv.style.display = (headBlock === BLOCK.WATER || headBlock === BLOCK.LAVA) ? 'block' : 'none';
@@ -718,6 +703,7 @@ function updateMining(dt, currentHit) {
       sfx.play(brokenId === BLOCK.AMETHYST ? 'chime' : 'break');
       spawnBlockParticles(currentHit.x, currentHit.y, currentHit.z, brokenId, 18);
       spawnItemDrop(currentHit.x, currentHit.y, currentHit.z, brokenId, 1);
+      addHungerExhaustion(0.12);
     }
     mineProgress = 0; mineTargetKey = '';
     crackBox.visible = false; mineBarWrap.style.display = 'none';
