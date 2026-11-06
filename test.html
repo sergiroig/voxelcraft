@@ -2511,6 +2511,10 @@
           let ws = vc.getWeatherState();
           assert(ws.isSandstorm === true && ws.isSnowing === false, 'En el bioma Desierto el clima activo debe transformarse en Tormenta de Arena (isSandstorm=true)');
           assert(vc.weatherInstanced.material.color.getHex() === 0xeab308, 'Las partículas de la Tormenta de Arena deben teñirse de color arena dorada (0xeab308)');
+          vc.player.y = 5; vc.updateWeather(0.016);
+          let visibleCaveDrops = 0;
+          for (let i = 0; i < 180; i++) if (vc.weatherInstanced.instanceMatrix.array[i * 16 + 13] > -500) visibleCaveDrops++;
+          assert(visibleCaveDrops === 0, `Bajo tierra en cuevas no deben caer partículas de tormenta/lluvia atravesando el techo (actual=${visibleCaveDrops})`);
 
           // 2) Taiga Nevada -> Nevada (isSnowing = true, isSandstorm = false)
           vc.teleportToBiome('Taiga Nevada');

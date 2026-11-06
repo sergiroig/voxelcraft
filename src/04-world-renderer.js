@@ -550,6 +550,7 @@ function updateParticles(dt) {
     anyUpdated = true; p.life -= dt;
     if (p.life <= 0) { p.active = false; dummyMatrix.makeTranslation(0, -999, 0); particleInstanced.setMatrixAt(i, dummyMatrix); continue; }
     p.vy -= 14.0 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    if (BLOCK_DEFS[getVoxelGlobal(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z))].solid) { p.y -= p.vy * dt; p.vy = 0; p.vx *= 0.5; p.vz *= 0.5; }
     dummyMatrix.makeTranslation(p.x, p.y, p.z); particleInstanced.setMatrixAt(i, dummyMatrix);
   }
   if (anyUpdated) particleInstanced.instanceMatrix.needsUpdate = true;

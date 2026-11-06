@@ -318,8 +318,8 @@ function updateWeather(dt) {
     d.oy -= fallSpeed * dt;
     if (d.oy < -4) d.oy += 16;
     const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (isSandstorm ? Math.sin(timeVal * 4.5 + d.phase) * 2.2 + 1.6 : (weatherMode === 'storm' ? 0.6 : 0.15));
-    const wx = px + d.ox + swayX, wy = py + d.oy, wz = pz + d.oz;
-    if ((getLightGlobal(Math.floor(wx), Math.floor(wy), Math.floor(wz)) >> 4) === 0) {
+    const wx = px + d.ox + swayX, wy = py + d.oy, wz = pz + d.oz, ix = Math.floor(wx), iy = Math.floor(wy), iz = Math.floor(wz);
+    if ((getLightGlobal(ix, iy, iz) >> 4) < 15 || getVoxelGlobal(ix, iy, iz) !== BLOCK.AIR) {
       dummyMatrix.makeTranslation(0, -999, 0);
     } else {
       weatherPosVec.set(wx, wy, wz);
