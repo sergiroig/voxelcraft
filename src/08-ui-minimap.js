@@ -667,7 +667,7 @@ function teleportToBiome(targetBiome) {
     for (let step = 0; step < Math.max(1, radius * 8); step++) {
       const angle = (step / Math.max(1, radius * 8)) * Math.PI * 2;
       const wx = Math.floor(8 + Math.cos(angle) * radius * 16), wz = Math.floor(8 + Math.sin(angle) * radius * 16);
-      if (generator.getBiomeAt(wx, wz) === targetBiome) {
+      if (generator.getBiomeAt(wx + 0.5, wz + 0.5) === targetBiome && generator.getBiomeAt(wx, wz) === targetBiome) {
         const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
         getChunkData(cx, cz); rebuildChunkImmediate(cx, cz);
         player.x = wx + 0.5; player.z = wz + 0.5; player.y = findSpawnHeight(player.x, player.z);

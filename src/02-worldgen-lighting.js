@@ -70,9 +70,9 @@ function createWorldGenerator(seed) {
     return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
   }
 
-  function getBiomeAt(wx, wz, dither = 0) {
-    const temp = fbm2D(wx * 0.0024 + 500.37, wz * 0.0024 + 500.37, 2, 2.0, 0.5) + dither;
-    const moist = fbm2D(wx * 0.0024 - 500.73, wz * 0.0024 - 500.73, 2, 2.0, 0.5) - dither * 0.7;
+  function getBiomeAt(wx, wz) {
+    const temp = fbm2D(wx * 0.0024 + 500.37, wz * 0.0024 + 500.37, 2, 2.0, 0.5);
+    const moist = fbm2D(wx * 0.0024 - 500.73, wz * 0.0024 - 500.73, 2, 2.0, 0.5);
     const weird = noise2D(wx * 0.0032 + 1234.51, wz * 0.0032 - 1234.51);
     if (temp < -0.11) return (weird > 0.02 || temp < -0.22) ? 'Cumbres Heladas' : 'Taiga Nevada';
     if (temp > 0.11) {
@@ -284,19 +284,19 @@ function createWorldGenerator(seed) {
         if (h >= CHUNK_HEIGHT - 6) h = CHUNK_HEIGHT - 7;
         surfaceMap[lz * CHUNK_SIZE + lx] = h;
 
-        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, rCol = hash3D(wx, h, wz), sBiome = getBiomeAt(wx, wz, (rCol - 0.5) * 0.028);
+        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, rCol = hash3D(wx, h, wz), sBiome = biome;
         data[colOffset] = BLOCK.BEDROCK;
 
         for (let y = 1; y <= h; y++) {
           if (y === h) {
-            if (h <= SEA_LEVEL) {
-              data[colOffset + y] = (sBiome === 'Pantano' || rCol > 0.68) ? BLOCK.CLAY : (rCol < 0.32 ? BLOCK.GRAVEL : BLOCK.SAND);
+            if (h < SEA_LEVEL) {
+              data[colOffset + y] = (sBiome === 'Pantano' || detail > 0.28) ? BLOCK.CLAY : BLOCK.SAND;
             } else if (sBiome === 'Cumbres Heladas') {
-              data[colOffset + y] = (h >= 34 && rCol > 0.45) ? BLOCK.ICE : BLOCK.SNOW;
+              data[colOffset + y] = (h >= 34 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
             } else if (h >= 42 || sBiome === 'Taiga Nevada') {
               data[colOffset + y] = BLOCK.SNOW;
-            } else if (sBiome === 'Desierto' || h === SEA_LEVEL + 1) {
-              data[colOffset + y] = (sBiome === 'Pantano' && rCol > 0.5) ? BLOCK.CLAY : BLOCK.SAND;
+            } else if (sBiome === 'Desierto') {
+              data[colOffset + y] = BLOCK.SAND;
             } else if (sBiome === 'Meseta') {
               data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
             } else {
@@ -304,7 +304,7 @@ function createWorldGenerator(seed) {
             }
           } else if (y >= h - 3) {
             if (sBiome === 'Meseta') data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
-            else data[colOffset + y] = (sBiome === 'Desierto' || (h <= SEA_LEVEL + 1 && sBiome !== 'Taiga Nevada' && sBiome !== 'Cumbres Heladas')) ? BLOCK.SAND : BLOCK.DIRT;
+            else data[colOffset + y] = (sBiome === 'Desierto' || h < SEA_LEVEL) ? BLOCK.SAND : BLOCK.DIRT;
           } else {
             data[colOffset + y] = (sBiome === 'Meseta' && y >= h - 8 && rCol > 0.92) ? BLOCK.GOLD_ORE : BLOCK.STONE;
           }
@@ -648,11 +648,11 @@ function createWorldGenerator(seed) {
       if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 3) * rf);
     }
     h = Math.max(5, Math.min(CHUNK_HEIGHT - 7, h));
-    const biome = getBiomeAt(wx, wz, (hash3D(wx, h, wz) - 0.5) * 0.028);
+    const biome = getBiomeAt(wx, wz);
     let topBlock = BLOCK.GRASS;
     if (h < SEA_LEVEL) topBlock = (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas') ? BLOCK.ICE : BLOCK.WATER;
     else if (biome === 'Cumbres Heladas' || biome === 'Taiga Nevada' || h >= 42) topBlock = BLOCK.SNOW;
-    else if (h <= SEA_LEVEL + 1 || biome === 'Desierto') topBlock = BLOCK.SAND;
+    else if (biome === 'Desierto') topBlock = BLOCK.SAND;
     else if (biome === 'Meseta') topBlock = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((h >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
     const surfY = Math.max(h, SEA_LEVEL);
     return { y: surfY, groundY: h, topBlock, color: BLOCK_DEFS[topBlock].color || 0x58a83a };
