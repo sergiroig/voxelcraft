@@ -323,7 +323,7 @@ function updateWeather(dt) {
     if (isRain && d.splash > 0) {
       d.splash -= dt;
       if (d.splash <= 0) { d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
-      else { const p = 1.0 - d.splash / 0.11, sr = 1.1 + p * 2.6; dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(sr, 0.06 * (1.0 - p * 0.5), sr)); }
+      else { const p = 1.0 - d.splash / 0.12, sr = 1.2 + p * 2.8; dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(sr, 0.12 * (1.0 - p * 0.65), sr)); }
       weatherInstanced.setMatrixAt(i, dummyMatrix); continue;
     }
     d.oy -= fallSpeed * dt;
@@ -334,9 +334,8 @@ function updateWeather(dt) {
     if (isRain && (blkAt !== BLOCK.AIR || (wy - iy <= 0.32 && blkBelow !== BLOCK.AIR))) {
       const surfY = blkAt === BLOCK.AIR ? iy : iy + 1;
       if (getVoxelGlobal(ix, surfY, iz) === BLOCK.AIR && getVoxelGlobal(ix, surfY - 1, iz) !== BLOCK.AIR && (getLightGlobal(ix, surfY, iz) >> 4) === 15) {
-        d.splash = 0.11; d.sx = wx; d.sy = surfY + 0.025; d.sz = wz;
-        dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(1.1, 0.06, 1.1));
-        if ((i & 15) === 0 && Math.random() < 0.35) spawnParticles(wx, surfY + 0.04, wz, 0xe2e8f0, 1);
+        d.splash = 0.12; d.sx = wx; d.sy = surfY + 0.03; d.sz = wz;
+        dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(1.2, 0.12, 1.2));
       } else { d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
     } else if ((getLightGlobal(ix, iy, iz) >> 4) < 15 || blkAt !== BLOCK.AIR) {
       dummyMatrix.makeTranslation(0, -999, 0);
