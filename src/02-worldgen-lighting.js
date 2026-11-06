@@ -709,7 +709,7 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
         }
         if (def.opaque) sun = 0;
         else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(0, sun - 2);
-        const emit = b === BLOCK.AMETHYST ? 0 : def.light;
+        const emit = def.light;
         light[idx] = (sun << 4) | emit;
         if (!surfaceOnly && (sun > 0 || emit > 0)) bfsQueue[qTail++] = idx;
         else if (surfaceOnly && topFound && sun === 0 && emit === 0) break;

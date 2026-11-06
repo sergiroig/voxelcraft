@@ -56,7 +56,7 @@ window.addEventListener('contextmenu', (e) => e.preventDefault());
 let currentHit = null;
 
 function triggerPrimaryAttackOrMine() {
-  player.swingTime = 1.0;
+  player.swingTime = 1.0; handArmMesh.visible = true;
   const heldId = getActiveHeldItem(), dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
   if (heldId === BLOCK.TOOL_BOW) { shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
   if (heldId === BLOCK.TOOL_GRAPPLING_HOOK) { shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
@@ -79,7 +79,7 @@ window.addEventListener('mousedown', (e) => {
     return;
   }
   if (e.button === 0) triggerPrimaryAttackOrMine();
-  else if (e.button === 2) { if (isSwordItem(getActiveHeldItem()) && !currentHit) toggleShieldBlock(true); else placeBlockAtCurrentTarget(); }
+  else if (e.button === 2) { if (isSwordItem(getActiveHeldItem()) && !currentHit) toggleShieldBlock(true); else { player.swingTime = 1.0; handArmMesh.visible = true; placeBlockAtCurrentTarget(); } }
   else if (e.button === 1 && currentHit) {
     const idx = hotbarSlots.indexOf(currentHit.block);
     if (idx !== -1) updateHotbarSelection(idx);

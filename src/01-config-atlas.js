@@ -78,7 +78,7 @@ const BLOCK_DEFS = {
   [BLOCK.WHEAT_1]:             { name: 'Semillas de Trigo',        solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0x84cc16, tiles: [35,35,35,35,35,35] },
   [BLOCK.WHEAT_2]:             { name: 'Trigo en Crecimiento',     solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.04, stoneLike: false, color: 0xa3e635, tiles: [36,36,36,36,36,36] },
   [BLOCK.WHEAT_3]:             { name: 'Trigo Maduro',             solid: false, opaque: false, shape: 'cross', light: 0,  hardness: 0.05, stoneLike: false, color: 0xeab308, tiles: [37,37,37,37,37,37] },
-  [BLOCK.AMETHYST]:            { name: 'Cristal de Amatista',      solid: true,  opaque: true,  shape: 'cube',  light: 5,  hardness: 1.30, stoneLike: true,  color: 0xa855f7, tiles: [38,38,38,38,38,38] },
+  [BLOCK.AMETHYST]:            { name: 'Cristal de Amatista',      solid: true,  opaque: true,  shape: 'cube',  light: 9,  hardness: 1.30, stoneLike: true,  color: 0xa855f7, tiles: [38,38,38,38,38,38] },
   [BLOCK.GLOW_MUSHROOM]:       { name: 'Seta Bioluminiscente',     solid: false, opaque: false, shape: 'cross', light: 12, hardness: 0.06, stoneLike: false, color: 0x22d3ee, tiles: [39,39,39,39,39,39] },
   [BLOCK.SLIME]:               { name: 'Bloque de Slime (Rebote)', solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0x4ade80, tiles: [40,40,40,40,40,40] },
   [BLOCK.DOOR_CLOSED]:         { name: 'Compuerta Mecánica',       solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.55, stoneLike: false, color: 0x92400e, tiles: [41,41,41,41,41,41] },

@@ -1222,8 +1222,8 @@
       // SUITE 22: Punto 13 — Cuevas Bioluminiscentes (Amatista y Hongos Luminosos)
       // =========================================================================
       describe('22. Cuevas Bioluminiscentes (Drusas de Amatista y Hongos Luminosos)', () => {
-        it('Emite iluminación BFS subterránea en Amatista (Luz 5) y Hongo Luminoso (Luz 12) + Pulso GPU', () => {
-          assert(vc.BLOCK_DEFS[vc.BLOCK.AMETHYST].light === 5, 'La Amatista debe tener nivel de luz 5');
+        it('Emite iluminación BFS subterránea en Amatista (Luz 9) y Hongo Luminoso (Luz 12) + Pulso GPU', () => {
+          assert(vc.BLOCK_DEFS[vc.BLOCK.AMETHYST].light === 9, 'La Amatista debe tener nivel de luz 9');
           assert(vc.BLOCK_DEFS[vc.BLOCK.GLOW_MUSHROOM].light === 12, 'El Hongo Luminoso debe tener nivel de luz 12');
 
           vc.setVoxelGlobal(8, 52, 8, vc.BLOCK.GLOW_MUSHROOM);
@@ -1233,7 +1233,7 @@
 
           const shaders = vc.getShaders();
           assert(
-            shaders.solidShaderRef && shaders.solidShaderRef.fragmentShader.includes('vTileIdx >= 38.5'),
+            shaders.solidShaderRef && shaders.solidShaderRef.fragmentShader.includes('vTileIdx >= 37.5'),
             'El Fragment Shader debe incluir el pulso bioluminiscente para Amatista y Hongo Luminoso'
           );
         });
@@ -1896,9 +1896,13 @@
           vc.player.swingTime = 0;
           vc.updatePlayerPhysics(0.016);
 
-          // Deseleccionar slot (-1 -> Mano vacía) debe mostrar la mano color piel sin textura de icono
+          // Deseleccionar slot (-1 -> Mano vacía) oculta el brazo en reposo y solo lo muestra al atacar/usar algo
           vc.updateHotbarSelection(-1);
-          assert(vc.handMat.map === null && vc.handMat.color.getHex() === 0xf1c27d && vc.handArmMesh.visible === true, 'Con la mano vacía (BLOCK.AIR) debe mostrarse el brazo color piel sin icono');
+          assert(vc.handMat.map === null && vc.handMat.color.getHex() === 0xf1c27d && vc.handArmMesh.visible === false, 'Con la mano vacía en reposo (BLOCK.AIR), el brazo debe estar oculto');
+          vc.triggerPrimaryAttackOrMine();
+          assert(vc.handArmMesh.visible === true, 'Al hacer clic para atacar/usar algo con la mano vacía, el brazo debe hacerse visible');
+          vc.setMiningHeld(false); vc.player.swingTime = 0; vc.updatePlayerPhysics(0.016);
+          assert(vc.handArmMesh.visible === false, 'Al terminar el golpe con la mano vacía, el brazo vuelve a ocultarse');
           vc.toggleGameMode('survival');
         });
       });
@@ -2989,12 +2993,17 @@
           assert(slotAfterScrollDown === 1, `Un giro de rueda (ráfaga de 5 eventos wheel) debe avanzar solo 1 slot (0 -> 1), pero avanzó a ${slotAfterScrollDown}`);
         });
 
-        it('Muestra un único brazo 3D (handArmMesh) y oculta handMesh cuando se selecciona un slot vacío sin ítem', () => {
+        it('Oculta el brazo en reposo sin ítem y lo muestra solo al equipar un ítem o atacar, manteniendo proporción con FOV y brillo de Amatista', () => {
+          vc.setMiningHeld(false); vc.player.swingTime = 0;
           vc.updateHotbarSelection(-1);
-          assert(vc.handArmMesh.visible === true && vc.handMesh.visible === false, `Al seleccionar un slot sin ítem (BLOCK.AIR), handMesh.visible debe ser false para no duplicar el brazo (handArmMesh.visible=${vc.handArmMesh.visible}, handMesh.visible=${vc.handMesh.visible})`);
+          assert(vc.handArmMesh.visible === false && vc.handMesh.visible === false, `Al seleccionar un slot sin ítem (BLOCK.AIR) en reposo, el brazo no debe verse (handArmMesh.visible=${vc.handArmMesh.visible}, handMesh.visible=${vc.handMesh.visible})`);
           vc.hotbarSlots[0] = vc.BLOCK.TOOL_PICKAXE;
           vc.updateHotbarSelection(0);
           assert(vc.handArmMesh.visible === true && vc.handMesh.visible === true, 'Al equipar un ítem deben ser visibles tanto handMesh (icono) como handArmMesh (brazo)');
+          vc.camera.fov = 100; vc.updatePlayerPhysics(0.016);
+          assert(vc.handGroup.scale.z < 0.72, `Al subir el FOV a 100°, handGroup.scale.z debe compensar la proyección para que no se vea el brazo suelto (scale.z=${vc.handGroup.scale.z.toFixed(2)})`);
+          vc.camera.fov = 75; vc.updatePlayerPhysics(0.016);
+          assert(vc.BLOCK_DEFS[vc.BLOCK.AMETHYST].light >= 9, 'El Cristal de Amatista debe brillar en la oscuridad (light >= 9)');
         });
       });
 

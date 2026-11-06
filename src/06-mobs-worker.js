@@ -270,7 +270,7 @@ function teleportEnderman(mob) {
   if (!moved) {
     const ang = Math.random() * Math.PI * 2;
     const tx = Math.floor(mob.x + Math.cos(ang) * 4.0), tz = Math.floor(mob.z + Math.sin(ang) * 4.0), ty = Math.floor(mob.y);
-    if (getVoxelGlobal(tx, ty, tz) === BLOCK.AIR && getVoxelGlobal(tx, ty + 1, tz) === BLOCK.AIR) { mob.x = tx + 0.5; mob.z = tz + 0.5; }
+    mob.x = tx + 0.5; mob.z = tz + 0.5;
   }
   mob.root.position.set(mob.x, mob.y, mob.z);
   spawnBlockParticles(mob.x, mob.y + 1.0, mob.z, BLOCK.PORTAL, 16);

@@ -428,16 +428,19 @@ function updatePlayerPhysics(dt) {
   // 1st-person hand bobbing, shield block pose & 3D arm+item attack/swing animation
   if (moveMag > 0.1 && (player.onGround || player.flying || inWater || inLava)) player.bobTime += dt * speed * moveMag * 1.6;
   if (player.swingTime > 0) player.swingTime = Math.max(0, player.swingTime - dt * 5.0);
+  handArmMesh.visible = (getActiveHeldItem() !== BLOCK.AIR) || player.swingTime > 0 || (typeof isMiningHeld !== 'undefined' && isMiningHeld);
   const swingProg = player.swingTime > 0 ? 1.0 - player.swingTime : 0;
   const swingAngle = Math.sin(Math.sqrt(swingProg) * Math.PI);
+  const fovScale = 0.767327 / Math.tan((camera.fov || 75) * Math.PI / 360);
+  handGroup.scale.set(1, 1, fovScale);
   if (isShieldBlocking) {
-    handGroup.position.set(0.18, -0.22, -0.46);
+    handGroup.position.set(0.18, -0.22, -0.46 * fovScale);
     handGroup.rotation.set(-0.35, 0.55, 0.85);
   } else {
     handGroup.position.set(
       0.42 + Math.cos(player.bobTime) * 0.022 - swingAngle * 0.19,
       -0.34 + Math.abs(Math.sin(player.bobTime)) * 0.025 + Math.sin(swingProg * Math.PI * 2) * 0.05 - swingAngle * 0.09,
-      -0.58 - swingAngle * 0.18
+      (-0.58 - swingAngle * 0.18) * fovScale
     );
     handGroup.rotation.set(-swingAngle * 0.82, swingAngle * 0.46, swingAngle * 0.54);
   }

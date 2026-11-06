@@ -280,7 +280,7 @@ solidMaterial.onBeforeCompile = (shader) => {
     .replace('#include <common>', `#include <common>\n#include <packing>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nuniform float uUseShadowMap;\nuniform sampler2D uShadowMap;\nuniform mat4 uShadowMatrix;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
-      `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 38.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
+      `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
       float torchMask = clamp((vColor.r - vColor.b) * 3.8, 0.0, 1.0);
       vec3 faceN = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
       float ndotl = dot(faceN, uLightDir);
@@ -477,13 +477,13 @@ function shadeBoxGeo(geo, hex) {
 }
 const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
 const handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
-const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.36), 0xf1c27d);
-const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.12), 0xe8b474);
+const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.64), 0xf1c27d);
+const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.44), 0xe8b474);
 const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 1.0, fog: false, depthTest: false, depthWrite: false });
 const handArmMesh = new THREE.Mesh(handArmGeo, handArmMat);
 handArmMesh.renderOrder = 997;
 const handSleeveMesh = new THREE.Mesh(handSleeveGeo, handArmMat);
-handSleeveMesh.position.set(0, 0, 0.14);
+handSleeveMesh.position.set(0, 0, 0.28);
 handSleeveMesh.renderOrder = 998;
 handArmMesh.add(handSleeveMesh);
 handGroup.add(handArmMesh);
@@ -496,20 +496,22 @@ handGroup.add(handMesh);
 function updateHeldItemVisual() {
   const bId = getActiveHeldItem();
   const avHeld = typeof playerAvatar !== 'undefined' && playerAvatar.userData ? playerAvatar.userData.heldIcon : null;
-  handArmMesh.visible = true;
+  const isSwinging = (typeof player !== 'undefined' && player && player.swingTime > 0) || (typeof isMiningHeld !== 'undefined' && isMiningHeld);
   if (bId === BLOCK.AIR || typeof drawItemIcon !== 'function') {
+    handArmMesh.visible = !!isSwinging;
     handMesh.visible = false;
     handMesh.geometry = handGeo; handMat.map = null; handMat.color.setHex(0xf1c27d); handMat.needsUpdate = true;
-    handArmMesh.position.set(0.03, -0.05, 0.06); handArmMesh.rotation.set(0.35, -0.35, 0.12);
+    handArmMesh.position.set(0.14, -0.14, 0.18); handArmMesh.rotation.set(0.38, 0.32, -0.14);
     if (avHeld) avHeld.visible = false;
     return;
   }
+  handArmMesh.visible = true;
   handMesh.visible = true;
   drawItemIcon(handIconCanvas, bId);
   handIconTex.needsUpdate = true;
   handMesh.geometry = handIconGeo; handMat.map = handIconTex; handMat.color.setHex(0xffffff); handMat.needsUpdate = true;
   handMesh.position.set(0, 0, 0); handMesh.scale.set(1, 1, 1); handMesh.rotation.set(0, 0, 0);
-  handArmMesh.position.set(0.09, -0.09, 0.08); handArmMesh.rotation.set(0.42, -0.38, 0.18);
+  handArmMesh.position.set(0.14, -0.14, 0.18); handArmMesh.rotation.set(0.38, 0.32, -0.14);
   if (avHeld) avHeld.visible = true;
 }
 
