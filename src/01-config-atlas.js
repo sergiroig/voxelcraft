@@ -16,6 +16,7 @@ const BLOCK = {
   REDSTONE_LAMP_OFF: 29, REDSTONE_LAMP_ON: 30, SAPLING: 31, WHEAT_1: 32, WHEAT_2: 33, WHEAT_3: 34, AMETHYST: 35, GLOW_MUSHROOM: 36,
   SLIME: 37, DOOR_CLOSED: 38, DOOR_OPEN: 39, LADDER: 40, TRAPDOOR_CLOSED: 41, TRAPDOOR_OPEN: 42, RAIL: 43, CHEST: 44,
   LILY_PAD: 45, PISTON: 46, PORTAL: 47, ICE: 48, CRAFTING_TABLE: 49, FURNACE: 50, IRON_BLOCK: 51, GOLD_BLOCK: 52, DIAMOND_BLOCK: 53, BOOKSHELF: 54, CAKE: 55,
+  BED: 56, ANVIL: 57, ENCHANTING_TABLE: 58, GRAVEL: 59, CLAY: 60, WOOL: 61, NETHERRACK: 62, END_STONE: 63, EMERALD_BLOCK: 64,
   // Special Tool, Material, Armor & Consumable IDs (not placed as blocks)
   TOOL_PICKAXE: 100, TOOL_SWORD: 101, TOOL_BOW: 102, ITEM_APPLE: 103, ITEM_BREAD: 104, ITEM_MINECART: 105, ITEM_BOAT: 106, TOOL_GRAPPLING_HOOK: 107,
   ITEM_STICK: 108, ITEM_COAL: 109, ITEM_IRON_INGOT: 110, ITEM_GOLD_INGOT: 111, ITEM_DIAMOND: 112,
@@ -26,11 +27,12 @@ const BLOCK = {
   ARMOR_IRON_HELMET: 129, ARMOR_IRON_CHESTPLATE: 130, ARMOR_IRON_LEGGINGS: 131, ARMOR_IRON_BOOTS: 132,
   ARMOR_DIAMOND_HELMET: 133, ARMOR_DIAMOND_CHESTPLATE: 134, ARMOR_DIAMOND_LEGGINGS: 135, ARMOR_DIAMOND_BOOTS: 136,
   TOOL_FISHING_ROD: 137, ITEM_BONE: 138, ITEM_BONE_MEAL: 139,
-  ITEM_RAW_PORKCHOP: 140, ITEM_COOKED_PORKCHOP: 141, ITEM_RAW_FISH: 142, ITEM_COOKED_FISH: 143, ITEM_GOLDEN_APPLE: 144
+  ITEM_RAW_PORKCHOP: 140, ITEM_COOKED_PORKCHOP: 141, ITEM_RAW_FISH: 142, ITEM_COOKED_FISH: 143, ITEM_GOLDEN_APPLE: 144,
+  ITEM_EMERALD: 145, ITEM_ENDER_PEARL: 146, ITEM_COMPASS: 147, ITEM_CLOCK: 148
 };
 
-// Atlas has 61 tiles (columns) of 16x16 pixels
-const ATLAS_COLS = 61;
+// Atlas has 72 tiles (columns) of 16x16 pixels
+const ATLAS_COLS = 72;
 const TILE_PX = 16;
 
 // Block Definitions:
@@ -94,6 +96,15 @@ const BLOCK_DEFS = {
   [BLOCK.DIAMOND_BLOCK]:       { name: 'Bloque de Diamante',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.75, stoneLike: true,  color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
   [BLOCK.BOOKSHELF]:           { name: 'Estantería de Libros',     solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xb45309, tiles: [ 8, 8,58,58,58,58] },
   [BLOCK.CAKE]:                { name: 'Tarta Dulce (+6❤)',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xf43f5e, tiles: [59, 8,60,60,60,60] },
+  [BLOCK.BED]:                 { name: 'Cama Roja (Dormir)',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.45, stoneLike: false, color: 0xdc2626, tiles: [61, 8,62,62,62,62] },
+  [BLOCK.ANVIL]:               { name: 'Yunque de Hierro',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.85, stoneLike: true,  color: 0x475569, tiles: [63,63,63,63,63,63] },
+  [BLOCK.ENCHANTING_TABLE]:    { name: 'Mesa de Encantamientos',   solid: true,  opaque: true,  shape: 'cube',  light: 9,  hardness: 1.80, stoneLike: true,  color: 0x38bdf8, tiles: [64,29,65,65,65,65] },
+  [BLOCK.GRAVEL]:              { name: 'Grava',                    solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.40, stoneLike: false, color: 0x94a3b8, tiles: [66,66,66,66,66,66] },
+  [BLOCK.CLAY]:                { name: 'Arcilla',                  solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.42, stoneLike: false, color: 0x9ca3af, tiles: [67,67,67,67,67,67] },
+  [BLOCK.WOOL]:                { name: 'Lana Blanca',              solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.30, stoneLike: false, color: 0xf8fafc, tiles: [68,68,68,68,68,68] },
+  [BLOCK.NETHERRACK]:          { name: 'Netherrack',               solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.55, stoneLike: true,  color: 0x991b1b, tiles: [69,69,69,69,69,69] },
+  [BLOCK.END_STONE]:           { name: 'Piedra del End',           solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.40, stoneLike: true,  color: 0xfef08a, tiles: [70,70,70,70,70,70] },
+  [BLOCK.EMERALD_BLOCK]:       { name: 'Bloque de Esmeralda',      solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.65, stoneLike: true,  color: 0x10b981, tiles: [71,71,71,71,71,71] },
   [BLOCK.TOOL_PICKAXE]:        { name: 'Pico de Diamante',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_SWORD]:          { name: 'Espada de Diamante',       solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_BOW]:            { name: 'Arco y Flechas',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
@@ -138,22 +149,27 @@ const BLOCK_DEFS = {
   [BLOCK.ITEM_COOKED_PORKCHOP]:    { name: 'Chuleta Asada (+8❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xd97706, tiles: [37,37,37,37,37,37] },
   [BLOCK.ITEM_RAW_FISH]:           { name: 'Pescado Crudo (+2❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x38bdf8, tiles: [12,12,12,12,12,12] },
   [BLOCK.ITEM_COOKED_FISH]:        { name: 'Pescado Asado (+6❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] },
-  [BLOCK.ITEM_GOLDEN_APPLE]:       { name: 'Manzana Dorada (+10❤)',      solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] }
+  [BLOCK.ITEM_GOLDEN_APPLE]:       { name: 'Manzana Dorada (+10❤)',      solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] },
+  [BLOCK.ITEM_EMERALD]:            { name: 'Gema de Esmeralda',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x10b981, tiles: [71,71,71,71,71,71] },
+  [BLOCK.ITEM_ENDER_PEARL]:        { name: 'Perla de Ender',             solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x0d9488, tiles: [49,49,49,49,49,49] },
+  [BLOCK.ITEM_COMPASS]:            { name: 'Brújula Magnética',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xef4444, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ITEM_CLOCK]:              { name: 'Reloj Solar',                solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] }
 };
 
 const ALL_INVENTORY_ITEMS = [
   BLOCK.TOOL_PICKAXE, BLOCK.TOOL_IRON_PICKAXE, BLOCK.TOOL_STONE_PICKAXE, BLOCK.TOOL_WOOD_PICKAXE, BLOCK.TOOL_GOLD_PICKAXE,
   BLOCK.TOOL_SWORD, BLOCK.TOOL_IRON_SWORD, BLOCK.TOOL_STONE_SWORD, BLOCK.TOOL_WOOD_SWORD, BLOCK.TOOL_GOLD_SWORD,
   BLOCK.TOOL_AXE, BLOCK.TOOL_SHOVEL, BLOCK.TOOL_HOE, BLOCK.TOOL_SHEARS, BLOCK.TOOL_FLINT_AND_STEEL, BLOCK.TOOL_FISHING_ROD,
-  BLOCK.TOOL_BOW, BLOCK.TOOL_GRAPPLING_HOOK,
+  BLOCK.TOOL_BOW, BLOCK.TOOL_GRAPPLING_HOOK, BLOCK.ITEM_COMPASS, BLOCK.ITEM_CLOCK, BLOCK.ITEM_ENDER_PEARL,
   BLOCK.ARMOR_DIAMOND_HELMET, BLOCK.ARMOR_DIAMOND_CHESTPLATE, BLOCK.ARMOR_DIAMOND_LEGGINGS, BLOCK.ARMOR_DIAMOND_BOOTS,
   BLOCK.ARMOR_IRON_HELMET, BLOCK.ARMOR_IRON_CHESTPLATE, BLOCK.ARMOR_IRON_LEGGINGS, BLOCK.ARMOR_IRON_BOOTS,
   BLOCK.ITEM_BUCKET, BLOCK.ITEM_WATER_BUCKET, BLOCK.ITEM_LAVA_BUCKET,
-  BLOCK.ITEM_STICK, BLOCK.ITEM_COAL, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_DIAMOND, BLOCK.ITEM_BONE, BLOCK.ITEM_BONE_MEAL,
+  BLOCK.ITEM_STICK, BLOCK.ITEM_COAL, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_DIAMOND, BLOCK.ITEM_EMERALD, BLOCK.ITEM_BONE, BLOCK.ITEM_BONE_MEAL,
   BLOCK.ITEM_APPLE, BLOCK.ITEM_GOLDEN_APPLE, BLOCK.ITEM_BREAD, BLOCK.CAKE, BLOCK.ITEM_RAW_PORKCHOP, BLOCK.ITEM_COOKED_PORKCHOP, BLOCK.ITEM_RAW_FISH, BLOCK.ITEM_COOKED_FISH,
   BLOCK.ITEM_MINECART, BLOCK.ITEM_BOAT,
-  BLOCK.CRAFTING_TABLE, BLOCK.FURNACE, BLOCK.CHEST, BLOCK.BOOKSHELF,
-  BLOCK.IRON_BLOCK, BLOCK.GOLD_BLOCK, BLOCK.DIAMOND_BLOCK,
+  BLOCK.CRAFTING_TABLE, BLOCK.FURNACE, BLOCK.ANVIL, BLOCK.ENCHANTING_TABLE, BLOCK.BED, BLOCK.CHEST, BLOCK.BOOKSHELF,
+  BLOCK.IRON_BLOCK, BLOCK.GOLD_BLOCK, BLOCK.DIAMOND_BLOCK, BLOCK.EMERALD_BLOCK,
+  BLOCK.WOOL, BLOCK.GRAVEL, BLOCK.CLAY, BLOCK.NETHERRACK, BLOCK.END_STONE,
   BLOCK.RAIL, BLOCK.LILY_PAD, BLOCK.PISTON, BLOCK.PORTAL, BLOCK.ICE, BLOCK.LADDER, BLOCK.TRAPDOOR_CLOSED,
   BLOCK.TORCH, BLOCK.TNT, BLOCK.SLIME, BLOCK.DOOR_CLOSED, BLOCK.LEVER_OFF, BLOCK.REDSTONE_LAMP_OFF,
   BLOCK.SAPLING, BLOCK.WHEAT_1, BLOCK.WHEAT_3, BLOCK.AMETHYST, BLOCK.GLOW_MUSHROOM,
@@ -174,7 +190,7 @@ function getArmorSlotForItem(id) {
 }
 function isArmorItem(id) { return getArmorSlotForItem(id) !== -1; }
 function isFoodItem(id) { return id === BLOCK.ITEM_APPLE || id === BLOCK.ITEM_BREAD || (id >= BLOCK.ITEM_RAW_PORKCHOP && id <= BLOCK.ITEM_GOLDEN_APPLE); }
-function isNonStackTool(id) { return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125) || (id >= 129 && id <= 137); }
+function isNonStackTool(id) { return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125) || (id >= 129 && id <= 137) || id === BLOCK.ITEM_COMPASS || id === BLOCK.ITEM_CLOCK; }
 
 const hotbarSlots = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -239,7 +255,20 @@ const CRAFTING_RECIPES = [
   { name: '1× Caña de Pescar',          outId: BLOCK.TOOL_FISHING_ROD,         outCount: 1, gridSize: 3, pattern: [0, 0, BLOCK.ITEM_STICK, 0, BLOCK.ITEM_STICK, BLOCK.TALL_GRASS, BLOCK.ITEM_STICK, 0, BLOCK.TALL_GRASS], ingredients: [{ id: BLOCK.ITEM_STICK, count: 3 }, { id: BLOCK.TALL_GRASS, count: 2 }] },
   { name: '3× Polvo de Hueso',          outId: BLOCK.ITEM_BONE_MEAL,           outCount: 3, gridSize: 2, pattern: [BLOCK.ITEM_BONE, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_BONE, count: 1 }] },
   { name: '1× Manzana Dorada (+10❤)',   outId: BLOCK.ITEM_GOLDEN_APPLE,        outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_APPLE, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_APPLE, count: 1 }, { id: BLOCK.ITEM_GOLD_INGOT, count: 2 }] },
-  { name: '1× Tarta Dulce (+6❤)',       outId: BLOCK.CAKE,                     outCount: 1, gridSize: 3, pattern: [BLOCK.WHEAT_3, BLOCK.ITEM_APPLE, BLOCK.WHEAT_3, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.WHEAT_3, count: 2 }, { id: BLOCK.ITEM_APPLE, count: 1 }] }
+  { name: '1× Tarta Dulce (+6❤)',       outId: BLOCK.CAKE,                     outCount: 1, gridSize: 3, pattern: [BLOCK.WHEAT_3, BLOCK.ITEM_APPLE, BLOCK.WHEAT_3, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.WHEAT_3, count: 2 }, { id: BLOCK.ITEM_APPLE, count: 1 }] },
+  { name: '2× Lana Blanca',             outId: BLOCK.WOOL,                     outCount: 2, gridSize: 2, pattern: [BLOCK.SNOW, BLOCK.TALL_GRASS, 0, 0], ingredients: [{ id: BLOCK.SNOW, count: 1 }, { id: BLOCK.TALL_GRASS, count: 1 }] },
+  { name: '1× Cama Roja (Dormir)',      outId: BLOCK.BED,                      outCount: 1, gridSize: 3, pattern: [BLOCK.WOOL, BLOCK.WOOL, BLOCK.WOOL, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, 0, 0, 0], ingredients: [{ id: BLOCK.WOOL, count: 3 }, { id: BLOCK.PLANKS, count: 3 }] },
+  { name: '1× Yunque de Hierro',        outId: BLOCK.ANVIL,                    outCount: 1, gridSize: 3, pattern: [BLOCK.IRON_BLOCK, BLOCK.ITEM_IRON_INGOT, BLOCK.IRON_BLOCK, 0, BLOCK.ITEM_IRON_INGOT, 0, 0, 0, 0], ingredients: [{ id: BLOCK.IRON_BLOCK, count: 2 }, { id: BLOCK.ITEM_IRON_INGOT, count: 2 }] },
+  { name: '1× Mesa de Encantamientos',  outId: BLOCK.ENCHANTING_TABLE,         outCount: 1, gridSize: 3, pattern: [0, BLOCK.BOOKSHELF, 0, BLOCK.DIAMOND_ORE, BLOCK.OBSIDIAN, BLOCK.DIAMOND_ORE, 0, 0, 0], ingredients: [{ id: BLOCK.BOOKSHELF, count: 1 }, { id: BLOCK.DIAMOND_ORE, count: 2 }, { id: BLOCK.OBSIDIAN, count: 1 }] },
+  { name: '2× Grava (Gravedad)',        outId: BLOCK.GRAVEL,                   outCount: 2, gridSize: 2, pattern: [BLOCK.COBBLE, BLOCK.SAND, 0, 0], ingredients: [{ id: BLOCK.COBBLE, count: 1 }, { id: BLOCK.SAND, count: 1 }] },
+  { name: '2× Arcilla Húmeda',          outId: BLOCK.CLAY,                     outCount: 2, gridSize: 2, pattern: [BLOCK.DIRT, BLOCK.SAND, 0, 0], ingredients: [{ id: BLOCK.DIRT, count: 1 }, { id: BLOCK.SAND, count: 1 }] },
+  { name: '2× Netherrack Abisal',       outId: BLOCK.NETHERRACK,               outCount: 2, gridSize: 2, pattern: [BLOCK.COBBLE, BLOCK.COAL_ORE, 0, 0], ingredients: [{ id: BLOCK.COBBLE, count: 1 }, { id: BLOCK.COAL_ORE, count: 1 }] },
+  { name: '2× Piedra del End',          outId: BLOCK.END_STONE,                outCount: 2, gridSize: 2, pattern: [BLOCK.SAND, BLOCK.AMETHYST, 0, 0], ingredients: [{ id: BLOCK.SAND, count: 1 }, { id: BLOCK.AMETHYST, count: 1 }] },
+  { name: '2× Esmeralda Brillante',     outId: BLOCK.ITEM_EMERALD,             outCount: 2, gridSize: 2, pattern: [BLOCK.DIAMOND_ORE, BLOCK.TALL_GRASS, 0, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 1 }, { id: BLOCK.TALL_GRASS, count: 1 }] },
+  { name: '1× Bloque de Esmeralda',     outId: BLOCK.EMERALD_BLOCK,            outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_EMERALD, BLOCK.ITEM_EMERALD, 0, BLOCK.ITEM_EMERALD, BLOCK.ITEM_EMERALD, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_EMERALD, count: 4 }] },
+  { name: '2× Perla de Ender (TP)',     outId: BLOCK.ITEM_ENDER_PEARL,         outCount: 2, gridSize: 2, pattern: [BLOCK.OBSIDIAN, BLOCK.AMETHYST, 0, 0], ingredients: [{ id: BLOCK.OBSIDIAN, count: 1 }, { id: BLOCK.AMETHYST, count: 1 }] },
+  { name: '1× Brújula Magnética',       outId: BLOCK.ITEM_COMPASS,             outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.COAL_ORE, BLOCK.ITEM_IRON_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 3 }, { id: BLOCK.COAL_ORE, count: 1 }] },
+  { name: '1× Reloj Solar',             outId: BLOCK.ITEM_CLOCK,               outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_GOLD_INGOT, BLOCK.COAL_ORE, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 3 }, { id: BLOCK.COAL_ORE, count: 1 }] }
 ];
 
 function createInitialInventoryCounts() {
@@ -574,81 +603,43 @@ function createProceduralAtlas() {
     return null;
   });
 
-  // 43: Trapdoor (Oak hatch with 4 square cutouts & iron hinges)
+  // 43..54: Trapdoor, Rail, Chest, Lily Pad, Piston, Portal, Ice, Crafting Table, Furnace
   drawTile(43, (x, y, r) => {
     const frame = x <= 2 || x >= 13 || y <= 2 || y >= 13 || x === 7 || x === 8 || y === 7 || y === 8;
     if ((x === 1 || x === 14) && (y === 3 || y === 12)) return shade(148, 163, 184, 0.95);
-    if (frame) return shade(146, 96, 48, 0.9 + r * 0.14);
-    return null;
+    return frame ? shade(146, 96, 48, 0.9 + r * 0.14) : null;
   });
-
-  // 44: Railroad Track (Wooden sleepers + metallic steel rails)
   drawTile(44, (x, y, r) => {
-    const rail = (x === 3 || x === 4 || x === 11 || x === 12);
-    const tie = (x >= 1 && x <= 14) && (y % 4 === 1 || y % 4 === 2);
-    if (rail) return shade(203, 213, 225, 0.92 + r * 0.12);
-    if (tie) return shade(132, 88, 46, 0.88 + r * 0.14);
-    return null;
+    if (x === 3 || x === 4 || x === 11 || x === 12) return shade(203, 213, 225, 0.92 + r * 0.12);
+    return ((x >= 1 && x <= 14) && (y % 4 === 1 || y % 4 === 2)) ? shade(132, 88, 46, 0.88 + r * 0.14) : null;
   });
-
-  // 45: Treasure Chest Top/Bottom (Oak lid with dark iron trim)
-  drawTile(45, (x, y, r) => {
-    const rim = x === 0 || x === 15 || y === 0 || y === 15;
-    if (rim) return shade(45, 32, 20, 0.95);
-    return shade(184, 118, 42, 0.88 + r * 0.16);
-  });
-
-  // 46: Treasure Chest Side (Oak planks + black seam + golden latch)
+  drawTile(45, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(45, 32, 20, 0.95) : shade(184, 118, 42, 0.88 + r * 0.16));
   drawTile(46, (x, y, r) => {
     if (x >= 7 && x <= 8 && y >= 4 && y <= 7) return shade(250, 204, 21, 0.98);
     if (y === 5) return shade(28, 22, 16, 0.98);
-    const rim = x === 0 || x === 15 || y === 0 || y === 15;
-    if (rim) return shade(62, 40, 22, 0.94);
-    return shade(176, 112, 38, 0.88 + r * 0.16);
+    return (x === 0 || x === 15 || y === 0 || y === 15) ? shade(62, 40, 22, 0.94) : shade(176, 112, 38, 0.88 + r * 0.16);
   });
-
-  // 47: Water Lily Pad (Floating green leaf with pink lotus blossom)
   drawTile(47, (x, y, r) => {
     const dist = Math.hypot(x - 7.5, y - 9.5);
     if (x >= 6 && x <= 9 && y >= 7 && y <= 10) return shade(244, 114, 182, 0.95 + r * 0.1);
-    if (dist <= 6.2 && !(x > 8 && y < 8)) return shade(34, 197, 94, 0.86 + r * 0.22);
-    return null;
+    return (dist <= 6.2 && !(x > 8 && y < 8)) ? shade(34, 197, 94, 0.86 + r * 0.22) : null;
   });
-
-  // 48: Mechanical Redstone Piston (Oak push head + iron shaft + cobblestone housing)
   drawTile(48, (x, y, r) => {
     if (y <= 3) return shade(184, 134, 72, 0.92 + r * 0.12);
     if (y === 4) return shade(203, 213, 225, 0.95);
-    if (x >= 6 && x <= 9 && y <= 10) return shade(148, 163, 184, 0.94);
-    return shade(105, 110, 118, 0.84 + r * 0.22);
+    return (x >= 6 && x <= 9 && y <= 10) ? shade(148, 163, 184, 0.94) : shade(105, 110, 118, 0.84 + r * 0.22);
   });
-
-  // 49: Dimensional Obsidian Portal (Glowing violet-magenta vortex)
   drawTile(49, (x, y, r) => {
     const swirl = Math.sin(x * 0.65 + y * 0.65) + Math.cos((x - 7.5) * 0.5 - (y - 7.5) * 0.5);
-    if (swirl > 0.7) return shade(240, 171, 252, 0.98);
-    return shade(168, 85, 247, 0.85 + r * 0.2);
+    return swirl > 0.7 ? shade(240, 171, 252, 0.98) : shade(168, 85, 247, 0.85 + r * 0.2);
   });
-
-  // 50: Slippery Glacial Ice (Translucent frost blue with white crystal streaks)
-  drawTile(50, (x, y, r) => {
-    const streak = ((x + y) === 7) || ((x + y) === 8) || ((x + y) === 18);
-    if (streak) return shade(240, 249, 255, 0.98);
-    return shade(125, 211, 252, 0.88 + r * 0.14);
-  });
-
-  // 51: Crafting Table Top (Oak border with 3x3 dark crafting grid & corner rivets)
+  drawTile(50, (x, y, r) => (((x + y) === 7) || ((x + y) === 8) || ((x + y) === 18)) ? shade(240, 249, 255, 0.98) : shade(125, 211, 252, 0.88 + r * 0.14));
   drawTile(51, (x, y, r) => {
-    const rim = x <= 1 || x >= 14 || y <= 1 || y >= 14;
     if ((x === 1 || x === 14) && (y === 1 || y === 14)) return shade(148, 163, 184, 0.98);
-    if (rim) return shade(110, 72, 38, 0.92 + r * 0.1);
-    const inGrid = x >= 2 && x <= 13 && y >= 2 && y <= 13;
+    if (x <= 1 || x >= 14 || y <= 1 || y >= 14) return shade(110, 72, 38, 0.92 + r * 0.1);
     const gridLine = x === 2 || x === 6 || x === 9 || x === 13 || y === 2 || y === 6 || y === 9 || y === 13;
-    if (inGrid && gridLine) return shade(58, 36, 18, 0.96);
-    return shade(182, 128, 72, 0.90 + r * 0.14);
+    return gridLine ? shade(58, 36, 18, 0.96) : shade(182, 128, 72, 0.90 + r * 0.14);
   });
-
-  // 52: Crafting Table Side (Dark top band + hanging steel saw & hammer on oak planks)
   drawTile(52, (x, y, r) => {
     if (y <= 2) return shade(92, 58, 30, 0.94);
     if (y === 3) return shade(48, 30, 15, 0.96);
@@ -656,79 +647,43 @@ function createProceduralAtlas() {
       if (y <= 6) return shade(120, 72, 32, 0.96);
       if (x <= 5 && y + x <= 15) return shade(203, 213, 225, 0.98);
     }
-    if (x >= 10 && x <= 12 && y >= 5 && y <= 12) {
-      if (y <= 7) return shade(148, 163, 184, 0.98);
-      if (x === 11) return shade(110, 70, 32, 0.95);
-    }
-    if (x === 0 || x === 15 || y === 15) return shade(92, 58, 30, 0.92);
-    return shade(168, 118, 66, 0.88 + r * 0.15);
+    if (x >= 10 && x <= 12 && y >= 5 && y <= 12) return y <= 7 ? shade(148, 163, 184, 0.98) : (x === 11 ? shade(110, 70, 32, 0.95) : shade(168, 118, 66, 0.9));
+    return (x === 0 || x === 15 || y === 15) ? shade(92, 58, 30, 0.92) : shade(168, 118, 66, 0.88 + r * 0.15);
   });
-
-  // 53: Furnace Top/Side (Beveled stone masonry)
-  drawTile(53, (x, y, r) => {
-    const border = x === 0 || x === 15 || y === 0 || y === 15 || y === 7;
-    if (border) return shade(71, 85, 105, 0.92);
-    return shade(115, 125, 138, 0.86 + r * 0.18);
-  });
-
-  // 54: Furnace Front (Dark grate + glowing ember fire core)
+  drawTile(53, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15 || y === 7) ? shade(71, 85, 105, 0.92) : shade(115, 125, 138, 0.86 + r * 0.18));
   drawTile(54, (x, y, r) => {
     if (x >= 4 && x <= 11 && y >= 3 && y <= 7) return shade(30, 41, 59, 0.96);
-    if (x >= 4 && x <= 11 && y >= 10 && y <= 14) {
-      return (y >= 12 && x >= 6 && x <= 9) ? shade(250, 204, 21, 0.98) : shade(249, 115, 22, 0.95);
-    }
-    if (x === 0 || x === 15 || y === 0 || y === 15) return shade(71, 85, 105, 0.94);
-    return shade(115, 125, 138, 0.86 + r * 0.16);
+    if (x >= 4 && x <= 11 && y >= 10 && y <= 14) return (y >= 12 && x >= 6 && x <= 9) ? shade(250, 204, 21, 0.98) : shade(249, 115, 22, 0.95);
+    return (x === 0 || x === 15 || y === 0 || y === 15) ? shade(71, 85, 105, 0.94) : shade(115, 125, 138, 0.86 + r * 0.16);
   });
-
-  // 55: Block of Iron (Brushed metallic silver plates)
-  drawTile(55, (x, y, r) => {
-    const rim = x === 0 || x === 15 || y === 0 || y === 15;
-    if (rim) return shade(148, 163, 184, 0.95);
-    const streak = (y % 4 === 1) ? 1.04 : 0.96;
-    return shade(226, 232, 240, streak * (0.94 + r * 0.08));
-  });
-
-  // 56: Block of Gold (Gleaming royal gold bullion)
-  drawTile(56, (x, y, r) => {
-    const rim = x === 0 || x === 15 || y === 0 || y === 15;
-    if (rim) return shade(180, 83, 9, 0.95);
-    if ((x + y) === 6 || (x + y) === 7) return shade(254, 249, 195, 0.98);
-    return shade(250, 204, 21, 0.90 + r * 0.14);
-  });
-
-  // 57: Block of Diamond (Crystalline cyan-aqua facets)
-  drawTile(57, (x, y, r) => {
-    const rim = x === 0 || x === 15 || y === 0 || y === 15;
-    if (rim) return shade(14, 116, 144, 0.96);
-    if ((x >= 3 && x <= 5 && y >= 3 && y <= 5) || (x + y === 14)) return shade(224, 242, 254, 0.99);
-    return shade(56, 189, 248, 0.90 + r * 0.14);
-  });
-
-  // 58: Bookshelf Side (Oak shelves with colorful book spines)
+  drawTile(55, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(148, 163, 184, 0.95) : shade(226, 232, 240, (y % 4 === 1 ? 1.04 : 0.96) * (0.94 + r * 0.08)));
+  drawTile(56, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(180, 83, 9, 0.95) : (((x + y) === 6 || (x + y) === 7) ? shade(254, 249, 195, 0.98) : shade(250, 204, 21, 0.90 + r * 0.14)));
+  drawTile(57, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(14, 116, 144, 0.96) : (((x >= 3 && x <= 5 && y >= 3 && y <= 5) || (x + y === 14)) ? shade(224, 242, 254, 0.99) : shade(56, 189, 248, 0.90 + r * 0.14)));
   drawTile(58, (x, y, r) => {
     if (y <= 1 || y === 7 || y === 8 || y >= 14 || x === 0 || x === 15) return shade(161, 98, 7, 0.92 + r * 0.12);
-    const spine = Math.floor((x - 1) / 3) + (y > 8 ? 3 : 0);
-    const bookColors = [[220, 38, 38], [37, 99, 235], [22, 163, 74], [147, 51, 234], [217, 119, 6], [13, 148, 136]];
-    const bc = bookColors[spine % bookColors.length];
-    if ((x - 1) % 3 === 2) return shade(30, 20, 10, 0.94);
-    return shade(bc[0], bc[1], bc[2], 0.88 + r * 0.14);
+    const bc = [[220, 38, 38], [37, 99, 235], [22, 163, 74], [147, 51, 234], [217, 119, 6], [13, 148, 136]][(Math.floor((x - 1) / 3) + (y > 8 ? 3 : 0)) % 6];
+    return ((x - 1) % 3 === 2) ? shade(30, 20, 10, 0.94) : shade(bc[0], bc[1], bc[2], 0.88 + r * 0.14);
   });
-  // 59: Cake Top (White vanilla frosting with red berry toppings)
   drawTile(59, (x, y, r) => {
     if (x <= 1 || x >= 14 || y <= 1 || y >= 14) return shade(217, 119, 6, 0.92);
-    const berry = ((x === 5 || x === 10) && (y === 5 || y === 10)) || (x >= 7 && x <= 8 && y >= 7 && y <= 8);
-    if (berry) return shade(225, 29, 72, 0.96);
-    return shade(248, 250, 252, 0.94 + r * 0.06);
+    return (((x === 5 || x === 10) && (y === 5 || y === 10)) || (x >= 7 && x <= 8 && y >= 7 && y <= 8)) ? shade(225, 29, 72, 0.96) : shade(248, 250, 252, 0.94 + r * 0.06);
   });
-  // 60: Cake Side (Golden sponge base + white frosting drip + strawberry dots)
   drawTile(60, (x, y, r) => {
-    if (y <= 5 || (y === 6 && x % 3 !== 0)) {
-      if (y === 3 && (x === 4 || x === 8 || x === 12)) return shade(225, 29, 72, 0.96);
-      return shade(248, 250, 252, 0.94 + r * 0.06);
-    }
+    if (y <= 5 || (y === 6 && x % 3 !== 0)) return (y === 3 && (x === 4 || x === 8 || x === 12)) ? shade(225, 29, 72, 0.96) : shade(248, 250, 252, 0.94 + r * 0.06);
     return shade(217, 119, 6, 0.88 + r * 0.16);
   });
+  // 61..71: Bed Top/Side, Anvil, Enchanting Table Top/Side, Gravel, Clay, White Wool, Netherrack, End Stone, Emerald Block
+  drawTile(61, (x, y, r) => y <= 4 ? shade(248, 250, 252, 0.94 + r * 0.06) : shade(220, 38, 38, 0.90 + r * 0.14));
+  drawTile(62, (x, y, r) => y <= 5 ? (x <= 4 ? shade(248, 250, 252, 0.95) : shade(220, 38, 38, 0.92 + r * 0.1)) : shade(161, 98, 7, 0.88 + r * 0.14));
+  drawTile(63, (x, y, r) => (y >= 5 && y <= 9 && (x <= 3 || x >= 12)) ? shade(30, 41, 59, 0.95) : shade(71, 85, 105, 0.88 + r * 0.16));
+  drawTile(64, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(56, 189, 248, 0.98) : ((x >= 4 && x <= 11 && y >= 4 && y <= 11) ? shade(220, 38, 38, 0.94 + r * 0.1) : shade(49, 46, 129, 0.9)));
+  drawTile(65, (x, y, r) => y <= 3 ? shade(220, 38, 38, 0.94) : ((y === 4 && x % 3 === 1) ? shade(56, 189, 248, 0.98) : shade(30, 27, 75, 0.86 + r * 0.2)));
+  drawTile(66, (x, y, r) => shade(148, 142, 138, ((x * 5 + y * 7) % 4 === 0 ? 0.74 : 0.94) + r * 0.18));
+  drawTile(67, (x, y, r) => shade(156, 163, 178, 0.90 + Math.sin(x * 0.8 + y * 0.6) * 0.05 + r * 0.1));
+  drawTile(68, (x, y, r) => shade(244, 246, 250, 0.92 + r * 0.1));
+  drawTile(69, (x, y, r) => shade(127, 29, 29, 0.78 + r * 0.34));
+  drawTile(70, (x, y, r) => shade(234, 228, 176, (((x * 3 + y * 5) % 7 === 0) ? 0.82 : 0.96) + r * 0.1));
+  drawTile(71, (x, y, r) => (x === 0 || x === 15 || y === 0 || y === 15) ? shade(5, 150, 105, 0.96) : (((x + y === 7) || (x + y === 14)) ? shade(167, 243, 208, 0.99) : shade(16, 185, 129, 0.90 + r * 0.14)));
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter;
@@ -744,8 +699,7 @@ function createCrackTextures() {
   const stages = [];
   for (let s = 0; s < 8; s++) {
     const c = document.createElement('canvas');
-    c.width = 16;
-    c.height = 16;
+    c.width = 16; c.height = 16;
     const ctx = c.getContext('2d');
     ctx.strokeStyle = 'rgba(15, 15, 15, 0.82)';
     ctx.lineWidth = 1.3;
@@ -753,14 +707,12 @@ function createCrackTextures() {
     for (let b = 0; b < branches; b++) {
       ctx.beginPath();
       ctx.moveTo(8, 8);
-      const angle = (b / branches) * Math.PI * 2 + b * 0.4;
-      const len = 2 + (s + 1) * 1.15;
+      const angle = (b / branches) * Math.PI * 2 + b * 0.4, len = 2 + (s + 1) * 1.15;
       ctx.lineTo(8 + Math.cos(angle) * len, 8 + Math.sin(angle) * len);
       ctx.stroke();
     }
     const tex = new THREE.CanvasTexture(c);
-    tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
     stages.push(tex);
   }
   return stages;

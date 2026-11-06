@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=31"></iframe>
+    <iframe id="game-frame" src="./index.html?v=32"></iframe>
   </div>
 
   <script>
@@ -2065,6 +2065,94 @@
             assert(nonTransparent >= 14, `El icono 16×16 de ${vc.BLOCK_DEFS[id].name} (ID ${id}) debe dibujarse correctamente (${nonTransparent} px visibles)`);
           }
           vc.player.health = 10;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 39: Fase 3 (Final) — Cama, Yunque, Mesa de Encantamientos, Grava, Arcilla, Perla de Ender, Brújula y Reloj
+      // =========================================================================
+      describe('39. Fase 3 (Final) de Objetos de Minecraft: Cama, Yunque, Encantamientos, Grava, Arcilla y Perla de Ender', () => {
+        it('Duerme en la Cama (BLOCK.BED) para saltar a la mañana (+4❤), mejora herramientas en el Yunque (BLOCK.ANVIL) y encanta en BLOCK.ENCHANTING_TABLE', () => {
+          vc.toggleGameMode('survival');
+          const bx = 12, by = 53, bz = 12;
+
+          // 1) Poner noche y dormir en la Cama (BLOCK.BED) -> amanece y cura +4❤
+          vc.setTimeOfDay(Math.PI);
+          vc.player.health = 5;
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.BED);
+          vc.setCurrentHit({ x: bx, y: by, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.BED });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.player.health === 9 && vc.getState().sunFactor > 0.7, `Dormir en BLOCK.BED debe hacer amanecer y curar +4❤ (HP=${vc.player.health}, sunFactor=${vc.getState().sunFactor.toFixed(2)})`);
+
+          // 2) Usar el Yunque (BLOCK.ANVIL) con Pico de Hierro equipado -> mejora a Pico de Diamante (TOOL_PICKAXE)
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.ANVIL);
+          vc.inventoryCounts[vc.BLOCK.TOOL_IRON_PICKAXE] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.TOOL_IRON_PICKAXE; vc.hotbarCounts[0] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+          vc.setCurrentHit({ x: bx, y: by, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.ANVIL });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.hotbarSlots[0] === vc.BLOCK.TOOL_PICKAXE, 'Usar el Yunque con un Pico de Hierro debe templarlo a Pico de Diamante (TOOL_PICKAXE)');
+
+          // 3) Usar la Mesa de Encantamientos (BLOCK.ENCHANTING_TABLE) -> restaura salud máxima y otorga 1× Perla de Ender
+          vc.player.health = 4;
+          const pearlsBefore = vc.inventoryCounts[vc.BLOCK.ITEM_ENDER_PEARL] || 0;
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.ENCHANTING_TABLE);
+          assert(vc.BLOCK_DEFS[vc.BLOCK.ENCHANTING_TABLE].light === 9, 'La Mesa de Encantamientos debe emitir luz mágica 9');
+          vc.setCurrentHit({ x: bx, y: by, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.ENCHANTING_TABLE });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.player.health === vc.player.maxHealth && (vc.inventoryCounts[vc.BLOCK.ITEM_ENDER_PEARL] || 0) === pearlsBefore + 1, 'Usar la Mesa de Encantamientos debe restaurar toda la salud y otorgar 1× Perla de Ender');
+
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
+        });
+
+        it('Simula gravedad en Grava (BLOCK.GRAVEL), hornea Arcilla en Ladrillos, teletransporta con Perla de Ender y dibuja los 13 iconos 16×16', () => {
+          vc.toggleGameMode('survival');
+          const gx = 14, gy = 54, gz = 14;
+
+          // 1) Grava (BLOCK.GRAVEL) cae por gravedad igual que la Arena
+          vc.setVoxelGlobal(gx, gy - 1, gz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(gx, gy, gz, vc.BLOCK.GRAVEL);
+          vc.updateVoxelSimulation(0.20);
+          assert(vc.getVoxelGlobal(gx, gy - 1, gz) === vc.BLOCK.GRAVEL && vc.getVoxelGlobal(gx, gy, gz) === vc.BLOCK.AIR, 'La Grava (BLOCK.GRAVEL) debe caer por gravedad al bloque inferior vacío');
+          vc.setVoxelGlobal(gx, gy - 1, gz, vc.BLOCK.AIR);
+
+          // 2) Horno convierte Arcilla Húmeda (BLOCK.CLAY) en 2× Ladrillos (BLOCK.BRICK)
+          vc.setVoxelGlobal(gx, gy, gz, vc.BLOCK.FURNACE);
+          vc.inventoryCounts[vc.BLOCK.CLAY] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.CLAY; vc.hotbarCounts[0] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+          const smeltClay = vc.smeltInFurnace(gx, gy, gz);
+          assert(smeltClay && smeltClay.outId === vc.BLOCK.BRICK && smeltClay.count === 2, 'El Horno debe cocer 1× Arcilla Húmeda en 2× Ladrillos (BLOCK.BRICK)');
+          vc.setVoxelGlobal(gx, gy, gz, vc.BLOCK.AIR);
+
+          // 3) Lanzar Perla de Ender (throwEnderPearl) teletransporta al jugador al bloque apuntado
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          vc.inventoryCounts[vc.BLOCK.ITEM_ENDER_PEARL] = 1;
+          vc.setCurrentHit({ x: 20, y: 50, z: 20, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.STONE });
+          const tpOk = vc.throwEnderPearl();
+          assert(tpOk === true && Math.hypot(vc.player.x - 20.5, vc.player.z - 20.5) < 0.2, 'throwEnderPearl debe teletransportar instantáneamente al jugador al punto de mira');
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+
+          // 4) Verificar que los 13 bloques/objetos de la Fase 3 tienen definición e icono 16×16 válido
+          const phase3Ids = [
+            vc.BLOCK.BED, vc.BLOCK.ANVIL, vc.BLOCK.ENCHANTING_TABLE, vc.BLOCK.GRAVEL, vc.BLOCK.CLAY,
+            vc.BLOCK.WOOL, vc.BLOCK.NETHERRACK, vc.BLOCK.END_STONE, vc.BLOCK.EMERALD_BLOCK,
+            vc.BLOCK.ITEM_EMERALD, vc.BLOCK.ITEM_ENDER_PEARL, vc.BLOCK.ITEM_COMPASS, vc.BLOCK.ITEM_CLOCK
+          ];
+          const testCanvas = doc.createElement('canvas');
+          testCanvas.width = 16; testCanvas.height = 16;
+          const ctx = testCanvas.getContext('2d');
+          for (const id of phase3Ids) {
+            assert(vc.BLOCK_DEFS[id] && vc.BLOCK_DEFS[id].name, `El ID ${id} de Fase 3 debe estar registrado en BLOCK_DEFS`);
+            ctx.clearRect(0, 0, 16, 16);
+            vc.drawItemIcon(testCanvas, id);
+            const data = ctx.getImageData(0, 0, 16, 16).data;
+            let nonTransparent = 0;
+            for (let p = 3; p < data.length; p += 4) if (data[p] > 0) nonTransparent++;
+            assert(nonTransparent >= 14, `El icono 16×16 de ${vc.BLOCK_DEFS[id].name} (ID ${id}) debe dibujarse correctamente (${nonTransparent} px visibles)`);
+          }
         });
       });
 

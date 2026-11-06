@@ -756,7 +756,7 @@ requestAnimationFrame(animate);
 window.__VOXELCRAFT__ = {
   BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
   isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isArmorItem, getArmorSlotForItem, isFoodItem, isNonStackTool,
-  getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
+  getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, sleepInBed, useAnvilAt, useEnchantingTableAt, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
   handGroup, handMesh, handMat, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,

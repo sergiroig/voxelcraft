@@ -169,11 +169,11 @@ function updateVoxelSimulation(dt) {
     if (wy <= 1 || wy >= CHUNK_HEIGHT) continue;
     const b = getVoxelGlobal(wx, wy, wz);
 
-    if (b === BLOCK.SAND) {
+    if (b === BLOCK.SAND || b === BLOCK.GRAVEL) {
       const below = getVoxelGlobal(wx, wy - 1, wz);
       if (below === BLOCK.AIR || below === BLOCK.WATER) {
         setVoxelRawNoRebuild(wx, wy, wz, below === BLOCK.WATER ? BLOCK.WATER : BLOCK.AIR, dirtySet);
-        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.SAND, dirtySet);
+        setVoxelRawNoRebuild(wx, wy - 1, wz, b, dirtySet);
         movedThisTick.add(`${wx},${wy - 1},${wz}`);
       }
     } else if (b === BLOCK.WATER) {

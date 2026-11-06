@@ -104,6 +104,18 @@ function drawItemIcon(canvas, itemId) {
   } else if (itemId === BLOCK.TOOL_GRAPPLING_HOOK) {
     ctx.fillStyle = '#cbd5e1'; for (let i = 2; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
     ctx.fillStyle = '#c084fc'; ctx.fillRect(9, 2, 5, 2); ctx.fillRect(12, 4, 2, 4); ctx.fillRect(7, 4, 3, 2);
+  } else if (itemId === BLOCK.ITEM_EMERALD) {
+    ctx.fillStyle = '#047857'; ctx.fillRect(4, 2, 8, 12); ctx.fillRect(3, 4, 10, 8);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(5, 3, 6, 10); ctx.fillStyle = '#a7f3d0'; ctx.fillRect(6, 4, 2, 3);
+  } else if (itemId === BLOCK.ITEM_ENDER_PEARL) {
+    ctx.fillStyle = '#115e59'; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = '#0d9488'; ctx.fillRect(4, 4, 8, 8);
+    ctx.fillStyle = '#5eead4'; ctx.fillRect(5, 5, 3, 3);
+  } else if (itemId === BLOCK.ITEM_COMPASS) {
+    ctx.fillStyle = '#475569'; ctx.fillRect(2, 3, 12, 10); ctx.fillRect(3, 2, 10, 12);
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = '#ef4444'; ctx.fillRect(7, 4, 2, 4); ctx.fillStyle = '#1e293b'; ctx.fillRect(7, 8, 2, 4);
+  } else if (itemId === BLOCK.ITEM_CLOCK) {
+    ctx.fillStyle = '#b45309'; ctx.fillRect(2, 3, 12, 10); ctx.fillRect(3, 2, 10, 12);
+    ctx.fillStyle = '#facc15'; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = '#1d4ed8'; ctx.fillRect(5, 5, 6, 6); ctx.fillStyle = '#fef08a'; ctx.fillRect(7, 6, 2, 2);
   } else {
     const def = BLOCK_DEFS[itemId];
     const tileIndex = def.tiles[2];
@@ -433,6 +445,7 @@ const SMELT_RECIPES = [
   { inId: BLOCK.DIAMOND_ORE, outId: BLOCK.ITEM_DIAMOND, count: 1 },
   { inId: BLOCK.ITEM_RAW_PORKCHOP, outId: BLOCK.ITEM_COOKED_PORKCHOP, count: 1 },
   { inId: BLOCK.ITEM_RAW_FISH, outId: BLOCK.ITEM_COOKED_FISH, count: 1 },
+  { inId: BLOCK.CLAY, outId: BLOCK.BRICK, count: 2 },
   { inId: BLOCK.SAND, outId: BLOCK.GLASS, count: 1 },
   { inId: BLOCK.COBBLE, outId: BLOCK.STONE, count: 1 },
   { inId: BLOCK.WOOD, outId: BLOCK.ITEM_COAL, count: 1 }
@@ -450,28 +463,19 @@ function smeltInFurnace(wx, wy, wz) {
   inventoryCounts[rec.outId] = (inventoryCounts[rec.outId] || 0) + rec.count;
   autoEquipToHotbar(rec.outId);
   if (typeof reconcileSlotsFromInventoryCounts === 'function') reconcileSlotsFromInventoryCounts();
-  sfx.play('craft');
-  spawnBlockParticles(wx, wy, wz, BLOCK.LAVA, 12);
+  sfx.play('craft'); spawnBlockParticles(wx, wy, wz, BLOCK.LAVA, 12);
   saveWorldData(); refreshInventoryCountsUI();
-  if (blockLabelEl) blockLabelEl.textContent = `🔥 Horno: 1× ${BLOCK_DEFS[rec.inId].name} ➔ 1× ${BLOCK_DEFS[rec.outId].name}`;
+  if (blockLabelEl) blockLabelEl.textContent = `🔥 Horno: 1× ${BLOCK_DEFS[rec.inId].name} ➔ ${rec.count}× ${BLOCK_DEFS[rec.outId].name}`;
   return { inId: rec.inId, outId: rec.outId, count: rec.count };
 }
 
-function toggleDayNight() {
-  isNight = !isNight;
-  setTimeOfDay(isNight ? Math.PI : 0.25);
-}
-
-function toggleFlyingMode() {
-  player.flying = !player.flying;
-  player.vy = 0;
-  document.getElementById('tbtn-fly').classList.toggle('toggled', player.flying);
-}
+function toggleDayNight() { isNight = !isNight; setTimeOfDay(isNight ? Math.PI : 0.25); }
+function toggleFlyingMode() { player.flying = !player.flying; player.vy = 0; document.getElementById('tbtn-fly').classList.toggle('toggled', player.flying); }
 
 function placeBlockAtCurrentTarget() {
   const bId = getActiveHeldItem();
 
-  // 1. Prioritize interacting with targeted interactive world blocks (Chest, Crafting Table, Lever, Door, Trapdoor, Portal)
+  // 1. Prioritize interacting with targeted interactive world blocks (Chest, Crafting Table, Lever, Door, Trapdoor, Portal, Bed, Anvil, Enchanting Table)
   if (currentHit) {
     if (currentHit.block === BLOCK.PORTAL) { useVoxelPortal(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.OBSIDIAN && (bId === BLOCK.AMETHYST || bId === BLOCK.TORCH || bId === BLOCK.TOOL_FLINT_AND_STEEL)) {
@@ -486,6 +490,9 @@ function placeBlockAtCurrentTarget() {
     if (currentHit.block === BLOCK.CRAFTING_TABLE) { openCraftingTable(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.FURNACE) { smeltInFurnace(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.CHEST) { openVoxelChest(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.BED) { sleepInBed(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.ANVIL) { useAnvilAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.ENCHANTING_TABLE) { useEnchantingTableAt(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.CAKE) {
       setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR);
       player.health = Math.min(player.maxHealth, player.health + 6);
@@ -494,10 +501,16 @@ function placeBlockAtCurrentTarget() {
     if (bId === BLOCK.ITEM_BONE_MEAL && applyBoneMealAt(currentHit.x, currentHit.y, currentHit.z)) return true;
   }
 
-  // 2. Consumables, Armor, Fishing Rod, Bow, Grappling Hook or Sword Shield
+  // 2. Consumables, Armor, Fishing Rod, Ender Pearl, Compass, Clock, Bow, Grappling Hook or Sword Shield
   if (isFoodItem(bId)) return eatHeldApple(bId);
   if (isArmorItem(bId)) return equipArmorItem(bId);
   if (bId === BLOCK.TOOL_FISHING_ROD) return !!useFishingRod(currentHit ? currentHit.x : undefined, currentHit ? currentHit.y : undefined, currentHit ? currentHit.z : undefined);
+  if (bId === BLOCK.ITEM_ENDER_PEARL) return throwEnderPearl();
+  if (bId === BLOCK.ITEM_COMPASS) {
+    if (blockLabelEl) blockLabelEl.textContent = `🧭 Brújula: Origen (0, 0) a ${Math.round(Math.hypot(player.x, player.z))}m • Pos: (${Math.round(player.x)}, ${Math.round(player.y)}, ${Math.round(player.z)})`;
+    sfx.play('waypoint'); return true;
+  }
+  if (bId === BLOCK.ITEM_CLOCK) { toggleDayNight(); sfx.play('chime'); return true; }
   if (bId === BLOCK.TOOL_BOW) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
@@ -629,8 +642,7 @@ function updateHotbarSelection(idx) {
   updateHeldItemVisual();
 }
 
-buildHotbarUI();
-buildInventoryModal();
+buildHotbarUI(); buildInventoryModal();
 
 const overlayEl = document.getElementById('overlay'), btnPlay = document.getElementById('btn-play');
 const btnReset = document.getElementById('btn-reset-world'), btnExport = document.getElementById('btn-export');
@@ -645,20 +657,16 @@ document.addEventListener('pointerlockchange', () => {
   if (!isLocked) {
     isMiningHeld = false;
     if (typeof isShieldBlocking !== 'undefined' && isShieldBlocking) toggleShieldBlock(false);
-  } else {
-    menuOpen = false; overlayEl.classList.add('hidden');
-  }
+  } else { menuOpen = false; overlayEl.classList.add('hidden'); }
 });
 
 rngDist.addEventListener('input', (e) => {
-  renderDistance = parseInt(e.target.value, 10);
-  lblDist.textContent = `${renderDistance} chunks`;
+  renderDistance = parseInt(e.target.value, 10); lblDist.textContent = `${renderDistance} chunks`;
   lastPlayerChunkX = null; scene.fog.density = 0.055 / renderDistance;
 });
 
 rngFov.addEventListener('input', (e) => {
-  baseFov = parseInt(e.target.value, 10);
-  lblFov.textContent = `${baseFov}°`;
+  baseFov = parseInt(e.target.value, 10); lblFov.textContent = `${baseFov}°`;
   if (!isZoomed) { camera.fov = baseFov; camera.updateProjectionMatrix(); }
 });
 
@@ -689,8 +697,7 @@ function applyWorldSeed(newSeed) {
   for (const t of activeTNTs) scene.remove(t.mesh);
   activeTNTs.length = 0; lastPlayerChunkX = null;
 
-  player.x = 8.5; player.z = 8.5;
-  player.y = findSpawnHeight(player.x, player.z);
+  player.x = 8.5; player.z = 8.5; player.y = findSpawnHeight(player.x, player.z);
   player.health = player.maxHealth; renderHeartsUI();
   const seedInputEl = document.getElementById('seed-input');
   if (seedInputEl) seedInputEl.value = `${worldSeed}`;
@@ -705,10 +712,8 @@ function teleportToBiome(targetBiome) {
       if (generator.getBiomeAt(wx, wz) === targetBiome) {
         const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
         getChunkData(cx, cz); rebuildChunkImmediate(cx, cz);
-        player.x = wx + 0.5; player.z = wz + 0.5;
-        player.y = findSpawnHeight(player.x, player.z);
-        player.vx = 0; player.vy = 0; player.vz = 0; lastPlayerChunkX = null;
-        updateMinimap(0, true);
+        player.x = wx + 0.5; player.z = wz + 0.5; player.y = findSpawnHeight(player.x, player.z);
+        player.vx = 0; player.vy = 0; player.vz = 0; lastPlayerChunkX = null; updateMinimap(0, true);
         return { x: player.x, y: player.y, z: player.z, biome: targetBiome };
       }
     }

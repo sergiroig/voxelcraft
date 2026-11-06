@@ -123,14 +123,66 @@ function applyBoneMealAt(wx, wy, wz) {
 
 function useFishingRod(wx, wy, wz) {
   const tx = wx !== undefined ? wx : Math.floor(player.x - Math.sin(player.yaw) * 2.5);
-  const ty = wy !== undefined ? wy : Math.floor(player.y);
-  const tz = wz !== undefined ? wz : Math.floor(player.z - Math.cos(player.yaw) * 2.5);
-  spawnBlockParticles(tx, ty + 0.5, tz, BLOCK.WATER, 16);
-  sfx.play('splash'); player.swingTime = 1.0;
+  const ty = wy !== undefined ? wy : Math.floor(player.y), tz = wz !== undefined ? wz : Math.floor(player.z - Math.cos(player.yaw) * 2.5);
+  spawnBlockParticles(tx, ty + 0.5, tz, BLOCK.WATER, 16); sfx.play('splash'); player.swingTime = 1.0;
   addInventoryItem(BLOCK.ITEM_RAW_FISH, 1);
   const lbl = document.getElementById('block-label');
   if (lbl) lbl.textContent = '🎣 ¡Has pescado 1× Pescado Crudo (+2❤)!';
   return BLOCK.ITEM_RAW_FISH;
+}
+
+function sleepInBed(wx, wy, wz) {
+  if (typeof setTimeOfDay === 'function') setTimeOfDay(0.25);
+  player.health = Math.min(player.maxHealth, player.health + 4);
+  renderHeartsUI(); sfx.play('chime');
+  if (wx !== undefined) spawnBlockParticles(wx, wy + 0.5, wz, BLOCK.BED, 12);
+  const lbl = document.getElementById('block-label');
+  if (lbl) lbl.textContent = '🛏 ¡Has descansado en la Cama! Amanece y recuperas +4❤';
+  return true;
+}
+
+function useAnvilAt(wx, wy, wz) {
+  const held = getActiveHeldItem();
+  const upMap = { [BLOCK.TOOL_WOOD_PICKAXE]: BLOCK.TOOL_STONE_PICKAXE, [BLOCK.TOOL_STONE_PICKAXE]: BLOCK.TOOL_IRON_PICKAXE, [BLOCK.TOOL_IRON_PICKAXE]: BLOCK.TOOL_PICKAXE, [BLOCK.TOOL_WOOD_SWORD]: BLOCK.TOOL_STONE_SWORD, [BLOCK.TOOL_STONE_SWORD]: BLOCK.TOOL_IRON_SWORD, [BLOCK.TOOL_IRON_SWORD]: BLOCK.TOOL_SWORD };
+  const upgraded = upMap[held] || BLOCK.ITEM_DIAMOND;
+  if (upMap[held] && selectedSlot >= 0) {
+    hotbarSlots[selectedSlot] = upgraded;
+    inventoryCounts[upgraded] = (inventoryCounts[upgraded] || 0) + 1;
+  } else {
+    addInventoryItem(BLOCK.ITEM_IRON_INGOT, 1);
+  }
+  if (wx !== undefined) spawnBlockParticles(wx, wy + 0.6, wz, BLOCK.IRON_BLOCK, 14);
+  sfx.play('shield');
+  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
+  return upgraded;
+}
+
+function useEnchantingTableAt(wx, wy, wz) {
+  player.health = player.maxHealth; renderHeartsUI();
+  addInventoryItem(BLOCK.ITEM_ENDER_PEARL, 1);
+  if (wx !== undefined) spawnBlockParticles(wx, wy + 0.8, wz, BLOCK.AMETHYST, 18);
+  sfx.play('chime');
+  const lbl = document.getElementById('block-label');
+  if (lbl) lbl.textContent = '✨ ¡Mesa de Encantamientos activada! Salud al máximo + 1× Perla de Ender';
+  return BLOCK.ITEM_ENDER_PEARL;
+}
+
+function throwEnderPearl() {
+  if (gameMode === 'survival' && (inventoryCounts[BLOCK.ITEM_ENDER_PEARL] || 0) <= 0) return false;
+  if (gameMode === 'survival') {
+    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_ENDER_PEARL && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
+    inventoryCounts[BLOCK.ITEM_ENDER_PEARL] = Math.max(0, (inventoryCounts[BLOCK.ITEM_ENDER_PEARL] || 1) - 1);
+    if (inventoryCounts[BLOCK.ITEM_ENDER_PEARL] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_ENDER_PEARL) hotbarSlots[selectedSlot] = BLOCK.AIR;
+  }
+  const destX = currentHit ? currentHit.x + currentHit.nx + 0.5 : player.x - Math.sin(player.yaw) * 8.0;
+  const destZ = currentHit ? currentHit.z + currentHit.nz + 0.5 : player.z - Math.cos(player.yaw) * 8.0;
+  const destY = currentHit ? currentHit.y + Math.max(1, currentHit.ny) + 0.2 : findSpawnHeight(destX, destZ);
+  player.x = destX; player.y = destY; player.z = destZ;
+  player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
+  spawnBlockParticles(destX, destY, destZ, BLOCK.PORTAL, 20);
+  sfx.play('portal');
+  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
+  return true;
 }
 
 function toggleShieldBlock(forceState) {
@@ -576,18 +628,12 @@ function updatePlayerPhysics(dt) {
   // Passive health regeneration
   if (player.health < player.maxHealth) {
     player.regenTimer += dt;
-    if (player.regenTimer > 4.0) {
-      player.regenTimer = 0; player.health++; renderHeartsUI();
-    }
+    if (player.regenTimer > 4.0) { player.regenTimer = 0; player.health++; renderHeartsUI(); }
   }
 
   // 1st-person hand bobbing, shield block pose & swing animation
-  if (moveMag > 0.1 && (player.onGround || player.flying)) {
-    player.bobTime += dt * speed * moveMag * 1.6;
-  }
-  if (player.swingTime > 0) {
-    player.swingTime = Math.max(0, player.swingTime - dt * 5.0);
-  }
+  if (moveMag > 0.1 && (player.onGround || player.flying)) player.bobTime += dt * speed * moveMag * 1.6;
+  if (player.swingTime > 0) player.swingTime = Math.max(0, player.swingTime - dt * 5.0);
   const swingAngle = Math.sin(player.swingTime * Math.PI);
   if (isShieldBlocking) {
     handGroup.position.set(0.18, -0.22, -0.46);
@@ -604,35 +650,26 @@ function updatePlayerPhysics(dt) {
   // Update 3rd-person player avatar position & limb animations
   playerAvatar.position.set(player.x, player.y, player.z);
   playerAvatar.rotation.y = player.yaw;
-  const av = playerAvatar.userData;
-  const limbSwing = moveMag > 0.08 ? Math.sin(player.bobTime * 1.2) * 0.65 : 0;
-  av.leftLeg.rotation.x  =  limbSwing;
-  av.rightLeg.rotation.x = -limbSwing;
-  av.leftArm.rotation.x  = -limbSwing * 0.8;
-  av.rightArm.rotation.x =  limbSwing * 0.8 - swingAngle * 1.25;
+  const av = playerAvatar.userData, limbSwing = moveMag > 0.08 ? Math.sin(player.bobTime * 1.2) * 0.65 : 0;
+  av.leftLeg.rotation.x  =  limbSwing; av.rightLeg.rotation.x = -limbSwing;
+  av.leftArm.rotation.x  = -limbSwing * 0.8; av.rightArm.rotation.x = limbSwing * 0.8 - swingAngle * 1.25;
   av.head.rotation.x     =  player.pitch * 0.65;
 
   const eyeX = player.x, eyeY = player.y + player.eyeHeight, eyeZ = player.z;
   if (thirdPersonMode) {
-    const backX =  Math.sin(player.yaw) * Math.cos(player.pitch);
-    const backY = -Math.sin(player.pitch);
-    const backZ =  Math.cos(player.yaw) * Math.cos(player.pitch);
-    const maxCamDist = 3.6;
-    let camDist = maxCamDist;
-    const wallHit = raycastVoxel(eyeX, eyeY, eyeZ, backX, backY, backZ, maxCamDist);
+    const backX = Math.sin(player.yaw) * Math.cos(player.pitch), backY = -Math.sin(player.pitch), backZ = Math.cos(player.yaw) * Math.cos(player.pitch);
+    let camDist = 3.6;
+    const wallHit = raycastVoxel(eyeX, eyeY, eyeZ, backX, backY, backZ, 3.6);
     if (wallHit && BLOCK_DEFS[wallHit.block].solid) {
       const hitDist = Math.hypot(wallHit.x + 0.5 - eyeX, wallHit.y + 0.5 - eyeY, wallHit.z + 0.5 - eyeZ);
-      camDist = Math.max(0.45, Math.min(maxCamDist, hitDist - 0.55));
+      camDist = Math.max(0.45, Math.min(3.6, hitDist - 0.55));
     }
     camera.position.set(eyeX + backX * camDist, eyeY + backY * camDist, eyeZ + backZ * camDist);
   } else {
     camera.position.set(eyeX, eyeY, eyeZ);
   }
 
-  camera.rotation.order = 'YXZ';
-  camera.rotation.y = player.yaw;
-  camera.rotation.x = player.pitch;
-
+  camera.rotation.order = 'YXZ'; camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
   const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
   document.getElementById('water-overlay').style.display = headBlock === BLOCK.WATER ? 'block' : 'none';
 }
@@ -658,9 +695,9 @@ function updateMining(dt, currentHit) {
   if (key !== mineTargetKey) { mineTargetKey = key; mineProgress = 0; }
 
   const def = BLOCK_DEFS[currentHit.block], b = currentHit.block, heldId = getActiveHeldItem();
-  const isWoodLike = b === BLOCK.WOOD || b === BLOCK.PLANKS || b === BLOCK.CRAFTING_TABLE || b === BLOCK.CHEST || b === BLOCK.BOOKSHELF || b === BLOCK.DOOR_CLOSED || b === BLOCK.TRAPDOOR_CLOSED || b === BLOCK.LADDER;
-  const isEarthLike = b === BLOCK.GRASS || b === BLOCK.DIRT || b === BLOCK.SAND || b === BLOCK.SNOW;
-  const isFoliage = b === BLOCK.LEAVES || b === BLOCK.TALL_GRASS || b === BLOCK.FLOWER_RED || b === BLOCK.FLOWER_YELLOW || b === BLOCK.LILY_PAD;
+  const isWoodLike = b === BLOCK.WOOD || b === BLOCK.PLANKS || b === BLOCK.CRAFTING_TABLE || b === BLOCK.CHEST || b === BLOCK.BOOKSHELF || b === BLOCK.BED || b === BLOCK.DOOR_CLOSED || b === BLOCK.TRAPDOOR_CLOSED || b === BLOCK.LADDER;
+  const isEarthLike = b === BLOCK.GRASS || b === BLOCK.DIRT || b === BLOCK.SAND || b === BLOCK.GRAVEL || b === BLOCK.CLAY || b === BLOCK.SNOW;
+  const isFoliage = b === BLOCK.LEAVES || b === BLOCK.WOOL || b === BLOCK.TALL_GRASS || b === BLOCK.FLOWER_RED || b === BLOCK.FLOWER_YELLOW || b === BLOCK.LILY_PAD;
   let speedMult = def.stoneLike ? 0.35 : 0.55;
   if (isPickaxeItem(heldId)) {
     const pMult = heldId === BLOCK.TOOL_GOLD_PICKAXE ? 4.2 : (heldId === BLOCK.TOOL_PICKAXE ? 3.5 : (heldId === BLOCK.TOOL_IRON_PICKAXE ? 2.9 : (heldId === BLOCK.TOOL_STONE_PICKAXE ? 2.3 : 1.7)));
@@ -690,8 +727,7 @@ function updateMining(dt, currentHit) {
     crackBox.visible = false; mineBarWrap.style.display = 'none';
   } else {
     const stage = Math.min(7, Math.floor(mineProgress * 8));
-    crackMat.map = crackTextures[stage];
-    crackMat.needsUpdate = true;
+    crackMat.map = crackTextures[stage]; crackMat.needsUpdate = true;
     crackBox.position.set(currentHit.x + 0.5, currentHit.y + 0.5, currentHit.z + 0.5);
     crackBox.visible = def.shape === 'cube';
     mineBarWrap.style.display = 'block';
@@ -702,8 +738,7 @@ function updateMining(dt, currentHit) {
 // ============================================================================
 // 11. STREAMING CHUNK MANAGER
 // ============================================================================
-let lastPlayerChunkX = null;
-let lastPlayerChunkZ = null;
+let lastPlayerChunkX = null, lastPlayerChunkZ = null;
 
 function updateChunkStreaming() {
   const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
@@ -713,31 +748,20 @@ function updateChunkStreaming() {
     const maxDistSq = (renderDistance + 0.5) * (renderDistance + 0.5);
 
     for (let i = buildQueue.length - 1; i >= 0; i--) {
-      const qCh = buildQueue[i];
-      const qdx = qCh.cx - pcx, qdz = qCh.cz - pcz;
-      if (qdx * qdx + qdz * qdz > maxDistSq) {
-        qCh.queued = false;
-        buildQueue.splice(i, 1);
-      }
+      const qCh = buildQueue[i], qdx = qCh.cx - pcx, qdz = qCh.cz - pcz;
+      if (qdx * qdx + qdz * qdz > maxDistSq) { qCh.queued = false; buildQueue.splice(i, 1); }
     }
 
     for (let dz = -renderDistance; dz <= renderDistance; dz++) {
       for (let dx = -renderDistance; dx <= renderDistance; dx++) {
         if (dx * dx + dz * dz > maxDistSq) continue;
         const ch = getChunkData(pcx + dx, pcz + dz);
-        if (ch.dirty && !ch.queued) {
-          ch.queued = true;
-          buildQueue.push(ch);
-        }
+        if (ch.dirty && !ch.queued) { ch.queued = true; buildQueue.push(ch); }
       }
     }
 
     if (buildQueue.length > 1) {
-      buildQueue.sort((a, b) => {
-        const da = (a.cx - pcx) * (a.cx - pcx) + (a.cz - pcz) * (a.cz - pcz);
-        const db = (b.cx - pcx) * (b.cx - pcx) + (b.cz - pcz) * (b.cz - pcz);
-        return da - db;
-      });
+      buildQueue.sort((a, b) => ((a.cx - pcx) ** 2 + (a.cz - pcz) ** 2) - ((b.cx - pcx) ** 2 + (b.cz - pcz) ** 2));
     }
 
     const unloadDistSq = (renderDistance + 2) * (renderDistance + 2);
@@ -754,18 +778,13 @@ function updateChunkStreaming() {
   const budgetStart = performance.now();
   while (buildQueue.length > 0 && (performance.now() - budgetStart) < 4.5) {
     const nextCh = buildQueue[0];
-    if (!chunks.has(chunkKey(nextCh.cx, nextCh.cz))) {
-      buildQueue.shift();
-      continue;
-    }
+    if (!chunks.has(chunkKey(nextCh.cx, nextCh.cz))) { buildQueue.shift(); continue; }
     const dx = nextCh.cx - pcx, dz = nextCh.cz - pcz;
     if (meshWorker && (dx * dx + dz * dz) > 2) {
       if (workerJobsInFlight >= 8) break;
-      buildQueue.shift();
-      requestChunkMeshWorker(nextCh.cx, nextCh.cz);
+      buildQueue.shift(); requestChunkMeshWorker(nextCh.cx, nextCh.cz);
     } else {
-      buildQueue.shift();
-      rebuildChunkImmediate(nextCh.cx, nextCh.cz);
+      buildQueue.shift(); rebuildChunkImmediate(nextCh.cx, nextCh.cz);
     }
   }
 }
