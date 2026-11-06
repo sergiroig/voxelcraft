@@ -2588,7 +2588,7 @@
           vc.setVoxelGlobal(12, 49, 12, vc.BLOCK.STONE);
           vc.setVoxelGlobal(11, 47, 12, vc.BLOCK.STONE);
           const spider = vc.spawnMob('spider', 11.4, 48.0, 12.5);
-          spider.yaw = Math.PI / 2; // +X hacia el muro en x=12
+          spider.yaw = Math.PI / 2; spider.targetYaw = Math.PI / 2; // +X hacia el muro en x=12
           spider.speed = 3.2;
           vc.updateMobs(0.05);
           assert(spider.vy >= 4.5, `La Araña debe trepar paredes verticales al colisionar en X/Z (vy=${spider.vy})`);
@@ -3231,6 +3231,96 @@
               assert(spec.tiles.includes(mappedTile) || (mobType === 'cow' && mappedTile === 8), `La cara frontal de '${gName}' debe mapear su UV a un tile válido de '${mobType}' (tile=${mappedTile})`);
             }
           }
+        });
+
+        it('Garantiza cobertura 100% de los 52 ítems (100..151) en drawItemIcon y audita sus sprites 16×16 estilo Minecraft Default Pack', () => {
+          const B = vc.BLOCK;
+          // REGLA AGENTS.md: Cualquier ítem nuevo (id >= 100) añadido a BLOCK DEBE registrarse en EXPECTED_ITEM_ICON_CONTRACT con su firma pixel-art.
+          const EXPECTED_ITEM_ICON_CONTRACT = {
+            [B.TOOL_PICKAXE]:              (px) => px(5, 10)[0] > 110 && px(11, 2)[2] > 230 && px(8, 2)[2] > 245,
+            [B.TOOL_WOOD_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 150 && px(11, 2)[2] < 30,
+            [B.TOOL_STONE_PICKAXE]:        (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 130 && Math.abs(px(11, 2)[0] - px(11, 2)[1]) < 30,
+            [B.TOOL_IRON_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 215 && px(8, 2)[0] > 245,
+            [B.TOOL_GOLD_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 235 && px(11, 2)[1] > 190 && px(11, 2)[2] < 50,
+            [B.TOOL_SWORD]:                (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[2] > 230,
+            [B.TOOL_WOOD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 150 && px(10, 5)[2] < 30,
+            [B.TOOL_STONE_SWORD]:          (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 130 && Math.abs(px(10, 5)[0] - px(10, 5)[1]) < 30,
+            [B.TOOL_IRON_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 215,
+            [B.TOOL_GOLD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(11, 5)[0] > 235 && px(11, 5)[2] < 50,
+            [B.TOOL_AXE]:                  (px) => px(5, 10)[0] > 110 && px(10, 4)[2] > 230 && px(8, 2)[2] > 245,
+            [B.TOOL_SHOVEL]:               (px) => px(5, 10)[0] > 110 && px(12, 3)[2] > 230 && px(11, 2)[2] > 245,
+            [B.TOOL_HOE]:                  (px) => px(5, 10)[0] > 110 && px(11, 2)[2] > 230 && px(13, 6)[3] === 0,
+            [B.TOOL_SHEARS]:               (px) => px(3, 12)[0] > 150 && px(8, 6)[0] > 215 && px(6, 6)[0] > 245,
+            [B.TOOL_FLINT_AND_STEEL]:      (px) => px(4, 4)[0] > 190 && px(11, 10)[0] < 70 && px(7, 3)[0] > 235,
+            [B.TOOL_FISHING_ROD]:          (px) => px(5, 10)[0] > 110 && px(13, 7)[0] > 190 && px(13, 12)[0] > 220 && px(13, 12)[1] < 90,
+            [B.TOOL_BOW]:                  (px) => px(4, 5)[0] > 190 && px(9, 6)[0] > 130 && px(7, 7)[0] > 235,
+            [B.TOOL_GRAPPLING_HOOK]:       (px) => px(5, 10)[0] > 190 && px(10, 3)[0] > 175 && px(10, 3)[2] > 235,
+            [B.ITEM_STICK]:                (px) => px(6, 9)[0] > 110 && px(6, 9)[2] < 70 && px(2, 2)[3] === 0,
+            [B.ITEM_COAL]:                 (px) => px(9, 9)[0] < 70 && px(5, 5)[0] > 85 && px(3, 3)[0] < 25,
+            [B.ITEM_IRON_INGOT]:           (px) => px(7, 7)[0] > 215 && px(4, 6)[0] > 245 && px(2, 10)[0] < 120,
+            [B.ITEM_GOLD_INGOT]:           (px) => px(9, 7)[0] > 235 && px(9, 7)[1] > 190 && px(9, 7)[2] < 50 && px(4, 6)[0] > 245,
+            [B.ITEM_DIAMOND]:              (px) => px(7, 7)[2] > 230 && px(6, 5)[0] > 210 && px(4, 2)[2] > 140,
+            [B.ITEM_EMERALD]:              (px) => px(7, 7)[1] > 175 && px(7, 7)[0] < 40 && px(6, 4)[1] > 230,
+            [B.ITEM_ENDER_PEARL]:          (px) => px(7, 7)[1] > 130 && px(7, 7)[2] > 120 && px(5, 5)[1] > 220,
+            [B.ITEM_BONE]:                 (px) => px(7, 8)[0] > 190 && px(3, 12)[0] > 245 && px(11, 3)[0] > 245,
+            [B.ITEM_BONE_MEAL]:            (px) => px(7, 7)[0] > 245 && px(3, 9)[0] > 180 && px(7, 2)[3] === 0,
+            [B.ITEM_BUCKET]:               (px) => px(7, 8)[0] > 190 && px(7, 4)[0] < 90 && px(7, 4)[2] < 110,
+            [B.ITEM_WATER_BUCKET]:         (px) => px(7, 8)[0] > 190 && px(10, 5)[2] > 210 && px(10, 5)[0] < 60,
+            [B.ITEM_LAVA_BUCKET]:          (px) => px(7, 8)[0] > 190 && px(10, 5)[0] > 230 && px(10, 5)[2] < 50,
+            [B.ARMOR_IRON_HELMET]:         (px) => px(7, 5)[0] > 215 && px(7, 10)[0] < 120 && px(3, 9)[0] > 215,
+            [B.ARMOR_IRON_CHESTPLATE]:     (px) => px(7, 9)[0] > 215 && px(3, 4)[0] > 215 && px(7, 3)[0] < 120,
+            [B.ARMOR_IRON_LEGGINGS]:       (px) => px(7, 4)[0] > 215 && px(5, 10)[0] > 215 && px(7, 10)[0] < 120,
+            [B.ARMOR_IRON_BOOTS]:          (px) => px(4, 10)[0] > 215 && px(11, 10)[0] > 215 && px(7, 3)[3] === 0,
+            [B.ARMOR_DIAMOND_HELMET]:      (px) => px(7, 5)[2] > 230 && px(7, 10)[1] < 150 && px(3, 9)[2] > 230,
+            [B.ARMOR_DIAMOND_CHESTPLATE]:  (px) => px(7, 9)[2] > 230 && px(3, 4)[2] > 230 && px(7, 3)[1] < 150,
+            [B.ARMOR_DIAMOND_LEGGINGS]:    (px) => px(7, 4)[2] > 230 && px(5, 10)[2] > 230 && px(7, 10)[1] < 150,
+            [B.ARMOR_DIAMOND_BOOTS]:       (px) => px(4, 10)[2] > 230 && px(11, 10)[2] > 230 && px(7, 3)[3] === 0,
+            [B.ITEM_APPLE]:                (px) => px(9, 2)[1] > 180 && px(7, 8)[0] > 220 && px(7, 8)[1] < 80,
+            [B.ITEM_GOLDEN_APPLE]:         (px) => px(9, 2)[1] > 180 && px(7, 8)[0] > 220 && px(7, 8)[1] > 165,
+            [B.ITEM_BREAD]:                (px) => px(7, 7)[0] > 235 && px(7, 7)[1] > 175 && px(3, 9)[0] > 195,
+            [B.ITEM_RAW_PORKCHOP]:         (px) => px(6, 7)[0] > 240 && px(6, 7)[1] > 150 && px(9, 6)[0] > 245,
+            [B.ITEM_COOKED_PORKCHOP]:      (px) => px(6, 7)[0] > 230 && px(6, 7)[2] < 40 && px(9, 6)[0] > 245,
+            [B.ITEM_RAW_FISH]:             (px) => px(7, 7)[2] > 235 && px(4, 6)[0] < 30 && px(12, 5)[2] > 180,
+            [B.ITEM_COOKED_FISH]:          (px) => px(7, 7)[0] > 235 && px(7, 7)[2] < 60 && px(4, 6)[0] < 30,
+            [B.ITEM_MINECART]:             (px) => px(3, 7)[0] > 190 && px(7, 7)[0] < 90 && px(4, 12)[0] < 45,
+            [B.ITEM_BOAT]:                 (px) => px(7, 9)[0] > 195 && px(6, 4)[0] > 240 && px(2, 10)[0] < 135,
+            [B.ITEM_COMPASS]:              (px) => px(7, 7)[0] > 220 && px(7, 7)[1] < 80 && px(5, 5)[0] > 190,
+            [B.ITEM_CLOCK]:                (px) => px(4, 4)[0] > 235 && px(4, 4)[1] > 190 && px(5, 5)[2] > 180,
+            [B.ITEM_PAPER]:                (px) => px(6, 3)[0] > 240 && px(5, 4)[0] < 170 && px(1, 1)[3] === 0,
+            [B.ITEM_EMPTY_MAP]:            (px) => px(5, 4)[0] > 215 && px(7, 7)[0] > 165 && px(7, 7)[2] < 40,
+            [B.ITEM_MAP]:                  (px) => px(7, 7)[0] > 220 && px(7, 7)[1] < 80 && px(1, 1)[0] < 90
+          };
+
+          // 1) Guardián de Completitud: cualquier ítem (id >= 100) en BLOCK debe estar en EXPECTED_ITEM_ICON_CONTRACT
+          const allItemEntries = Object.entries(B).filter(([, id]) => id >= 100);
+          assert(allItemEntries.length >= 52, `Deben existir al menos 52 ítems en BLOCK (encontrados: ${allItemEntries.length})`);
+          vc.setTimeOfDay(0.0);
+          const cv = doc.createElement('canvas'); cv.width = 16; cv.height = 16;
+          const ctx = cv.getContext('2d');
+
+          for (const [key, id] of allItemEntries) {
+            const checkFn = EXPECTED_ITEM_ICON_CONTRACT[id];
+            assert(checkFn !== undefined, `El ítem BLOCK.${key} (id=${id}) no está registrado en EXPECTED_ITEM_ICON_CONTRACT de Suite 52. Regla AGENTS.md: añade su contrato visual`);
+            delete vc.enchantedItems[id];
+            vc.drawItemIcon(cv, id);
+            const data = ctx.getImageData(0, 0, 16, 16).data;
+            const px = (x, y) => {
+              const o = (y * 16 + x) * 4;
+              return [data[o], data[o + 1], data[o + 2], data[o + 3]];
+            };
+            let opaqueCount = 0;
+            const palette = new Set();
+            for (let i = 0; i < 256; i++) {
+              if (data[i * 4 + 3] > 0) {
+                opaqueCount++;
+                palette.add(`${data[i * 4]},${data[i * 4 + 1]},${data[i * 4 + 2]}`);
+              }
+            }
+            assert(px(0, 0)[3] === 0 && px(15, 15)[3] === 0, `El icono de BLOCK.${key} (id=${id}) debe tener silueta recortada con esquinas (0,0) y (15,15) transparentes`);
+            assert(opaqueCount >= 18 && palette.size >= 3, `El icono de BLOCK.${key} (id=${id}) debe tener sombreado pixel-art multicapa (>=3 tonos, obtuvo ${palette.size} tonos y ${opaqueCount} píxeles)`);
+            assert(checkFn(px) === true, `La firma pixel-art estilo Minecraft Default Pack de BLOCK.${key} (id=${id}) no cumple el contrato`);
+          }
+          vc.setTimeOfDay(5.82);
         });
       });
 
