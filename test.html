@@ -2288,6 +2288,13 @@
                 sInfo.topBlock !== vc.BLOCK.BRICK && sInfo.topBlock !== vc.BLOCK.YELLOW_TERRACOTTA && sInfo.topBlock !== vc.BLOCK.RED_TERRACOTTA,
                 'El suelo del bioma Meseta debe usar una paleta cálida coherente (Arena Roja, Terracota y Terracota Naranja en capas de 4 bloques), sin ladrillos ni franjas amarillas estridentes'
               );
+              const chData = gen.generateChunkVoxels(Math.floor(vc.player.x / 16), Math.floor(vc.player.z / 16), null);
+              let cobbleAboveSurface = 0;
+              for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+                const sy = gen.sampleSurfaceAt(Math.floor(vc.player.x / 16) * 16 + x, Math.floor(vc.player.z / 16) * 16 + z).groundY;
+                if (chData[(z * 16 + x) * 64 + sy + 2] === vc.BLOCK.COBBLE) cobbleAboveSurface++;
+              }
+              assert(cobbleAboveSurface === 0, 'El terreno natural no debe sembrarse con grupitos artificiales de adoquín (boulder) sobre la superficie');
             }
           }
 

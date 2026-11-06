@@ -381,7 +381,7 @@ function createWorldGenerator(seed) {
       } else if (validSurface && isCabinChunk(cx, cz)) {
         placeStructureInChunk(data, surfaceMap, cx, cz, 'cabin');
         surfaceStructType = 'cabin';
-      } else if (validSurface && (structHash % 44 === 0)) {
+      } else if (validSurface && (structHash % 140 === 0)) {
         const variant = (structHash >>> 4) & 3;
         const sType = variant === 3 ? 'ruined_portal'
           : ((centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
@@ -395,7 +395,7 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 4B: Biome-Specific Trees, Environmental Formations & Surface Flora (skipping structure footprints)
+    // Step 4B: Biome-Specific Trees & Surface Flora (skipping structure footprints)
     for (let lz = 2; lz < CHUNK_SIZE - 2; lz++) {
       for (let lx = 2; lx < CHUNK_SIZE - 2; lx++) {
         if (surfaceStructType === 'village') continue;
@@ -406,32 +406,19 @@ function createWorldGenerator(seed) {
         const r = hash3D(wx, sy, wz), biome = getBiomeAt(wx, wz);
 
         if (biome === 'Desierto' || biome === 'Meseta') {
-          if (r > 0.984 && (topBlock === BLOCK.SAND || topBlock === BLOCK.RED_SAND)) {
+          if (r > 0.986 && (topBlock === BLOCK.SAND || topBlock === BLOCK.RED_SAND)) {
             const ch = 2 + ((r * 100) & 1);
             for (let ty = 1; ty <= ch; ty++) data[colOffset + sy + ty] = BLOCK.CACTUS;
-          } else if (biome === 'Meseta' && r > 0.986 && data[colOffset + sy + 1] === BLOCK.AIR) {
+          } else if (biome === 'Meseta' && r > 0.988 && data[colOffset + sy + 1] === BLOCK.AIR) {
             data[colOffset + sy + 1] = BLOCK.DEAD_BUSH || BLOCK.TALL_GRASS;
-          } else if (biome === 'Desierto' && r < 0.0025 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, 'oasis');
-          } else if (notOriginChunk && r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, 'lava_pool');
-          } else if (biome === 'Meseta' && r < 0.006) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
           }
         } else if (biome === 'Cumbres Heladas') {
-          if (r > 0.986) placeEnvFeatureInChunk(data, lx, sy, lz, 'ice_spike');
-          else if (r > 0.980 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
+          if (r > 0.982 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) placeTreeInChunk(data, lx, sy, lz, 'pine', r);
         } else if (topBlock === BLOCK.GRASS || topBlock === BLOCK.SNOW) {
           const treeThr = biome === 'Jungla' ? 0.962 : (biome === 'Bosque' ? 0.974 : (biome === 'Taiga Nevada' ? 0.978 : (biome === 'Pantano' ? 0.980 : 0.988)));
           const treeType = (biome === 'Taiga Nevada') ? 'pine' : (biome === 'Jungla' ? 'jungle' : (biome === 'Sabana' ? 'acacia' : (biome === 'Pantano' ? 'swamp' : 'oak')));
           if (r > treeThr && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeTreeInChunk(data, lx, sy, lz, treeType, r);
-          } else if (r > treeThr - 0.003 && (biome === 'Bosque' || biome === 'Taiga Nevada')) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, 'fallen_log');
-          } else if (r > treeThr - 0.005 && (biome === 'Taiga Nevada' || biome === 'Llanura')) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
-          } else if (r > treeThr - 0.0065 && sy > SEA_LEVEL + 2 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, (biome === 'Sabana' && notOriginChunk) ? 'lava_pool' : 'water_spring');
           } else if (topBlock === BLOCK.GRASS && data[colOffset + sy + 1] === BLOCK.AIR) {
             const grassLim = (biome === 'Jungla' || biome === 'Sabana') ? 0.16 : 0.085;
             if (r < grassLim) data[colOffset + sy + 1] = BLOCK.TALL_GRASS;
