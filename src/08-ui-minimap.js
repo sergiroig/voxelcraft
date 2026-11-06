@@ -660,8 +660,10 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 rngDist.addEventListener('input', (e) => {
-  renderDistance = parseInt(e.target.value, 10); lblDist.textContent = `${renderDistance} chunks`;
-  lastPlayerChunkX = null; scene.fog.density = 0.055 / renderDistance;
+  renderDistance = parseInt(e.target.value, 10); lblDist.textContent = `${renderDistance} chunks (+6 horiz.)`;
+  lastPlayerChunkX = null; scene.fog.density = 0.042 / (renderDistance + 2.6);
+  camera.far = Math.max(320, (renderDistance + 7) * CHUNK_SIZE * 1.35); camera.updateProjectionMatrix();
+  if (typeof updateFarHorizon === 'function') updateFarHorizon(true);
 });
 
 rngFov.addEventListener('input', (e) => {
@@ -697,6 +699,7 @@ function applyWorldSeed(newSeed) {
   activeTNTs.length = 0; lastPlayerChunkX = null;
 
   player.x = 8.5; player.z = 8.5; player.y = findSpawnHeight(player.x, player.z);
+  if (typeof updateFarHorizon === 'function') updateFarHorizon(true);
   player.health = player.maxHealth; player.hunger = player.maxHunger || 10; player.exhaustion = 0; renderHeartsUI();
   const seedInputEl = document.getElementById('seed-input');
   if (seedInputEl) seedInputEl.value = `${worldSeed}`;

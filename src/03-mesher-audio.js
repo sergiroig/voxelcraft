@@ -81,7 +81,7 @@ const scratchWUV  = new Float32Array(12000 * 2);
 const scratchWCol = new Float32Array(12000 * 3);
 const scratchWIdx = new Uint32Array((12000 / 4) * 6);
 
-function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor) {
+function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor, lodLevel = 0) {
   let vCount = 0, iCount = 0;
   let wvCount = 0, wiCount = 0;
 
@@ -89,12 +89,13 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
   const wz0 = cz * CHUNK_SIZE;
   const uvStep = 1.0 / ATLAS_COLS;
   const uvPad = 0.0015 / ATLAS_COLS;
+  const yStart = lodLevel > 0 ? Math.max(0, SEA_LEVEL - 4) : 0;
 
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     const wz = wz0 + lz;
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const wx = wx0 + lx;
-      for (let y = 0; y < CHUNK_HEIGHT; y++) {
+      for (let y = yStart; y < CHUNK_HEIGHT; y++) {
         const blockId = getVoxelGlobal(wx, y, wz);
         if (blockId === BLOCK.AIR) continue;
 
@@ -102,6 +103,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
 
         // Cross-Quad Geometry (Torches, Tall Grass, Flowers, Lily Pads)
         if (def.shape === 'cross') {
+          if (lodLevel > 0 && blockId !== BLOCK.TORCH) continue;
           const tileIdx = def.tiles[0];
           const u0 = tileIdx * uvStep + uvPad;
           const u1 = (tileIdx + 1) * uvStep - uvPad;
@@ -153,6 +155,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
         const isGlow = def.light > 0;
 
         for (let f = 0; f < 6; f++) {
+          if (lodLevel > 0 && f === 1) continue;
           const face = FACES[f];
           const nx = wx + face.dir[0];
           const ny = y + face.dir[1];
@@ -228,27 +231,29 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor)
               scratchUV[uvIdx]     = corner[3] === 0 ? u0 : u1;
               scratchUV[uvIdx + 1] = 1.0 - corner[4];
 
-              let aoFactor = 1.0;
-              if (!isGlow) {
-                const aoOff = face.ao[c];
-                const s1 = BLOCK_DEFS[getVoxelGlobal(wx + aoOff[0][0], y + aoOff[0][1], wz + aoOff[0][2])].opaque ? 1 : 0;
-                const s2 = BLOCK_DEFS[getVoxelGlobal(wx + aoOff[1][0], y + aoOff[1][1], wz + aoOff[1][2])].opaque ? 1 : 0;
-                const sc = BLOCK_DEFS[getVoxelGlobal(wx + aoOff[2][0], y + aoOff[2][1], wz + aoOff[2][2])].opaque ? 1 : 0;
-                const aoLevel = (s1 && s2) ? 0 : (3 - (s1 + s2 + sc));
-                aoScores[c] = aoLevel;
-                aoFactor = face.shade * AO_CURVE[aoLevel];
+              let aoFactor = 1.0, touchesWood = false;
+              if (lodLevel > 0) {
+                aoFactor = isGlow ? 1.0 : face.shade * 0.92;
+              } else {
+                if (!isGlow) {
+                  const aoOff = face.ao[c];
+                  const s1 = BLOCK_DEFS[getVoxelGlobal(wx + aoOff[0][0], y + aoOff[0][1], wz + aoOff[0][2])].opaque ? 1 : 0;
+                  const s2 = BLOCK_DEFS[getVoxelGlobal(wx + aoOff[1][0], y + aoOff[1][1], wz + aoOff[1][2])].opaque ? 1 : 0;
+                  const sc = BLOCK_DEFS[getVoxelGlobal(wx + aoOff[2][0], y + aoOff[2][1], wz + aoOff[2][2])].opaque ? 1 : 0;
+                  const aoLevel = (s1 && s2) ? 0 : (3 - (s1 + s2 + sc));
+                  aoScores[c] = aoLevel;
+                  aoFactor = face.shade * AO_CURVE[aoLevel];
+                }
+                if (isLeaves) {
+                  const vx = wx + corner[0], vy = y + corner[1], vz = wz + corner[2];
+                  touchesWood = (
+                    getVoxelGlobal(vx - 1, vy - 1, vz - 1) === BLOCK.WOOD || getVoxelGlobal(vx, vy - 1, vz - 1) === BLOCK.WOOD ||
+                    getVoxelGlobal(vx - 1, vy,     vz - 1) === BLOCK.WOOD || getVoxelGlobal(vx, vy,     vz - 1) === BLOCK.WOOD ||
+                    getVoxelGlobal(vx - 1, vy - 1, vz)     === BLOCK.WOOD || getVoxelGlobal(vx, vy - 1, vz)     === BLOCK.WOOD ||
+                    getVoxelGlobal(vx - 1, vy,     vz)     === BLOCK.WOOD || getVoxelGlobal(vx, vy,     vz)     === BLOCK.WOOD
+                  );
+                }
               }
-              const vx = wx + corner[0], vy = y + corner[1], vz = wz + corner[2];
-              const touchesWood = isLeaves && (
-                getVoxelGlobal(vx - 1, vy - 1, vz - 1) === BLOCK.WOOD ||
-                getVoxelGlobal(vx,     vy - 1, vz - 1) === BLOCK.WOOD ||
-                getVoxelGlobal(vx - 1, vy,     vz - 1) === BLOCK.WOOD ||
-                getVoxelGlobal(vx,     vy,     vz - 1) === BLOCK.WOOD ||
-                getVoxelGlobal(vx - 1, vy - 1, vz)     === BLOCK.WOOD ||
-                getVoxelGlobal(vx,     vy - 1, vz)     === BLOCK.WOOD ||
-                getVoxelGlobal(vx - 1, vy,     vz)     === BLOCK.WOOD ||
-                getVoxelGlobal(vx,     vy,     vz)     === BLOCK.WOOD
-              );
               scratchCol[pIdx]     = (touchesWood ? -1 : 1) * aoFactor * baseR;
               scratchCol[pIdx + 1] = aoFactor * baseG;
               scratchCol[pIdx + 2] = aoFactor * baseB;

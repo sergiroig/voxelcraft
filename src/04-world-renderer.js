@@ -200,9 +200,9 @@ const cloudColDay      = new THREE.Color(0xf8fafc);
 const cloudColSunset   = new THREE.Color(0xfdba8c);
 const cloudColNight    = new THREE.Color(0x263147);
 scene.background = currentSkyColor.clone();
-scene.fog = new THREE.FogExp2(0x6ec6ff, 0.012);
+scene.fog = new THREE.FogExp2(0x6ec6ff, 0.0055);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 220);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 360);
 scene.add(camera);
 
 const { texture: atlasTexture, canvas: atlasCanvas } = createProceduralAtlas();
@@ -779,6 +779,10 @@ function updateDynamicSky(dt) {
     gpuShaderUniforms.uSunLightColor.value.set(0.18, 0.22, 0.34);
   }
   gpuShaderUniforms.uSunFactor.value = sunFactor;
+  if (typeof farHorizonMesh !== 'undefined') {
+    const sc = gpuShaderUniforms.uSunLightColor.value;
+    farHorizonMesh.material.color.setRGB(sc.x * sunFactor, sc.y * sunFactor, sc.z * sunFactor);
+  }
   if (!isCameraUnderwater) { scene.background.copy(currentSkyColor); scene.fog.color.copy(currentSkyColor); }
 
   starMat.opacity = THREE.MathUtils.clamp((0.14 - sunElev) * 3.8, 0, 0.88);

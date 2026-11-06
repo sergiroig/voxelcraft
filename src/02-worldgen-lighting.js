@@ -41,51 +41,26 @@ function createWorldGenerator(seed) {
   };
 
   function noise2D(x, y) {
-    const X = Math.floor(x) & 255;
-    const Y = Math.floor(y) & 255;
-    x -= Math.floor(x);
-    y -= Math.floor(y);
-    const u = fade(x);
-    const v = fade(y);
-    const A = p[X] + Y;
-    const B = p[X + 1] + Y;
-    return lerp(
-      v,
-      lerp(u, grad2(p[A], x, y), grad2(p[B], x - 1, y)),
-      lerp(u, grad2(p[A + 1], x, y - 1), grad2(p[B + 1], x - 1, y - 1))
-    ) * 0.35;
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+    x -= Math.floor(x); y -= Math.floor(y);
+    const u = fade(x), v = fade(y), A = p[X] + Y, B = p[X + 1] + Y;
+    return lerp(v, lerp(u, grad2(p[A], x, y), grad2(p[B], x - 1, y)), lerp(u, grad2(p[A + 1], x, y - 1), grad2(p[B + 1], x - 1, y - 1))) * 0.35;
   }
 
   function noise3D(x, y, z) {
-    const X = Math.floor(x) & 255;
-    const Y = Math.floor(y) & 255;
-    const Z = Math.floor(z) & 255;
-    x -= Math.floor(x);
-    y -= Math.floor(y);
-    z -= Math.floor(z);
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+    x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
     const u = fade(x), v = fade(y), w = fade(z);
-    const A  = p[X] + Y,     AA = p[A] + Z,     AB = p[A + 1] + Z;
-    const B  = p[X + 1] + Y, BA = p[B] + Z,     BB = p[B + 1] + Z;
+    const A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z, B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
     return lerp(w,
-      lerp(v,
-        lerp(u, grad3(p[AA], x, y, z),     grad3(p[BA], x - 1, y, z)),
-        lerp(u, grad3(p[AB], x, y - 1, z), grad3(p[BB], x - 1, y - 1, z))
-      ),
-      lerp(v,
-        lerp(u, grad3(p[AA + 1], x, y, z - 1),     grad3(p[BA + 1], x - 1, y, z - 1)),
-        lerp(u, grad3(p[AB + 1], x, y - 1, z - 1), grad3(p[BB + 1], x - 1, y - 1, z - 1))
-      )
+      lerp(v, lerp(u, grad3(p[AA], x, y, z), grad3(p[BA], x - 1, y, z)), lerp(u, grad3(p[AB], x, y - 1, z), grad3(p[BB], x - 1, y - 1, z))),
+      lerp(v, lerp(u, grad3(p[AA + 1], x, y, z - 1), grad3(p[BA + 1], x - 1, y, z - 1)), lerp(u, grad3(p[AB + 1], x, y - 1, z - 1), grad3(p[BB + 1], x - 1, y - 1, z - 1)))
     );
   }
 
   function fbm2D(x, z, octaves, lacunarity, gain) {
     let total = 0, freq = 1, amp = 1, max = 0;
-    for (let i = 0; i < octaves; i++) {
-      total += noise2D(x * freq, z * freq) * amp;
-      max += amp;
-      amp *= gain;
-      freq *= lacunarity;
-    }
+    for (let i = 0; i < octaves; i++) { total += noise2D(x * freq, z * freq) * amp; max += amp; amp *= gain; freq *= lacunarity; }
     return total / max;
   }
 
@@ -661,7 +636,30 @@ function createWorldGenerator(seed) {
     return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
   }
 
-  return { generateChunkVoxels, getBiomeAt, getRiverFactorAt, getRavineFloorAt, isVillageChunk, isCabinChunk, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
+  function sampleSurfaceAt(wx, wz) {
+    const biome = getBiomeAt(wx, wz);
+    const continental = fbm2D(wx * 0.008, wz * 0.008, 3, 2.0, 0.5);
+    const detail = fbm2D(wx * 0.032, wz * 0.032, 2, 2.0, 0.5);
+    const mountain = Math.max(0, fbm2D(wx * 0.012 + 100, wz * 0.012 + 100, 3, 2.1, 0.55));
+    let h = Math.floor(SEA_LEVEL + 5 + continental * 14 + detail * 4 + mountain * mountain * 26);
+    if (biome === 'Pantano') h = Math.floor(SEA_LEVEL + continental * 4 + detail * 2);
+    else if (biome === 'Meseta') h += Math.floor(Math.max(0, detail) * 6);
+    else if (biome === 'Cumbres Heladas') h += Math.floor(mountain * 8);
+    if (h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 13) {
+      const rf = getRiverFactorAt(wx, wz);
+      if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 3) * rf);
+    }
+    h = Math.max(5, Math.min(CHUNK_HEIGHT - 7, h));
+    let topBlock = BLOCK.GRASS;
+    if (h < SEA_LEVEL) topBlock = (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas') ? BLOCK.ICE : BLOCK.WATER;
+    else if (h <= SEA_LEVEL + 1 || biome === 'Desierto') topBlock = BLOCK.SAND;
+    else if (biome === 'Meseta') topBlock = (h % 3 === 0) ? BLOCK.BRICK : (h % 3 === 1 ? BLOCK.SAND : BLOCK.GRAVEL);
+    else if (biome === 'Cumbres Heladas' || biome === 'Taiga Nevada' || h >= 42) topBlock = BLOCK.SNOW;
+    const surfY = Math.max(h, SEA_LEVEL);
+    return { y: surfY, groundY: h, topBlock, color: BLOCK_DEFS[topBlock].color || 0x58a83a };
+  }
+
+  return { generateChunkVoxels, sampleSurfaceAt, getBiomeAt, getRiverFactorAt, getRavineFloorAt, isVillageChunk, isCabinChunk, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
 }
 
 // ============================================================================
@@ -670,11 +668,9 @@ function createWorldGenerator(seed) {
 // Fast BFS lighting calculation per chunk (reads light sources from chunk & 1-block border)
 const bfsQueue = new Int32Array(CHUNK_VOLUME * 2);
 
-function computeChunkLighting(ch, getChunkAt) {
-  const light = ch.light;
-  const data = ch.data;
+function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
+  const light = ch.light, data = ch.data;
   light.fill(0);
-
   let qHead = 0, qTail = 0;
 
   // 1. Cast vertical sunlight rays from top (y = 63 -> 0) + seed block light emitters + cache 2D minimap surface colors
@@ -683,12 +679,9 @@ function computeChunkLighting(ch, getChunkAt) {
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-      let sun = 15;
-      let topFound = false;
+      let sun = 15, topFound = false;
       for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
-        const idx = colOffset + y;
-        const b = data[idx];
-        const def = BLOCK_DEFS[b];
+        const idx = colOffset + y, b = data[idx], def = BLOCK_DEFS[b];
         if (!topFound && b !== BLOCK.AIR) {
           topFound = true;
           const hex = def.color || 0x58a83a;
@@ -698,19 +691,16 @@ function computeChunkLighting(ch, getChunkAt) {
           const bl = Math.min(255, (hex & 255) * hShade) | 0;
           mapColors[lz * CHUNK_SIZE + lx] = (255 << 24) | (bl << 16) | (g << 8) | r;
         }
-        if (def.opaque) {
-          sun = 0;
-        } else if (b === BLOCK.WATER || b === BLOCK.LEAVES) {
-          sun = Math.max(0, sun - 2);
-        }
+        if (def.opaque) sun = 0;
+        else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(0, sun - 2);
         const emit = def.light;
         light[idx] = (sun << 4) | emit;
-        if (sun > 0 || emit > 0) {
-          bfsQueue[qTail++] = idx;
-        }
+        if (!surfaceOnly && (sun > 0 || emit > 0)) bfsQueue[qTail++] = idx;
+        else if (surfaceOnly && topFound && sun === 0 && emit === 0) break;
       }
     }
   }
+  if (surfaceOnly) { ch.lightReady = 'surface'; return; }
 
   // 2. Seed border light from the 4 adjacent chunks so torches/sun cross chunk seams!
   const nDirs = [

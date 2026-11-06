@@ -2686,6 +2686,41 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 47: Optimización de Distancia de Render (LOD Superficial, Iluminación Rápida y Horizonte Lejano "Distant Horizons")
+      // =========================================================================
+      describe('47. Optimización de Distancia de Render: LOD Superficial (lodLevel=1), Iluminación Rápida y Horizonte Lejano (farHorizonMesh)', () => {
+        it('Reduce drásticamente los vértices con Meshing LOD Superficial (lodLevel=1) e Iluminación Rápida de Superficie (surfaceOnly=true)', () => {
+          const testCh = vc.getChunkData(2, 2);
+          vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), true);
+          assert(testCh.lightReady === 'surface', `computeChunkLighting(..., true) debe marcar lightReady='surface' sin ejecutar la cola BFS 3D subterránea (obtuvo ${testCh.lightReady})`);
+          vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), false);
+          assert(testCh.lightReady === true, 'computeChunkLighting(..., false) debe completar el BFS 3D y marcar lightReady=true');
+
+          const meshFull = vc.buildChunkMeshArrays(2, 2, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 0);
+          const meshLod1 = vc.buildChunkMeshArrays(2, 2, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 1);
+          assert(
+            meshLod1.solid.pos.length > 0 && meshLod1.solid.pos.length < meshFull.solid.pos.length * 0.78,
+            `El Meshing LOD Superficial (lodLevel=1) debe generar significativamente menos coordenadas de vértices al omitir cuevas subterráneas, flora X-Mesh y caras inferiores (${meshLod1.solid.pos.length} vs ${meshFull.solid.pos.length})`
+          );
+        });
+
+        it('Genera el Anillo de Horizonte Lejano ("Distant Horizons" farHorizonMesh) de +6 chunks en 1 solo Draw Call y 0 chunks extra en RAM', () => {
+          const gen = vc.getGenerator();
+          assert(typeof gen.sampleSurfaceAt === 'function', 'El generador debe exponer sampleSurfaceAt(wx, wz) en O(1)');
+          const sSample = gen.sampleSurfaceAt(120, -140);
+          assert(sSample && sSample.y >= vc.SEA_LEVEL && typeof sSample.color === 'number', 'sampleSurfaceAt debe devolver altura superficial y color hexadecimal del bioma');
+
+          const chunksBefore = vc.chunks.size;
+          const rebuilt = vc.updateFarHorizon(true);
+          assert(rebuilt === true && vc.farHorizonMesh && vc.farHorizonMesh.geometry, 'updateFarHorizon(true) debe construir la geometría de farHorizonMesh');
+          const posAttr = vc.farHorizonMesh.geometry.getAttribute('position');
+          const idxAttr = vc.farHorizonMesh.geometry.getIndex();
+          assert(posAttr && posAttr.count > 1000 && idxAttr && idxAttr.count > 1500, `farHorizonMesh debe contener la malla fusionada del anillo exterior (>1000 vértices, obtuvo ${posAttr ? posAttr.count : 0})`);
+          assert(vc.chunks.size === chunksBefore, `updateFarHorizon NO debe alojar ningún chunk Uint8Array(16384) adicional en RAM (chunks antes=${chunksBefore}, después=${vc.chunks.size})`);
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -2784,9 +2819,12 @@
       const sampleMesh0 = vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0);
       const onDemandFeatures = [
         { name: 'Generación Chunk (Terreno + Cuevas 3D 4×4×4 + Menas)', ms: bench(() => { vc.getGenerator().generateChunkVoxels(50, 50, null); }, 40) },
-        { name: 'Iluminación Vóxel Flood-Fill BFS (16,384 bloques)',    ms: bench(() => { vc.computeChunkLighting(ch0, (x, z) => vc.chunks.get(`${x},${z}`)); }, 40) },
-        { name: 'Meshing Chunk Síncrono (Face Culling + AO + X-Mesh)',  ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0); }, 30) },
+        { name: 'Iluminación Vóxel Flood-Fill BFS (16,384 bloques)',    ms: bench(() => { vc.computeChunkLighting(ch0, (x, z) => vc.chunks.get(`${x},${z}`), false); }, 40) },
+        { name: 'Iluminación Rápida Superficial LOD (surfaceOnly=true)',ms: bench(() => { vc.computeChunkLighting(ch0, (x, z) => vc.chunks.get(`${x},${z}`), true); }, 60) },
+        { name: 'Meshing Chunk Síncrono Completo (lodLevel=0)',         ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 0); }, 30) },
+        { name: 'Meshing Chunk LOD Superficial Lejano (lodLevel=1)',    ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 1); }, 50) },
         { name: 'Meshing vía Web Worker (Coste en Hilo Principal)',     ms: bench(() => { vc.packChunkPaddedBuffers(0, 0); vc.applyArraysToMesh(ch0, sampleMesh0); }, 40) },
+        { name: 'Anillo Horizonte Lejano (+6 Chunks en 1 Draw Call)',   ms: bench(() => { vc.updateFarHorizon(true); }, 15) },
         { name: 'Pistón Mecánico Redstone (Empuje de Bloques en Lote)', ms: bench(() => { ch0.data[(14 * 16 + 14) * 64 + 53] = vc.BLOCK.PISTON; ch0.data[(14 * 16 + 14) * 64 + 54] = vc.BLOCK.STONE; ch0.data[(14 * 16 + 14) * 64 + 55] = vc.BLOCK.AIR; vc.triggerVoxelPiston(14, 53, 14, 13, 53, 14, new Set()); }, 60) }
       ];
 

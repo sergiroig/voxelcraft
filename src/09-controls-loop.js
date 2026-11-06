@@ -784,7 +784,7 @@ window.__VOXELCRAFT__ = {
   raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation, spawnMob, damageMob, removeMobAt, updateMobs, tameWolf, teleportEnderman, isHostileMob, MOB_HP_MAP, MOB_LOOT_MAP,
   updatePlayerPhysics, checkAABBCollision, damagePlayer, renderHeartsUI, addHungerExhaustion, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
   canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, updateAmbientAudio, updateDynamicSky,
-  getGenerator: () => generator, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
+  getGenerator: () => generator, farHorizonMesh, updateFarHorizon, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
   updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine, startGameplay, isGameActive, keys,
   getState: () => ({ worldSeed, worldDeltas, selectedSlot, renderDistance, isNight, sunFactor, invOpen, menuOpen, isLocked, touchPlaying, isMiningHeld, mineProgress, currentHit, joyX, joyY, joySprint, gameMode }),
   setMiningHeld: (v) => { isMiningHeld = v; }, setCurrentHit: (h) => { currentHit = h; },

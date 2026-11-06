@@ -6,18 +6,11 @@
 // ============================================================================
 function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
   let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
-  const stepX = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
-  const stepY = dy > 0 ? 1 : (dy < 0 ? -1 : 0);
-  const stepZ = dz > 0 ? 1 : (dz < 0 ? -1 : 0);
-
-  const tDeltaX = stepX !== 0 ? Math.abs(1 / dx) : 1e30;
-  const tDeltaY = stepY !== 0 ? Math.abs(1 / dy) : 1e30;
-  const tDeltaZ = stepZ !== 0 ? Math.abs(1 / dz) : 1e30;
-
+  const stepX = dx > 0 ? 1 : (dx < 0 ? -1 : 0), stepY = dy > 0 ? 1 : (dy < 0 ? -1 : 0), stepZ = dz > 0 ? 1 : (dz < 0 ? -1 : 0);
+  const tDeltaX = stepX !== 0 ? Math.abs(1 / dx) : 1e30, tDeltaY = stepY !== 0 ? Math.abs(1 / dy) : 1e30, tDeltaZ = stepZ !== 0 ? Math.abs(1 / dz) : 1e30;
   let tMaxX = stepX > 0 ? (x + 1 - ox) * tDeltaX : (ox - x) * tDeltaX;
   let tMaxY = stepY > 0 ? (y + 1 - oy) * tDeltaY : (oy - y) * tDeltaY;
   let tMaxZ = stepZ > 0 ? (z + 1 - oz) * tDeltaZ : (oz - z) * tDeltaZ;
-
   let nx = 0, ny = 0, nz = 0, dist = 0;
 
   while (dist <= maxDist) {
@@ -25,25 +18,15 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
     if (b !== BLOCK.AIR && b !== BLOCK.WATER) {
       if (b === BLOCK.TORCH) {
         const hx = ox + dx * dist - x, hy = oy + dy * dist - y, hz = oz + dz * dist - z;
-        if (hx >= 0.28 && hx <= 0.72 && hz >= 0.28 && hz <= 0.72 && hy <= 0.75) {
-          return { x, y, z, nx, ny, nz, block: b };
-        }
-      } else {
-        return { x, y, z, nx, ny, nz, block: b };
-      }
+        if (hx >= 0.28 && hx <= 0.72 && hz >= 0.28 && hz <= 0.72 && hy <= 0.75) return { x, y, z, nx, ny, nz, block: b };
+      } else return { x, y, z, nx, ny, nz, block: b };
     }
     if (tMaxX < tMaxY) {
-      if (tMaxX < tMaxZ) {
-        x += stepX; dist = tMaxX; tMaxX += tDeltaX; nx = -stepX; ny = 0; nz = 0;
-      } else {
-        z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ; nx = 0; ny = 0; nz = -stepZ;
-      }
+      if (tMaxX < tMaxZ) { x += stepX; dist = tMaxX; tMaxX += tDeltaX; nx = -stepX; ny = 0; nz = 0; }
+      else { z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ; nx = 0; ny = 0; nz = -stepZ; }
     } else {
-      if (tMaxY < tMaxZ) {
-        y += stepY; dist = tMaxY; tMaxY += tDeltaY; nx = 0; ny = -stepY; nz = 0;
-      } else {
-        z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ; nx = 0; ny = 0; nz = -stepZ;
-      }
+      if (tMaxY < tMaxZ) { y += stepY; dist = tMaxY; tMaxY += tDeltaY; nx = 0; ny = -stepY; nz = 0; }
+      else { z += stepZ; dist = tMaxZ; tMaxZ += tDeltaZ; nx = 0; ny = 0; nz = -stepZ; }
     }
   }
   return null;
@@ -224,26 +207,19 @@ renderHeartsUI();
 
 function damagePlayer(amount) {
   if (player.flying) return;
-  if (isShieldBlocking) {
-    sfx.play('shield');
-    amount = Math.floor(amount * 0.2);
-    if (amount <= 0) return;
-  }
+  if (isShieldBlocking) { sfx.play('shield'); amount = Math.floor(amount * 0.2); if (amount <= 0) return; }
   const armorDef = getArmorDefenseRatio();
   if (armorDef > 0) amount = Math.max(1, Math.round(amount * (1 - armorDef)));
   player.health = Math.max(1, player.health - amount);
-  renderHeartsUI();
-  sfx.play('hurt');
+  renderHeartsUI(); sfx.play('hurt');
   const hurtEl = document.getElementById('hurt-overlay');
-  hurtEl.style.opacity = '1';
-  setTimeout(() => { hurtEl.style.opacity = '0'; }, 240);
+  hurtEl.style.opacity = '1'; setTimeout(() => { hurtEl.style.opacity = '0'; }, 240);
 }
 
 function findSpawnHeight(wx, wz) {
   getChunkData(Math.floor(wx / CHUNK_SIZE), Math.floor(wz / CHUNK_SIZE));
   for (let y = CHUNK_HEIGHT - 1; y > 1; y--) {
-    const b = getVoxelGlobal(Math.floor(wx), y, Math.floor(wz));
-    if (BLOCK_DEFS[b].solid) return y + 1.5;
+    if (BLOCK_DEFS[getVoxelGlobal(Math.floor(wx), y, Math.floor(wz))].solid) return y + 1.5;
   }
   return 35;
 }
@@ -367,21 +343,12 @@ function checkAABBCollision(px, py, pz) {
 // ============================================================================
 // 10B. SMART FRUSTUM CULLING (PUNTO 11) + 3RD-PERSON AVATAR & ZOOM (PUNTO 15)
 // ============================================================================
-let thirdPersonMode = false;
-let isZoomed = false;
-let baseFov = 75;
-let visibleChunksCount = 0;
-let culledChunksCount = 0;
-
-const projScreenMat = new THREE.Matrix4();
-const viewFrustum = new THREE.Frustum();
+let thirdPersonMode = false, isZoomed = false, baseFov = 75, visibleChunksCount = 0, culledChunksCount = 0;
+const projScreenMat = new THREE.Matrix4(), viewFrustum = new THREE.Frustum();
 
 const playerAvatar = (() => {
   const grp = new THREE.Group();
-  const skinMat  = new THREE.MeshBasicMaterial({ color: 0xf1c27d });
-  const shirtMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
-  const pantsMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
-
+  const skinMat = new THREE.MeshBasicMaterial({ color: 0xf1c27d }), shirtMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 }), pantsMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
   const torso = new THREE.Mesh(mobGeos.bodyBiped, shirtMat); torso.position.set(0, 0.90, 0); grp.add(torso);
   const head = new THREE.Mesh(mobGeos.head, skinMat); head.position.set(0, 1.46, 0); grp.add(head);
   const leftArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat); leftArm.position.set(-0.32, 0.94, 0); grp.add(leftArm);
@@ -390,29 +357,22 @@ const playerAvatar = (() => {
   heldIcon.position.set(0, -0.30, -0.18); heldIcon.rotation.y = Math.PI / 2; heldIcon.visible = false; rightArm.add(heldIcon);
   const leftLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat); leftLeg.position.set(-0.12, 0.31, 0); grp.add(leftLeg);
   const rightLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat); rightLeg.position.set(0.12, 0.31, 0); grp.add(rightLeg);
-
   grp.userData = { head, torso, leftArm, rightArm, leftLeg, rightLeg, heldIcon };
-  grp.visible = false;
-  scene.add(grp);
+  grp.visible = false; scene.add(grp);
   return grp;
 })();
 
 function toggleCameraMode(force3rd) {
   thirdPersonMode = typeof force3rd === 'boolean' ? force3rd : !thirdPersonMode;
-  playerAvatar.visible = thirdPersonMode;
-  handGroup.visible = !thirdPersonMode;
+  playerAvatar.visible = thirdPersonMode; handGroup.visible = !thirdPersonMode;
   const tbtnCam = document.getElementById('tbtn-cam');
-  if (tbtnCam) {
-    tbtnCam.textContent = thirdPersonMode ? '🎥 1ªP' : '🎥 3ªP';
-    tbtnCam.classList.toggle('toggled', thirdPersonMode);
-  }
+  if (tbtnCam) { tbtnCam.textContent = thirdPersonMode ? '🎥 1ªP' : '🎥 3ªP'; tbtnCam.classList.toggle('toggled', thirdPersonMode); }
   return thirdPersonMode;
 }
 
 function toggleZoom(forceZoom) {
   isZoomed = typeof forceZoom === 'boolean' ? forceZoom : !isZoomed;
-  camera.fov = isZoomed ? 24 : baseFov;
-  camera.updateProjectionMatrix();
+  camera.fov = isZoomed ? 24 : baseFov; camera.updateProjectionMatrix();
   const tbtnZoom = document.getElementById('tbtn-zoom');
   if (tbtnZoom) tbtnZoom.classList.toggle('toggled', isZoomed);
   return isZoomed;
@@ -422,10 +382,8 @@ function updateFrustumCulling() {
   camera.updateMatrixWorld();
   projScreenMat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   viewFrustum.setFromProjectionMatrix(projScreenMat);
-
   const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
   let vis = 0, culled = 0;
-
   for (const ch of chunks.values()) {
     if (!ch.solidMesh && !ch.waterMesh) continue;
     const dx = ch.cx - pcx, dz = ch.cz - pcz;
@@ -434,9 +392,7 @@ function updateFrustumCulling() {
     if (ch.waterMesh) ch.waterMesh.visible = inView;
     if (inView) vis++; else culled++;
   }
-  visibleChunksCount = vis;
-  culledChunksCount = culled;
-
+  visibleChunksCount = vis; culledChunksCount = culled;
   for (let i = 0; i < mobs.length; i++) {
     const m = mobs[i];
     if (!m.root) continue;
@@ -447,26 +403,12 @@ function updateFrustumCulling() {
 
 function updatePlayerPhysics(dt) {
   if (player.portalCooldown > 0) player.portalCooldown = Math.max(0, player.portalCooldown - dt);
-
-  const forwardX = -Math.sin(player.yaw), forwardZ = -Math.cos(player.yaw);
-  const rightX   =  Math.cos(player.yaw), rightZ   = -Math.sin(player.yaw);
-
-  let inputFwd = 0, inputRight = 0;
-  if (keys['KeyW'] || keys['ArrowUp'])    inputFwd += 1;
-  if (keys['KeyS'] || keys['ArrowDown'])  inputFwd -= 1;
-  if (keys['KeyD'] || keys['ArrowRight']) inputRight += 1;
-  if (keys['KeyA'] || keys['ArrowLeft'])  inputRight -= 1;
-  inputFwd += joyY; inputRight += joyX;
-
-  let moveX = forwardX * inputFwd + rightX * inputRight;
-  let moveZ = forwardZ * inputFwd + rightZ * inputRight;
-
-  const len = Math.hypot(moveX, moveZ);
-  const moveMag = Math.min(1.0, len);
-  if (len > 0) {
-    moveX = (moveX / len) * moveMag;
-    moveZ = (moveZ / len) * moveMag;
-  }
+  const forwardX = -Math.sin(player.yaw), forwardZ = -Math.cos(player.yaw), rightX = Math.cos(player.yaw), rightZ = -Math.sin(player.yaw);
+  let inputFwd = (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) + joyY;
+  let inputRight = (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0) + joyX;
+  let moveX = forwardX * inputFwd + rightX * inputRight, moveZ = forwardZ * inputFwd + rightZ * inputRight;
+  const len = Math.hypot(moveX, moveZ), moveMag = Math.min(1.0, len);
+  if (len > 0) { moveX = (moveX / len) * moveMag; moveZ = (moveZ / len) * moveMag; }
 
   const inWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
   const inLava = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LAVA || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.LAVA;
@@ -720,14 +662,80 @@ function updateMining(dt, currentHit) {
 }
 
 // ============================================================================
-// 11. STREAMING CHUNK MANAGER
+// 11. DISTANT HORIZONS RING (1 DRAW CALL, 0 CHUNKS IN RAM) & STREAMING MANAGER
 // ============================================================================
+const farHorizonMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true });
+const farHorizonMesh = new THREE.Mesh(new THREE.BufferGeometry(), farHorizonMat);
+farHorizonMesh.frustumCulled = false;
+scene.add(farHorizonMesh);
+let lastHorizonCx = null, lastHorizonCz = null, lastHorizonDist = null, lastHorizonSeed = null;
+
+function updateFarHorizon(force = false) {
+  const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
+  const hcx = pcx >> 1, hcz = pcz >> 1;
+  if (!force && hcx === lastHorizonCx && hcz === lastHorizonCz && lastHorizonDist === renderDistance && lastHorizonSeed === worldSeed) return false;
+  lastHorizonCx = hcx; lastHorizonCz = hcz; lastHorizonDist = renderDistance; lastHorizonSeed = worldSeed;
+
+  const STEP = 4, outerChunks = renderDistance + 6;
+  const innerR = Math.max(16, (renderDistance - 0.35) * CHUNK_SIZE), outerR = outerChunks * CHUNK_SIZE;
+  const innerRSq = innerR * innerR, outerRSq = outerR * outerR;
+  const halfSteps = Math.ceil(outerR / STEP), gridN = halfSteps * 2 + 1;
+  const centerX = pcx * CHUNK_SIZE + 8, centerZ = pcz * CHUNK_SIZE + 8;
+  const gridY = new Float32Array(gridN * gridN), gridCol = new Uint32Array(gridN * gridN);
+
+  for (let gz = 0; gz < gridN; gz++) {
+    const wz = centerZ + (gz - halfSteps) * STEP;
+    for (let gx = 0; gx < gridN; gx++) {
+      const s = generator.sampleSurfaceAt(centerX + (gx - halfSteps) * STEP, wz), idx = gz * gridN + gx;
+      gridY[idx] = s.topBlock === BLOCK.WATER ? s.y - 0.15 : s.y;
+      gridCol[idx] = s.color;
+    }
+  }
+
+  const maxCells = gridN * gridN;
+  const pos = new Float32Array(maxCells * 12), col = new Float32Array(maxCells * 12), indices = new Uint32Array(maxCells * 6);
+  let vCount = 0, iCount = 0;
+
+  for (let gz = 0; gz < gridN - 1; gz++) {
+    const z0 = centerZ + (gz - halfSteps) * STEP, z1 = z0 + STEP, dz = (z0 + 2) - centerZ;
+    for (let gx = 0; gx < gridN - 1; gx++) {
+      const x0 = centerX + (gx - halfSteps) * STEP, x1 = x0 + STEP, dx = (x0 + 2) - centerX, dSq = dx * dx + dz * dz;
+      if (dSq < innerRSq || dSq > outerRSq) continue;
+      const i00 = gz * gridN + gx, i10 = i00 + 1, i01 = i00 + gridN, i11 = i01 + 1;
+      const y00 = gridY[i00], y10 = gridY[i10], y11 = gridY[i11], y01 = gridY[i01];
+      const slopeShade = Math.min(1.18, Math.max(0.68, 0.92 + ((y00 - y10) + (y00 - y01)) * 0.04));
+      const pts = [[x0, y00, z0, gridCol[i00]], [x0, y01, z1, gridCol[i01]], [x1, y11, z1, gridCol[i11]], [x1, y10, z0, gridCol[i10]]];
+      const baseV = vCount;
+      for (let c = 0; c < 4; c++) {
+        const pt = pts[c], pOff = (baseV + c) * 3, hex = pt[3];
+        pos[pOff] = pt[0]; pos[pOff + 1] = pt[1]; pos[pOff + 2] = pt[2];
+        const hShade = Math.min(1.22, Math.max(0.65, 0.78 + (pt[1] - SEA_LEVEL) * 0.015)) * slopeShade;
+        col[pOff] = Math.min(1, (((hex >> 16) & 255) / 255) * hShade);
+        col[pOff + 1] = Math.min(1, (((hex >> 8) & 255) / 255) * hShade);
+        col[pOff + 2] = Math.min(1, ((hex & 255) / 255) * hShade);
+      }
+      indices[iCount++] = baseV; indices[iCount++] = baseV + 1; indices[iCount++] = baseV + 2;
+      indices[iCount++] = baseV; indices[iCount++] = baseV + 2; indices[iCount++] = baseV + 3;
+      vCount += 4;
+    }
+  }
+
+  farHorizonMesh.geometry.dispose();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos.slice(0, vCount * 3), 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col.slice(0, vCount * 3), 3));
+  geo.setIndex(new THREE.BufferAttribute(indices.slice(0, iCount), 1));
+  farHorizonMesh.geometry = geo;
+  return true;
+}
+
 let lastPlayerChunkX = null, lastPlayerChunkZ = null;
 
 function updateChunkStreaming() {
   const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
 
   if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ || buildQueue.length === 0) {
+    if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ) updateFarHorizon(false);
     lastPlayerChunkX = pcx; lastPlayerChunkZ = pcz;
     const maxDistSq = (renderDistance + 0.5) * (renderDistance + 0.5);
 
@@ -738,8 +746,11 @@ function updateChunkStreaming() {
 
     for (let dz = -renderDistance; dz <= renderDistance; dz++) {
       for (let dx = -renderDistance; dx <= renderDistance; dx++) {
-        if (dx * dx + dz * dz > maxDistSq) continue;
+        const dSq = dx * dx + dz * dz;
+        if (dSq > maxDistSq) continue;
         const ch = getChunkData(pcx + dx, pcz + dz);
+        const targetLod = dSq > 12 ? 1 : 0;
+        if (!ch.dirty && ch.solidMesh && ch.lodLevel === 1 && targetLod === 0) ch.dirty = true;
         if (ch.dirty && !ch.queued) { ch.queued = true; buildQueue.push(ch); }
       }
     }
@@ -763,12 +774,13 @@ function updateChunkStreaming() {
   while (buildQueue.length > 0 && (performance.now() - budgetStart) < 4.5) {
     const nextCh = buildQueue[0];
     if (!chunks.has(chunkKey(nextCh.cx, nextCh.cz))) { buildQueue.shift(); continue; }
-    const dx = nextCh.cx - pcx, dz = nextCh.cz - pcz;
-    if (meshWorker && (dx * dx + dz * dz) > 2) {
+    const dx = nextCh.cx - pcx, dz = nextCh.cz - pcz, dSq = dx * dx + dz * dz;
+    const lod = dSq > 12 ? 1 : 0;
+    if (meshWorker && dSq > 2) {
       if (workerJobsInFlight >= 8) break;
-      buildQueue.shift(); requestChunkMeshWorker(nextCh.cx, nextCh.cz);
+      buildQueue.shift(); requestChunkMeshWorker(nextCh.cx, nextCh.cz, lod);
     } else {
-      buildQueue.shift(); rebuildChunkImmediate(nextCh.cx, nextCh.cz);
+      buildQueue.shift(); rebuildChunkImmediate(nextCh.cx, nextCh.cz, lod);
     }
   }
 }
