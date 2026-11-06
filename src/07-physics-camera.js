@@ -83,14 +83,16 @@ function damagePlayer(amount) {
   if (isShieldBlocking) { sfx.play('shield'); amount = Math.floor(amount * 0.2); if (amount <= 0) return; }
   const armorDef = getArmorDefenseRatio();
   if (armorDef > 0) amount = Math.max(1, Math.round(amount * (1 - armorDef)));
-  if (player.health - amount <= 0 && player.hasBedSpawn && typeof respawnPlayerAtBed === 'function') {
-    respawnPlayerAtBed();
-    return;
+  const hurtEl = document.getElementById('hurt-overlay');
+  if (player.health - amount <= 0) {
+    if (gameMode === 'survival' && (getActiveHeldItem() === BLOCK.ITEM_TOTEM_OF_UNDYING || (inventoryCounts[BLOCK.ITEM_TOTEM_OF_UNDYING] || 0) > 0) && typeof tryTriggerTotemOfUndying === 'function' && tryTriggerTotemOfUndying()) return;
+    sfx.play('hurt');
+    if (hurtEl) { hurtEl.style.opacity = '1'; setTimeout(() => { hurtEl.style.opacity = '0'; }, 360); }
+    if (typeof respawnPlayerAtBed === 'function') { respawnPlayerAtBed(); return; }
   }
   player.health = Math.max(1, player.health - amount);
   renderHeartsUI(); sfx.play('hurt');
-  const hurtEl = document.getElementById('hurt-overlay');
-  hurtEl.style.opacity = '1'; setTimeout(() => { hurtEl.style.opacity = '0'; }, 240);
+  if (hurtEl) { hurtEl.style.opacity = '1'; setTimeout(() => { hurtEl.style.opacity = '0'; }, 240); }
 }
 
 function findSpawnHeight(wx, wz) {
@@ -422,7 +424,7 @@ function updatePlayerPhysics(dt) {
   }
   if (gameMode === 'survival' && !player.flying && player.hunger <= 0) {
     player.starveTimer = (player.starveTimer || 0) + dt;
-    if (player.starveTimer >= 4.0) { player.starveTimer = 0; if (player.health > 1) damagePlayer(1); }
+    if (player.starveTimer >= 4.0) { player.starveTimer = 0; damagePlayer(1); }
   } else player.starveTimer = 0;
 
   // 1st-person hand bobbing, shield block pose & 3D arm+item attack/swing animation

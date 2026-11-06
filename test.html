@@ -2946,7 +2946,10 @@
           vc.toggleGameMode('survival');
           const bx = 14, by = 52, bz = 14;
 
-          // 1) Cama (BLOCK.BED): de día fija Respawn Point sin saltar tiempo; de noche duerme; al morir reaparece en la Cama
+          // 1) Cama (BLOCK.BED): de día fija Respawn Point sin saltar tiempo; de noche duerme; al morir reaparece en la Cama o en el Origen sin quedar inmortal a 1❤
+          vc.player.hasBedSpawn = false; vc.player.x = 40; vc.player.y = 50; vc.player.z = 40; vc.player.health = 1; vc.player.hunger = 0; vc.player.starveTimer = 3.95; vc.player.flying = false; vc.armorSlots.fill(0);
+          vc.updatePlayerPhysics(0.1);
+          assert(Math.hypot(vc.player.x - 8.5, vc.player.z - 8.5) < 0.2 && vc.player.health === vc.player.maxHealth && vc.player.hunger === vc.player.maxHunger, 'Sufrir daño letal (o inanición en 1❤) sin Cama debe matar al jugador y reaparecerlo en el Origen con 10❤ y 10🍗');
           vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.BED);
           vc.setTimeOfDay(0.0); // Mediodía soleado
           vc.toggleWeather('clear');

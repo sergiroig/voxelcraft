@@ -193,10 +193,10 @@ function respawnPlayerAtBed() {
   const sy = player.hasBedSpawn && player.spawnY !== undefined ? player.spawnY : findSpawnHeight(sx, sz);
   player.x = sx; player.y = sy; player.z = sz;
   player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
-  player.health = player.maxHealth; player.hunger = player.maxHunger || 10; player.saturation = 5.0; player.air = player.maxAir || 10;
+  player.health = player.maxHealth; player.hunger = player.maxHunger || 10; player.saturation = 5.0; player.air = player.maxAir || 10; player.exhaustion = 0; player.starveTimer = 0; player.lavaBurnTimer = 0; player.airTimer = 0;
   renderHeartsUI(); sfx.play('portal');
   const lbl = document.getElementById('block-label');
-  if (lbl) lbl.textContent = player.hasBedSpawn ? `🛏 ¡Has reaparecido en tu Cama (${Math.floor(sx)}, ${Math.floor(sy)}, ${Math.floor(sz)})!` : '🧭 Has reaparecido en el Origen';
+  if (lbl) lbl.textContent = player.hasBedSpawn ? `💀 ¡Has muerto! Reaparecido en tu Cama (${Math.floor(sx)}, ${Math.floor(sy)}, ${Math.floor(sz)})` : '💀 ¡Has muerto! Reaparecido en el Origen';
   return { x: sx, y: sy, z: sz };
 }
 
