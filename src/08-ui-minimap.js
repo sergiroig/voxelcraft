@@ -539,9 +539,9 @@ function openSettingsMenu(show = true) {
 function applyUserSettingsToUI() {
   renderDistance = userSettings.renderDistance;
   if (rngDist) rngDist.value = `${renderDistance}`;
-  if (lblDist) lblDist.textContent = `${renderDistance} chunks (+6 horiz.)`;
-  scene.fog.density = 0.042 / (renderDistance + 2.6);
-  camera.far = Math.max(320, (renderDistance + 7) * CHUNK_SIZE * 1.35);
+  if (lblDist) lblDist.textContent = `${renderDistance} chunks`;
+  scene.fog.density = 0.042 / (renderDistance + 1.8);
+  camera.far = Math.max(320, (renderDistance + 4) * CHUNK_SIZE * 1.45);
   baseFov = userSettings.fov;
   if (rngFov) rngFov.value = `${baseFov}`;
   if (lblFov) lblFov.textContent = `${baseFov}°`;
@@ -577,7 +577,7 @@ function loadUserSettings() {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      if (typeof p.renderDistance === 'number' && p.renderDistance >= 2 && p.renderDistance <= 12) userSettings.renderDistance = p.renderDistance;
+      if (typeof p.renderDistance === 'number' && p.renderDistance >= 2 && p.renderDistance <= 24) userSettings.renderDistance = p.renderDistance;
       if (typeof p.fov === 'number' && p.fov >= 60 && p.fov <= 105) userSettings.fov = p.fov;
       if (p.lightingMode === 'shader' || p.lightingMode === 'shadowmap') userSettings.lightingMode = p.lightingMode;
       if (typeof p.showHud === 'boolean') userSettings.showHud = p.showHud;

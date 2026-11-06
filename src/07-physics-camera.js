@@ -559,6 +559,7 @@ function updateMining(dt, currentHit) {
 const farHorizonMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true, side: THREE.DoubleSide });
 const farHorizonMesh = new THREE.Mesh(new THREE.BufferGeometry(), farHorizonMat);
 farHorizonMesh.frustumCulled = false;
+farHorizonMesh.visible = false;
 scene.add(farHorizonMesh);
 let lastHorizonCx = null, lastHorizonCz = null, lastHorizonDist = null, lastHorizonSeed = null;
 
@@ -624,7 +625,6 @@ function updateChunkStreaming() {
   const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
 
   if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ || buildQueue.length === 0) {
-    if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ) updateFarHorizon(false);
     lastPlayerChunkX = pcx; lastPlayerChunkZ = pcz;
     const maxDistSq = (renderDistance + 0.5) * (renderDistance + 0.5);
 
@@ -638,7 +638,7 @@ function updateChunkStreaming() {
         const dSq = dx * dx + dz * dz;
         if (dSq > maxDistSq) continue;
         const ch = getChunkData(pcx + dx, pcz + dz);
-        const targetLod = dSq > 12 ? 1 : 0;
+        const targetLod = dSq > 25 ? 1 : 0;
         if (!ch.dirty && ch.solidMesh && ch.lodLevel === 1 && targetLod === 0) ch.dirty = true;
         if (ch.dirty && !ch.queued) { ch.queued = true; buildQueue.push(ch); }
       }
@@ -659,14 +659,14 @@ function updateChunkStreaming() {
     }
   }
 
-  const budgetStart = performance.now();
-  while (buildQueue.length > 0 && (performance.now() - budgetStart) < 4.5) {
+  const budgetStart = performance.now(), maxBudgetMs = buildQueue.length > 30 ? 7.5 : 4.5;
+  while (buildQueue.length > 0 && (performance.now() - budgetStart) < maxBudgetMs) {
     const nextCh = buildQueue[0];
     if (!chunks.has(chunkKey(nextCh.cx, nextCh.cz))) { buildQueue.shift(); continue; }
     const dx = nextCh.cx - pcx, dz = nextCh.cz - pcz, dSq = dx * dx + dz * dz;
-    const lod = dSq > 12 ? 1 : 0;
+    const lod = dSq > 25 ? 1 : 0;
     if (meshWorker && dSq > 2) {
-      if (workerJobsInFlight >= 8) break;
+      if (workerJobsInFlight >= 16) break;
       buildQueue.shift(); requestChunkMeshWorker(nextCh.cx, nextCh.cz, lod);
     } else {
       buildQueue.shift(); rebuildChunkImmediate(nextCh.cx, nextCh.cz, lod);

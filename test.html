@@ -2804,6 +2804,7 @@
           const idxAttr = vc.farHorizonMesh.geometry.getIndex();
           assert(posAttr && posAttr.count > 1000 && idxAttr && idxAttr.count > 1500, `farHorizonMesh debe contener la malla fusionada del anillo exterior (>1000 vértices, obtuvo ${posAttr ? posAttr.count : 0})`);
           assert(vc.chunks.size === chunksBefore, `updateFarHorizon NO debe alojar ningún chunk Uint8Array(16384) adicional en RAM (chunks antes=${chunksBefore}, después=${vc.chunks.size})`);
+          assert(vc.farHorizonMesh.visible === false && doc.getElementById('rng-dist').max === '24', 'El anillo falso de horizonte debe estar oculto en partida y el selector de distancia debe permitir hasta 24 chunks reales');
         });
       });
 

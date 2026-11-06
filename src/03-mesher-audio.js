@@ -158,7 +158,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
         const isGlow = def.light > 5;
 
         for (let f = 0; f < 6; f++) {
-          if (lodLevel > 0 && f === 1) continue;
+          if (lodLevel > 0 && f === 1 && y <= SEA_LEVEL + 2) continue;
           const face = FACES[f];
           const nx = wx + face.dir[0];
           const ny = y + face.dir[1];

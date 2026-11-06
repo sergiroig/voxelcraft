@@ -719,6 +719,8 @@ function setTimeOfDay(angle, customMoonAngle) {
 
 function updateDynamicSky(dt) {
   skyGroup.position.set(player.x, player.y, player.z);
+  const skyScale = Math.max(1.0, (renderDistance * CHUNK_SIZE + 40) / 140);
+  skyGroup.scale.set(skyScale, skyScale, skyScale);
   celestialAngle = (celestialAngle + dt * DAY_CYCLE_SPEED) % (Math.PI * 2);
   moonAngle = (moonAngle + dt * MOON_CYCLE_SPEED) % (Math.PI * 2);
   celestialOrbit.rotation.z = celestialAngle * 0.5;
