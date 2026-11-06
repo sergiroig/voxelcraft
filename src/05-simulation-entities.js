@@ -328,13 +328,7 @@ const arrowInstanced = new THREE.InstancedMesh(arrowGeo, arrowMat, MAX_ARROWS);
 arrowInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 scene.add(arrowInstanced);
 
-const arrows = [];
-const arrowPosVec = new THREE.Vector3();
-const arrowTargetVec = new THREE.Vector3();
-const arrowLookMat = new THREE.Matrix4();
-const arrowQuat = new THREE.Quaternion();
-const arrowScaleVec = new THREE.Vector3(1, 1, 1);
-
+const arrows = [], arrowPosVec = new THREE.Vector3(), arrowTargetVec = new THREE.Vector3(), arrowLookMat = new THREE.Matrix4(), arrowQuat = new THREE.Quaternion(), arrowScaleVec = new THREE.Vector3(1, 1, 1);
 for (let i = 0; i < MAX_ARROWS; i++) {
   arrows.push({ active: false, stuck: false, isGrapple: false, fromMob: false, x: 0, y: -999, z: 0, vx: 0, vy: 0, vz: 0, age: 0 });
   dummyMatrix.makeTranslation(0, -999, 0);
@@ -343,20 +337,14 @@ for (let i = 0; i < MAX_ARROWS; i++) {
 let arrowCursor = 0;
 
 function shootArrow(ox, oy, oz, dx, dy, dz, opts = {}) {
-  const a = arrows[arrowCursor];
-  const idx = arrowCursor;
+  const a = arrows[arrowCursor], idx = arrowCursor;
   arrowCursor = (arrowCursor + 1) % MAX_ARROWS;
-
   const len = Math.hypot(dx, dy, dz) || 1;
   const nx = dx / len, ny = dy / len, nz = dz / len;
   const speed = opts.isGrapple ? 28.0 : (opts.fromMob ? 18.0 : 24.0);
-
-  a.active = true; a.stuck = false;
-  a.isGrapple = !!opts.isGrapple; a.fromMob = !!opts.fromMob;
+  a.active = true; a.stuck = false; a.isGrapple = !!opts.isGrapple; a.fromMob = !!opts.fromMob;
   a.x = ox + nx * 0.45; a.y = oy + ny * 0.45; a.z = oz + nz * 0.45;
-  a.vx = nx * speed; a.vy = ny * speed; a.vz = nz * speed;
-  a.age = 0;
-
+  a.vx = nx * speed; a.vy = ny * speed; a.vz = nz * speed; a.age = 0;
   arrowPosVec.set(a.x, a.y, a.z);
   arrowTargetVec.set(a.x + a.vx, a.y + a.vy, a.z + a.vz);
   arrowLookMat.lookAt(arrowPosVec, arrowTargetVec, camera.up);
@@ -364,20 +352,14 @@ function shootArrow(ox, oy, oz, dx, dy, dz, opts = {}) {
   dummyMatrix.compose(arrowPosVec, arrowQuat, arrowScaleVec);
   arrowInstanced.setMatrixAt(idx, dummyMatrix);
   arrowInstanced.instanceMatrix.needsUpdate = true;
-
   sfx.play(a.isGrapple ? 'grapple' : 'bow');
   return a;
 }
 
 function grapplePullPlayerTo(tx, ty, tz) {
-  const dx = tx - player.x, dy = (ty + 1.0) - player.y, dz = tz - player.z;
-  const dist = Math.hypot(dx, dy, dz) || 1;
-  player.vx = (dx / dist) * 16.0;
-  player.vy = Math.max(8.5, (dy / dist) * 15.0 + 4.5);
-  player.vz = (dz / dist) * 16.0;
-  player.x += dx * 0.65;
-  player.y = Math.max(player.y + 0.5, ty + 1.05);
-  player.z += dz * 0.65;
+  const dx = tx - player.x, dy = (ty + 1.0) - player.y, dz = tz - player.z, dist = Math.hypot(dx, dy, dz) || 1;
+  player.vx = (dx / dist) * 16.0; player.vy = Math.max(8.5, (dy / dist) * 15.0 + 4.5); player.vz = (dz / dist) * 16.0;
+  player.x += dx * 0.65; player.y = Math.max(player.y + 0.5, ty + 1.05); player.z += dz * 0.65;
   player.maxFallVel = 0;
   spawnBlockParticles(tx, ty, tz, BLOCK.AMETHYST, 18);
   sfx.play('grapple');
@@ -387,9 +369,7 @@ function grapplePullPlayerTo(tx, ty, tz) {
 function shootGrappleHook(ox, oy, oz, dx, dy, dz) {
   const hit = raycastVoxel(ox, oy, oz, dx, dy, dz, 24.0);
   const proj = shootArrow(ox, oy, oz, dx, dy, dz, { isGrapple: true });
-  if (hit && BLOCK_DEFS[hit.block].solid) {
-    grapplePullPlayerTo(hit.x + hit.nx * 0.5, hit.y + Math.max(0, hit.ny), hit.z + hit.nz * 0.5);
-  }
+  if (hit && BLOCK_DEFS[hit.block].solid) grapplePullPlayerTo(hit.x + hit.nx * 0.5, hit.y + Math.max(0, hit.ny), hit.z + hit.nz * 0.5);
   return proj;
 }
 
@@ -398,14 +378,9 @@ function updateArrows(dt) {
   for (let i = 0; i < MAX_ARROWS; i++) {
     const a = arrows[i];
     if (!a.active) continue;
-    anyUpdated = true;
-    a.age += dt;
-
+    anyUpdated = true; a.age += dt;
     if (a.age > 12.0) {
-      a.active = false;
-      dummyMatrix.makeTranslation(0, -999, 0);
-      arrowInstanced.setMatrixAt(i, dummyMatrix);
-      continue;
+      a.active = false; dummyMatrix.makeTranslation(0, -999, 0); arrowInstanced.setMatrixAt(i, dummyMatrix); continue;
     }
     if (a.stuck) continue;
 
@@ -614,8 +589,15 @@ function toggleVoxelLever(wx, wy, wz) {
 }
 
 // ============================================================================
-// 8C-5. TREASURE CHESTS & PERSISTENT ITEM STORAGE (BLOCK.CHEST)
+// 8C-5. TREASURE CHESTS & 27-SLOT PERSISTENT STORAGE (BLOCK.CHEST)
 // ============================================================================
+function ensureChestSlots(record) {
+  if (!Array.isArray(record.slots) || record.slots.length !== 27) {
+    record.slots = Array.from({ length: 27 }, () => ({ id: 0, count: 0 }));
+  }
+  return record.slots;
+}
+
 function openVoxelChest(wx, wy, wz) {
   if (getVoxelGlobal(wx, wy, wz) !== BLOCK.CHEST) return null;
   const key = `${wx},${wy},${wz}`;
@@ -636,26 +618,30 @@ function openVoxelChest(wx, wy, wz) {
       inventoryCounts[item.id] = (inventoryCounts[item.id] || 0) + item.count;
       autoEquipToHotbar(item.id);
     }
-    record = { opened: true, storedId: 0, storedCount: 0, items: [], lastLoot: lootItems, lootAwarded: lootItems.length };
+    record = { opened: true, storedId: 0, storedCount: 0, items: [], slots: Array.from({ length: 27 }, () => ({ id: 0, count: 0 })), lastLoot: lootItems, lootAwarded: lootItems.length };
+    const lootPositions = [4, 11, 13, 15, 21, 23];
+    lootItems.forEach((it, idx) => { record.slots[lootPositions[idx]] = { id: it.id, count: it.count }; });
     chestLootMap[key] = record;
     refreshInventoryCountsUI();
     saveWorldData();
-    const msg = '🎁 ¡Cofre del Tesoro Abierto! Recibido: +2 Diamantes, +3 Oro, +2 Pan, +2 Manzanas, +8 Vías y +1 Vagoneta';
+    const msg = '🎁 ¡Cofre del Tesoro Abierto! (27 ranuras)';
     const lbl = document.getElementById('block-label');
     if (lbl) lbl.textContent = msg;
     if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, msg);
     return { action: 'looted', lootItems, record };
   }
 
+  ensureChestSlots(record);
   if (!Array.isArray(record.items)) record.items = [];
   const lbl = document.getElementById('block-label');
   if (record.storedCount > 0 && record.storedId > 0) {
     const itemId = record.storedId, count = record.storedCount;
     inventoryCounts[itemId] = (inventoryCounts[itemId] || 0) + count;
     record.storedId = 0; record.storedCount = 0;
+    if (record.slots[0] && record.slots[0].id === itemId) record.slots[0] = { id: 0, count: 0 };
     refreshInventoryCountsUI();
     saveWorldData();
-    const msg = `📦 Cofre: Retirado ${count}× ${BLOCK_DEFS[itemId]?.name || 'Objeto'} a tu mochila`;
+    const msg = `📦 Cofre: Retirado ${count}× ${BLOCK_DEFS[itemId]?.name || 'Objeto'} a tu inventario`;
     if (lbl) lbl.textContent = msg;
     if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, msg);
     return { action: 'withdrawn', itemId, count, record };
@@ -666,6 +652,7 @@ function openVoxelChest(wx, wy, wz) {
     if (avail > 0) {
       if (gameMode === 'survival') inventoryCounts[heldId] -= avail;
       record.storedId = heldId; record.storedCount = avail;
+      record.slots[0] = { id: heldId, count: avail };
       refreshInventoryCountsUI();
       saveWorldData();
       const msg = `📦 Cofre: Guardado ${avail}× ${BLOCK_DEFS[heldId]?.name || 'Objeto'} en el cofre`;
@@ -674,7 +661,7 @@ function openVoxelChest(wx, wy, wz) {
       return { action: 'stored', itemId: heldId, count: avail, record };
     }
   }
-  if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, '📦 Cofre abierto: haz clic en cualquier objeto para guardarlo o retirarlo.');
+  if (typeof openChestModalUI === 'function') openChestModalUI(wx, wy, wz, '📦 Cofre (27 ranuras) — Clic Izq: mover pila · Clic Der: mitad/1 ud. · Shift+Clic: transferir');
   return { action: 'empty', record };
 }
 

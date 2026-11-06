@@ -3,9 +3,8 @@
 
 window.addEventListener('mousemove', (e) => {
   if (!isLocked) return;
-  const sensitivity = 0.0022;
-  player.yaw   -= e.movementX * sensitivity;
-  player.pitch -= e.movementY * sensitivity;
+  player.yaw -= e.movementX * 0.0022;
+  player.pitch -= e.movementY * 0.0022;
   const maxPitch = Math.PI / 2 - 0.02;
   if (player.pitch >  maxPitch) player.pitch =  maxPitch;
   if (player.pitch < -maxPitch) player.pitch = -maxPitch;
@@ -21,33 +20,15 @@ window.addEventListener('keydown', (e) => {
     }
     return;
   }
-
   keys[e.code] = true;
   if (e.code === 'KeyP') { e.preventDefault(); togglePauseMenu(); return; }
   if (e.code === 'Enter' && menuOpen) { e.preventDefault(); togglePauseMenu(false); return; }
-  if (e.code === 'KeyE') {
-    if (chestOpen) { closeChestModal(); return; }
-    if (isGameActive() || invOpen) toggleInventory();
-    return;
-  }
-  if (e.code === 'Escape') { return; }
-  if (false && e.code === 'Escape') {
-    if (chestOpen) { closeChestModal(); return; }
-    if (invOpen) { toggleInventory(false); return; }
-    if (menuOpen && (performance.now() - lastPointerLockExitTime) < 120) return;
-    togglePauseMenu();
-    return;
-  }
-  if (e.code === 'F2' || e.code === 'KeyK') {
-    e.preventDefault();
-    takeGameScreenshot();
-    return;
-  }
+  if (e.code === 'KeyE') { if (chestOpen) closeChestModal(); else if (isGameActive() || invOpen) toggleInventory(); return; }
+  if (e.code === 'Escape') return;
+  if (e.code === 'F2' || e.code === 'KeyK') { e.preventDefault(); takeGameScreenshot(); return; }
   if (e.code.startsWith('Digit')) {
     const num = parseInt(e.code.slice(5), 10);
-    if (num >= 1 && num <= hotbarSlots.length) {
-      updateHotbarSelection(selectedSlot === num - 1 ? -1 : num - 1);
-    }
+    if (num >= 1 && num <= hotbarSlots.length) updateHotbarSelection(selectedSlot === num - 1 ? -1 : num - 1);
   } else if (e.code === 'KeyF') toggleFlyingMode();
   else if (e.code === 'KeyG') toggleGameMode();
   else if (e.code === 'KeyC') toggleCameraMode();
@@ -57,121 +38,66 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'KeyT') toggleDayNight();
   else if (e.code === 'KeyV') toggleWeather();
   else if (e.code === 'KeyM') toggleMusic();
-  else if (e.code === 'KeyH') {
-    hudVisible = !hudVisible;
-    document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none';
-  }
+  else if (e.code === 'KeyH') { hudVisible = !hudVisible; document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; }
 });
 
-window.addEventListener('keyup', (e) => {
-  keys[e.code] = false;
-});
-
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 window.addEventListener('wheel', (e) => {
   if (!isLocked) return;
   if (selectedSlot < 0) updateHotbarSelection(e.deltaY > 0 ? 0 : hotbarSlots.length - 1);
   else updateHotbarSelection(selectedSlot + (e.deltaY > 0 ? 1 : -1));
 });
-
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 
 let currentHit = null;
 
 function triggerPrimaryAttackOrMine() {
   player.swingTime = 1.0;
-  const heldId = getActiveHeldItem();
-  const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
-
-  if (heldId === BLOCK.TOOL_BOW) {
-    shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
-    isMiningHeld = false;
-    return;
-  }
-  if (heldId === BLOCK.TOOL_GRAPPLING_HOOK) {
-    shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
-    isMiningHeld = false;
-    return;
-  }
-
+  const heldId = getActiveHeldItem(), dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+  if (heldId === BLOCK.TOOL_BOW) { shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
+  if (heldId === BLOCK.TOOL_GRAPPLING_HOOK) { shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
   const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 4.3);
-  if (hitMob) {
-    const dmg = heldId === BLOCK.TOOL_SWORD ? 5 : (heldId === BLOCK.TOOL_PICKAXE ? 3 : 1);
-    damageMob(hitMob, dmg, dir.x, dir.z);
-    isMiningHeld = false;
-    return;
-  }
+  if (hitMob) { damageMob(hitMob, heldId === BLOCK.TOOL_SWORD ? 5 : (heldId === BLOCK.TOOL_PICKAXE ? 3 : 1), dir.x, dir.z); isMiningHeld = false; return; }
   isMiningHeld = true;
 }
 
 window.addEventListener('mousedown', (e) => {
   if (!isLocked) {
     if (!menuOpen && !invOpen && !chestOpen && !isTouchMode && e.target === canvasEl && canvasEl.requestPointerLock) {
-      try {
-        const p = canvasEl.requestPointerLock();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
+      try { const p = canvasEl.requestPointerLock(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch (_) {}
     }
     return;
   }
-
-  if (e.button === 0) {
-    triggerPrimaryAttackOrMine();
-  } else if (e.button === 2) {
-    if (getActiveHeldItem() === BLOCK.TOOL_SWORD && !currentHit) {
-      toggleShieldBlock(true);
-    } else {
-      placeBlockAtCurrentTarget();
-    }
-  } else if (e.button === 1 && currentHit) {
+  if (e.button === 0) triggerPrimaryAttackOrMine();
+  else if (e.button === 2) { if (getActiveHeldItem() === BLOCK.TOOL_SWORD && !currentHit) toggleShieldBlock(true); else placeBlockAtCurrentTarget(); }
+  else if (e.button === 1 && currentHit) {
     const idx = hotbarSlots.indexOf(currentHit.block);
     if (idx !== -1) updateHotbarSelection(idx);
-    else {
-      if (selectedSlot < 0) selectedSlot = 0;
-      hotbarSlots[selectedSlot] = currentHit.block;
-      buildHotbarUI();
-    }
+    else { if (selectedSlot < 0) selectedSlot = 0; hotbarSlots[selectedSlot] = currentHit.block; buildHotbarUI(); }
   }
 });
 
-window.addEventListener('mouseup', (e) => {
-  if (e.button === 0) isMiningHeld = false;
-  if (e.button === 2 && isShieldBlocking) toggleShieldBlock(false);
-});
+window.addEventListener('mouseup', (e) => { if (e.button === 0) isMiningHeld = false; if (e.button === 2 && isShieldBlocking) toggleShieldBlock(false); });
 
 // ============================================================================
 // 12B. MOBILE MULTI-TOUCH CONTROLLER (JOYSTICK + CAMERA DRAG + ACTION BUTTONS)
 // ============================================================================
-const joyZoneEl  = document.getElementById('joy-zone');
-const joyStickEl = document.getElementById('joy-stick');
-let joyTouchId  = null;
-let lookTouchId = null;
-let lastLookX   = 0;
-let lastLookY   = 0;
+const joyZoneEl = document.getElementById('joy-zone'), joyStickEl = document.getElementById('joy-stick');
+let joyTouchId = null, lookTouchId = null, lastLookX = 0, lastLookY = 0;
 
 function updateJoystickFromTouch(touch) {
   const rect = joyZoneEl.getBoundingClientRect();
-  const cx = rect.width > 0 ? rect.left + rect.width / 2 : 90;
-  const cy = rect.height > 0 ? rect.top + rect.height / 2 : 400;
+  const cx = rect.width > 0 ? rect.left + rect.width / 2 : 90, cy = rect.height > 0 ? rect.top + rect.height / 2 : 400;
   const maxR = Math.max(28, rect.width * 0.42);
-
-  let dx = touch.clientX - cx;
-  let dy = touch.clientY - cy;
+  let dx = touch.clientX - cx, dy = touch.clientY - cy;
   const dist = Math.hypot(dx, dy);
-
-  if (dist > maxR) {
-    dx = (dx / dist) * maxR;
-    dy = (dy / dist) * maxR;
-  }
-
+  if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
   joyStickEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-  joyX = dx / maxR;
-  joyY = -dy / maxR;
-  joySprint = (dist / maxR) > 0.82;
+  joyX = dx / maxR; joyY = -dy / maxR; joySprint = (dist / maxR) > 0.82;
 }
 
 function resetJoystick() {
-  joyTouchId = null;
-  joyX = 0; joyY = 0; joySprint = false;
+  joyTouchId = null; joyX = 0; joyY = 0; joySprint = false;
   joyStickEl.style.transform = 'translate(-50%, -50%)';
 }
 
@@ -179,11 +105,7 @@ joyZoneEl.addEventListener('touchstart', (e) => {
   e.preventDefault(); e.stopPropagation();
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
-    if (joyTouchId === null) {
-      joyTouchId = t.identifier;
-      updateJoystickFromTouch(t);
-      break;
-    }
+    if (joyTouchId === null) { joyTouchId = t.identifier; updateJoystickFromTouch(t); break; }
   }
 }, { passive: false });
 
@@ -191,17 +113,12 @@ joyZoneEl.addEventListener('touchmove', (e) => {
   e.preventDefault(); e.stopPropagation();
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
-    if (t.identifier === joyTouchId) {
-      updateJoystickFromTouch(t);
-      break;
-    }
+    if (t.identifier === joyTouchId) { updateJoystickFromTouch(t); break; }
   }
 }, { passive: false });
 
 const endJoyHandler = (e) => {
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    if (e.changedTouches[i].identifier === joyTouchId) { resetJoystick(); break; }
-  }
+  for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === joyTouchId) { resetJoystick(); break; }
 };
 joyZoneEl.addEventListener('touchend', endJoyHandler);
 joyZoneEl.addEventListener('touchcancel', endJoyHandler);
@@ -211,12 +128,7 @@ canvasEl.addEventListener('touchstart', (e) => {
   e.preventDefault();
   for (let i = 0; i < e.changedTouches.length; i++) {
     const t = e.changedTouches[i];
-    if (lookTouchId === null && t.identifier !== joyTouchId) {
-      lookTouchId = t.identifier;
-      lastLookX = t.clientX;
-      lastLookY = t.clientY;
-      break;
-    }
+    if (lookTouchId === null && t.identifier !== joyTouchId) { lookTouchId = t.identifier; lastLookX = t.clientX; lastLookY = t.clientY; break; }
   }
 }, { passive: false });
 
@@ -228,9 +140,7 @@ canvasEl.addEventListener('touchmove', (e) => {
     if (t.identifier === lookTouchId) {
       const dx = t.clientX - lastLookX, dy = t.clientY - lastLookY;
       lastLookX = t.clientX; lastLookY = t.clientY;
-      const touchSens = 0.0048;
-      player.yaw   -= dx * touchSens;
-      player.pitch -= dy * touchSens;
+      player.yaw -= dx * 0.0048; player.pitch -= dy * 0.0048;
       const maxPitch = Math.PI / 2 - 0.02;
       if (player.pitch >  maxPitch) player.pitch =  maxPitch;
       if (player.pitch < -maxPitch) player.pitch = -maxPitch;
@@ -240,9 +150,7 @@ canvasEl.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 const endLookHandler = (e) => {
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    if (e.changedTouches[i].identifier === lookTouchId) { lookTouchId = null; break; }
-  }
+  for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === lookTouchId) { lookTouchId = null; break; }
 };
 canvasEl.addEventListener('touchend', endLookHandler);
 canvasEl.addEventListener('touchcancel', endLookHandler);
@@ -250,16 +158,8 @@ canvasEl.addEventListener('touchcancel', endLookHandler);
 function bindHoldButton(btnId, onDown, onUp) {
   const el = document.getElementById(btnId);
   if (!el) return;
-  el.addEventListener('touchstart', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    el.classList.add('pressed');
-    onDown();
-  }, { passive: false });
-  const release = (e) => {
-    e.preventDefault();
-    el.classList.remove('pressed');
-    onUp();
-  };
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); el.classList.add('pressed'); onDown(); }, { passive: false });
+  const release = (e) => { e.preventDefault(); el.classList.remove('pressed'); onUp(); };
   el.addEventListener('touchend', release, { passive: false });
   el.addEventListener('touchcancel', release, { passive: false });
 }
@@ -287,10 +187,7 @@ bindTap('tbtn-photo',   () => takeGameScreenshot());
 bindTap('tbtn-time',    () => toggleDayNight());
 bindTap('tbtn-weather', () => toggleWeather());
 bindTap('tbtn-music',   () => toggleMusic());
-bindTap('tbtn-hud',     () => {
-  hudVisible = !hudVisible;
-  document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none';
-});
+bindTap('tbtn-hud',     () => { hudVisible = !hudVisible; document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; });
 bindTap('tbtn-menu',    () => togglePauseMenu(true));
 
 window.addEventListener('resize', () => {
@@ -304,70 +201,40 @@ window.addEventListener('resize', () => {
 // ============================================================================
 player.y = findSpawnHeight(player.x, player.z);
 
-const elFps    = document.getElementById('stat-fps');
-const elDraws  = document.getElementById('stat-draws');
-const elTris   = document.getElementById('stat-tris');
-const elChunks = document.getElementById('stat-chunks');
-const elPos    = document.getElementById('stat-pos');
-const elLight  = document.getElementById('stat-light');
-const elMode   = document.getElementById('stat-mode');
-
-let lastTime = performance.now();
-let frames = 0;
-let fpsAccum = 0;
-let frameDurationSum = 0;
+const elFps = document.getElementById('stat-fps'), elDraws = document.getElementById('stat-draws');
+const elTris = document.getElementById('stat-tris'), elChunks = document.getElementById('stat-chunks');
+const elPos = document.getElementById('stat-pos'), elLight = document.getElementById('stat-light'), elMode = document.getElementById('stat-mode');
+let lastTime = performance.now(), frames = 0, fpsAccum = 0, frameDurationSum = 0;
 const rayDir = new THREE.Vector3();
 
 function animate(now) {
   requestAnimationFrame(animate);
-
   const frameStart = performance.now();
   const dt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
 
   if (isGameActive()) {
-    updateMinecarts(dt);
-    updateBoats(dt);
-    updatePlayerPhysics(dt);
-    updateVoxelSimulation(dt);
-    updateMobs(dt);
+    updateMinecarts(dt); updateBoats(dt); updatePlayerPhysics(dt);
+    updateVoxelSimulation(dt); updateMobs(dt);
   }
-
-  updateDynamicSky(dt);
-  updateGPUShaders(dt);
-  updateAmbientAudio(dt);
-  updateChunkStreaming();
+  updateDynamicSky(dt); updateGPUShaders(dt); updateAmbientAudio(dt); updateChunkStreaming();
 
   rayDir.set(0, 0, -1).applyEuler(camera.rotation);
   currentHit = raycastVoxel(player.x, player.y + player.eyeHeight, player.z, rayDir.x, rayDir.y, rayDir.z, 6.5);
+  if (currentHit) { highlightBox.position.set(currentHit.x + 0.5, currentHit.y + 0.5, currentHit.z + 0.5); highlightBox.visible = true; }
+  else highlightBox.visible = false;
 
-  if (currentHit) {
-    highlightBox.position.set(currentHit.x + 0.5, currentHit.y + 0.5, currentHit.z + 0.5);
-    highlightBox.visible = true;
-  } else {
-    highlightBox.visible = false;
-  }
-
-  updateMining(dt, currentHit);
-  updateParticles(dt);
-  updateItemDrops(dt);
-  updateArrows(dt);
-  updateWeather(dt);
-  updateMinimap(dt);
-  updateFrustumCulling();
-
+  updateMining(dt, currentHit); updateParticles(dt); updateItemDrops(dt);
+  updateArrows(dt); updateWeather(dt); updateMinimap(dt); updateFrustumCulling();
   renderer.render(scene, camera);
 
   const frameMs = performance.now() - frameStart;
-  frames++;
-  fpsAccum += dt;
-  frameDurationSum += frameMs;
+  frames++; fpsAccum += dt; frameDurationSum += frameMs;
 
   if (fpsAccum >= 0.35) {
     const fps = Math.round(frames / fpsAccum);
     updateDynamicResolution(fps);
-    const avgMsNum = frameDurationSum / frames;
-    const avgMs = avgMsNum.toFixed(2);
+    const avgMsNum = frameDurationSum / frames, avgMs = avgMsNum.toFixed(2);
     const fpsCost60 = ((avgMsNum / 16.667) * 60).toFixed(2);
     const biome = generator.getBiomeAt(player.x, player.z);
     const pLight = getLightGlobal(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z));
@@ -379,204 +246,545 @@ function animate(now) {
     elPos.textContent = `${player.x.toFixed(0)}, ${player.y.toFixed(0)}, ${player.z.toFixed(0)} (${biome})`;
     elLight.textContent = `Sol ${pLight >> 4} | Bloque ${pLight & 15}`;
     elMode.textContent = `${gameMode === 'creative' ? 'Creativo' : 'Supervivencia'}${player.flying ? ' (Vuelo)' : ''} | ${isNight ? 'Noche' : 'Día'}`;
-
     frames = 0; fpsAccum = 0; frameDurationSum = 0;
   }
 }
 
-const chestModalEl = document.getElementById('chest-modal');
-const chestItemsGridEl = document.getElementById('chest-items-grid');
-const chestPlayerGridEl = document.getElementById('chest-player-grid');
-const chestStatusBannerEl = document.getElementById('chest-status-banner');
-const chestModalTitleEl = document.getElementById('chest-modal-title');
-const btnChestCloseEl = document.getElementById('btn-chest-close');
-const btnChestTakeAllEl = document.getElementById('btn-chest-take-all');
+// ============================================================================
+// 13B. MINECRAFT-STYLE INVENTORY (2×2), CRAFTING TABLE (3×3) & 27-SLOT CHESTS
+// ============================================================================
+const chestModalEl = document.getElementById('chest-modal'), chestItemsGridEl = document.getElementById('chest-items-grid');
+const chestPlayerGridEl = document.getElementById('chest-player-grid'), chestHotbarGridEl = document.getElementById('chest-hotbar-grid');
+const chestStatusBannerEl = document.getElementById('chest-status-banner'), chestModalTitleEl = document.getElementById('chest-modal-title');
+const btnChestCloseEl = document.getElementById('btn-chest-close'), btnChestTakeAllEl = document.getElementById('btn-chest-take-all');
+const btnChestDepositAllEl = document.getElementById('btn-chest-deposit-all'), btnChestQuickEl = document.getElementById('btn-chest-quick');
+const mcCursorEl = document.getElementById('mc-cursor-item'), mcCursorCanvas = document.getElementById('mc-cursor-canvas'), mcCursorCountEl = document.getElementById('mc-cursor-count');
+
+function updateCursorItemDOM(clientX, clientY) {
+  if (!mcCursorEl) return;
+  if (!cursorItem.id || cursorItem.count <= 0 || (!invOpen && !chestOpen)) { mcCursorEl.classList.add('hidden'); return; }
+  mcCursorEl.classList.remove('hidden');
+  if (typeof clientX === 'number' && typeof clientY === 'number') { mcCursorEl.style.left = `${clientX}px`; mcCursorEl.style.top = `${clientY}px`; }
+  if (mcCursorCanvas) drawItemIcon(mcCursorCanvas, cursorItem.id);
+  if (mcCursorCountEl) mcCursorCountEl.textContent = cursorItem.count > 1 ? `${cursorItem.count}` : '';
+}
+
+window.addEventListener('mousemove', (e) => { if (invOpen || chestOpen) updateCursorItemDOM(e.clientX, e.clientY); });
+
+function recomputeInventoryCountsFromSlots() {
+  for (const bId of ALL_INVENTORY_ITEMS) inventoryCounts[bId] = 0;
+  for (let i = 0; i < 9; i++) {
+    const id = hotbarSlots[i] || 0, c = hotbarCounts[i] || 0;
+    if (id > 0 && c > 0) inventoryCounts[id] = (inventoryCounts[id] || 0) + c;
+    else if (gameMode === 'survival') { hotbarSlots[i] = 0; hotbarCounts[i] = 0; }
+  }
+  for (let i = 0; i < 27; i++) {
+    const s = invSlots[i];
+    if (s.id > 0 && s.count > 0) inventoryCounts[s.id] = (inventoryCounts[s.id] || 0) + s.count;
+    else { s.id = 0; s.count = 0; }
+  }
+  for (let i = 0; i < 9; i++) {
+    const s = craftGridSlots[i];
+    if (s.id > 0 && s.count > 0) inventoryCounts[s.id] = (inventoryCounts[s.id] || 0) + s.count;
+  }
+  if (cursorItem.id > 0 && cursorItem.count > 0) inventoryCounts[cursorItem.id] = (inventoryCounts[cursorItem.id] || 0) + cursorItem.count;
+}
+
+function reconcileSlotsFromInventoryCounts() {
+  for (let i = 0; i < 9; i++) {
+    const hId = hotbarSlots[i] || 0;
+    if (hId === 0 || (gameMode === 'survival' && (inventoryCounts[hId] || 0) <= 0)) {
+      if (gameMode === 'survival') hotbarSlots[i] = 0;
+      hotbarCounts[i] = 0;
+    } else if (hotbarCounts[i] <= 0) {
+      const fromInv = invSlots.find(s => s.id === hId && s.count > 0);
+      if (fromInv) { hotbarCounts[i] = fromInv.count; fromInv.id = 0; fromInv.count = 0; }
+      else hotbarCounts[i] = Math.max(1, inventoryCounts[hId] || 1);
+    }
+  }
+  for (const bId of ALL_INVENTORY_ITEMS) {
+    let sum = (cursorItem.id === bId ? cursorItem.count : 0);
+    for (let i = 0; i < 9; i++) {
+      if (hotbarSlots[i] === bId) sum += hotbarCounts[i];
+      if (craftGridSlots[i].id === bId) sum += craftGridSlots[i].count;
+    }
+    for (let i = 0; i < 27; i++) if (invSlots[i].id === bId) sum += invSlots[i].count;
+    const diff = Math.max(0, inventoryCounts[bId] || 0) - sum;
+    if (diff > 0) {
+      const hIdx = hotbarSlots.indexOf(bId);
+      if (hIdx !== -1) { hotbarCounts[hIdx] += diff; continue; }
+      const exSlot = invSlots.find(s => s.id === bId && s.count > 0);
+      if (exSlot) { exSlot.count += diff; continue; }
+      const empH = hotbarSlots.indexOf(0);
+      if (empH !== -1) { hotbarSlots[empH] = bId; hotbarCounts[empH] = diff; continue; }
+      const empI = invSlots.find(s => s.id === 0 || s.count <= 0);
+      if (empI) { empI.id = bId; empI.count = diff; }
+    } else if (diff < 0) {
+      let rem = -diff;
+      for (let i = 26; i >= 0 && rem > 0; i--) {
+        if (invSlots[i].id === bId) {
+          const take = Math.min(rem, invSlots[i].count);
+          invSlots[i].count -= take; rem -= take;
+          if (invSlots[i].count <= 0) { invSlots[i].id = 0; invSlots[i].count = 0; }
+        }
+      }
+      for (let i = 8; i >= 0 && rem > 0; i--) {
+        if (hotbarSlots[i] === bId) {
+          const take = Math.min(rem, hotbarCounts[i]);
+          hotbarCounts[i] -= take; rem -= take;
+          if (hotbarCounts[i] <= 0 && gameMode === 'survival') hotbarSlots[i] = 0;
+        }
+      }
+    }
+  }
+}
+
+function putStackIntoPlayerSlots(itemId, count, preferHotbar = true) {
+  if (!itemId || count <= 0) return false;
+  if (preferHotbar) {
+    const hMatch = hotbarSlots.indexOf(itemId);
+    if (hMatch !== -1) { hotbarCounts[hMatch] += count; return true; }
+  }
+  const iMatch = invSlots.find(s => s.id === itemId && s.count > 0);
+  if (iMatch) { iMatch.count += count; return true; }
+  if (preferHotbar) {
+    const hEmpty = hotbarSlots.indexOf(0);
+    if (hEmpty !== -1) { hotbarSlots[hEmpty] = itemId; hotbarCounts[hEmpty] = count; return true; }
+  }
+  const iEmpty = invSlots.find(s => s.id === 0 || s.count <= 0);
+  if (iEmpty) { iEmpty.id = itemId; iEmpty.count = count; return true; }
+  const hEmpty2 = hotbarSlots.indexOf(0);
+  if (hEmpty2 !== -1) { hotbarSlots[hEmpty2] = itemId; hotbarCounts[hEmpty2] = count; return true; }
+  return false;
+}
+
+function returnCraftAndCursorItemsToInventory() {
+  for (let i = 0; i < 9; i++) {
+    if (craftGridSlots[i].id > 0 && craftGridSlots[i].count > 0) {
+      putStackIntoPlayerSlots(craftGridSlots[i].id, craftGridSlots[i].count, true);
+      craftGridSlots[i].id = 0; craftGridSlots[i].count = 0;
+    }
+  }
+  if (cursorItem.id > 0 && cursorItem.count > 0) {
+    putStackIntoPlayerSlots(cursorItem.id, cursorItem.count, true);
+    cursorItem.id = 0; cursorItem.count = 0;
+  }
+  craftOutputSlot.id = 0; craftOutputSlot.count = 0; craftOutputSlot.recipeIdx = -1;
+  recomputeInventoryCountsFromSlots(); updateCursorItemDOM();
+}
+
+function getPatternTrimSignature(ids, size) {
+  let minR = size, maxR = -1, minC = size, maxC = -1;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (ids[r * size + c] > 0) {
+        if (r < minR) minR = r; if (r > maxR) maxR = r;
+        if (c < minC) minC = c; if (c > maxC) maxC = c;
+      }
+    }
+  }
+  if (maxR < 0) return '';
+  const out = [];
+  for (let r = minR; r <= maxR; r++) for (let c = minC; c <= maxC; c++) out.push(ids[r * size + c] || 0);
+  return `${maxC - minC + 1}x${maxR - minR + 1}:${out.join(',')}`;
+}
+
+function evaluateCraftingGrid() {
+  const maxGrid = craftingTableMode ? 3 : 2, cellCount = maxGrid * maxGrid;
+  const activeIds = [], gridCounts = {};
+  let nonEmptyCells = 0;
+  for (let i = 0; i < cellCount; i++) {
+    const s = craftGridSlots[i], id = (s && s.count > 0) ? s.id : 0;
+    activeIds.push(id);
+    if (id > 0) { nonEmptyCells++; gridCounts[id] = (gridCounts[id] || 0) + s.count; }
+  }
+  if (nonEmptyCells === 0) { craftOutputSlot.id = 0; craftOutputSlot.count = 0; craftOutputSlot.recipeIdx = -1; return null; }
+  const inputSig = getPatternTrimSignature(activeIds, maxGrid), distinctTypes = Object.keys(gridCounts).map(Number);
+
+  // Pass 1: Exact 2D shape pattern match
+  for (let idx = 0; idx < CRAFTING_RECIPES.length; idx++) {
+    const rec = CRAFTING_RECIPES[idx], rSize = rec.gridSize || 2;
+    if (rSize <= maxGrid && rec.pattern && getPatternTrimSignature(rec.pattern, rSize) === inputSig) {
+      craftOutputSlot.id = rec.outId; craftOutputSlot.count = rec.outCount; craftOutputSlot.recipeIdx = idx;
+      return craftOutputSlot;
+    }
+  }
+
+  // Pass 2: Flexible ingredient match within allowed grid size (2x2 vs 3x3)
+  for (let idx = 0; idx < CRAFTING_RECIPES.length; idx++) {
+    const rec = CRAFTING_RECIPES[idx];
+    if ((rec.gridSize || 2) > maxGrid || rec.ingredients.length !== distinctTypes.length) continue;
+    let ok = true;
+    for (const ing of rec.ingredients) if ((gridCounts[ing.id] || 0) < ing.count) { ok = false; break; }
+    if (ok) {
+      craftOutputSlot.id = rec.outId; craftOutputSlot.count = rec.outCount; craftOutputSlot.recipeIdx = idx;
+      return craftOutputSlot;
+    }
+  }
+  craftOutputSlot.id = 0; craftOutputSlot.count = 0; craftOutputSlot.recipeIdx = -1;
+  return null;
+}
+
+function craftFromOutputSlot() {
+  evaluateCraftingGrid();
+  if (craftOutputSlot.id <= 0 || craftOutputSlot.recipeIdx < 0) return false;
+  const rec = CRAFTING_RECIPES[craftOutputSlot.recipeIdx];
+  if (!rec) return false;
+  const maxGrid = craftingTableMode ? 3 : 2, cellCount = maxGrid * maxGrid;
+
+  if (gameMode === 'survival') {
+    for (const ing of rec.ingredients) {
+      let rem = ing.count;
+      while (rem > 0) {
+        let progressed = false;
+        for (let i = 0; i < cellCount && rem > 0; i++) {
+          if (craftGridSlots[i].id === ing.id && craftGridSlots[i].count > 0) {
+            craftGridSlots[i].count--; rem--; progressed = true;
+            if (craftGridSlots[i].count <= 0) { craftGridSlots[i].id = 0; craftGridSlots[i].count = 0; }
+          }
+        }
+        if (!progressed) break;
+      }
+    }
+  } else {
+    for (let i = 0; i < cellCount; i++) { craftGridSlots[i].id = 0; craftGridSlots[i].count = 0; }
+  }
+  putStackIntoPlayerSlots(rec.outId, rec.outCount, true);
+  autoEquipToHotbar(rec.outId);
+  recomputeInventoryCountsFromSlots(); evaluateCraftingGrid();
+  sfx.play('craft'); saveWorldData(); refreshInventoryCountsUI();
+  return true;
+}
+
+function fillOrCraftRecipeInGrid(recipeIdx) {
+  const rec = CRAFTING_RECIPES[recipeIdx];
+  if (!rec) return false;
+  const maxGrid = craftingTableMode ? 3 : 2;
+  if (gameMode === 'survival' && (rec.gridSize || 2) > maxGrid) return false;
+  evaluateCraftingGrid();
+  if (craftOutputSlot.recipeIdx === recipeIdx) return craftFromOutputSlot();
+  returnCraftAndCursorItemsToInventory();
+  if (!canCraftRecipe(recipeIdx, true)) return false;
+
+  const pat = rec.pattern || [], patSize = rec.gridSize || 2, placedCounts = {};
+  for (let r = 0; r < patSize; r++) {
+    for (let c = 0; c < patSize; c++) {
+      const bId = pat[r * patSize + c] || 0;
+      if (bId) {
+        const dstIdx = r * maxGrid + c;
+        craftGridSlots[dstIdx].id = bId; craftGridSlots[dstIdx].count = 1;
+        placedCounts[bId] = (placedCounts[bId] || 0) + 1;
+      }
+    }
+  }
+  for (const ing of rec.ingredients) {
+    const extra = Math.max(0, ing.count - (placedCounts[ing.id] || 0));
+    if (extra > 0) { const slot = craftGridSlots.find(s => s.id === ing.id); if (slot) slot.count += extra; }
+    if (gameMode === 'survival') {
+      let rem = ing.count;
+      for (let i = 26; i >= 0 && rem > 0; i--) {
+        if (invSlots[i].id === ing.id) {
+          const take = Math.min(rem, invSlots[i].count);
+          invSlots[i].count -= take; rem -= take;
+          if (invSlots[i].count <= 0) { invSlots[i].id = 0; invSlots[i].count = 0; }
+        }
+      }
+      for (let i = 8; i >= 0 && rem > 0; i--) {
+        if (hotbarSlots[i] === ing.id) {
+          const take = Math.min(rem, hotbarCounts[i]);
+          hotbarCounts[i] -= take; rem -= take;
+          if (hotbarCounts[i] <= 0) hotbarSlots[i] = 0;
+        }
+      }
+    }
+  }
+  recomputeInventoryCountsFromSlots(); evaluateCraftingGrid();
+  sfx.play('step'); renderMinecraftInventoryDOM();
+  return true;
+}
+
+function giveCreativeStackToSlot(bId) {
+  const isTool = (bId >= 100 && bId <= 102) || bId === BLOCK.TOOL_GRAPPLING_HOOK;
+  putStackIntoPlayerSlots(bId, isTool ? 1 : 16, true);
+  recomputeInventoryCountsFromSlots(); sfx.play('pickup'); saveWorldData(); refreshInventoryCountsUI();
+}
+
+function getSlotRef(container, idx) {
+  if (container === 'hotbar') return { get id() { return hotbarSlots[idx] || 0; }, set id(v) { hotbarSlots[idx] = v; }, get count() { return hotbarCounts[idx] || 0; }, set count(v) { hotbarCounts[idx] = v; } };
+  if (container === 'inv') return invSlots[idx];
+  if (container === 'craft') return craftGridSlots[idx];
+  if (container === 'chest' && activeChestKey && chestLootMap[activeChestKey]) return ensureChestSlots(chestLootMap[activeChestKey])[idx];
+  return null;
+}
+
+function syncActiveChestLegacyFields() {
+  if (!activeChestKey || !chestLootMap[activeChestKey]) return;
+  const record = chestLootMap[activeChestKey], slots = ensureChestSlots(record);
+  record.storedId = 0; record.storedCount = 0; record.items = [];
+  for (let i = 0; i < 27; i++) {
+    if (slots[i].id > 0 && slots[i].count > 0) {
+      if (record.storedId === 0) { record.storedId = slots[i].id; record.storedCount = slots[i].count; }
+      else record.items.push({ id: slots[i].id, count: slots[i].count });
+    }
+  }
+}
+
+function clickSlot(container, idx, button = 0, shiftKey = false) {
+  if (container === 'output') return craftFromOutputSlot();
+  const slot = getSlotRef(container, idx);
+  if (!slot) return false;
+  const isShift = shiftKey || quickMoveMode;
+
+  if (isShift && slot.id > 0 && slot.count > 0) {
+    if (container === 'chest' || container === 'craft') {
+      putStackIntoPlayerSlots(slot.id, slot.count, true); slot.id = 0; slot.count = 0;
+    } else if (chestOpen && (container === 'inv' || container === 'hotbar')) {
+      const cSlots = ensureChestSlots(chestLootMap[activeChestKey]);
+      const match = cSlots.find(s => s.id === slot.id && s.count > 0) || cSlots.find(s => s.id === 0 || s.count <= 0);
+      if (match) {
+        if (match.id === slot.id) match.count += slot.count; else { match.id = slot.id; match.count = slot.count; }
+        slot.id = 0; slot.count = 0;
+      }
+    } else if (container === 'inv') {
+      const hMatch = hotbarSlots.indexOf(slot.id), hEmp = hotbarSlots.indexOf(0);
+      if (hMatch !== -1) { hotbarCounts[hMatch] += slot.count; slot.id = 0; slot.count = 0; }
+      else if (hEmp !== -1) { hotbarSlots[hEmp] = slot.id; hotbarCounts[hEmp] = slot.count; slot.id = 0; slot.count = 0; }
+    } else if (container === 'hotbar') {
+      const iMatch = invSlots.find(s => s.id === slot.id && s.count > 0) || invSlots.find(s => s.id === 0 || s.count <= 0);
+      if (iMatch) {
+        if (iMatch.id === slot.id) iMatch.count += slot.count; else { iMatch.id = slot.id; iMatch.count = slot.count; }
+        slot.id = 0; slot.count = 0;
+      }
+    }
+  } else if (button === 2) {
+    if (cursorItem.id === 0) {
+      if (slot.id > 0 && slot.count > 0) {
+        const half = Math.ceil(slot.count / 2);
+        cursorItem.id = slot.id; cursorItem.count = half; slot.count -= half;
+        if (slot.count <= 0) { slot.id = 0; slot.count = 0; }
+      }
+    } else {
+      if (slot.id === 0 || slot.count <= 0) { slot.id = cursorItem.id; slot.count = 1; cursorItem.count--; }
+      else if (slot.id === cursorItem.id) { slot.count++; cursorItem.count--; }
+      if (cursorItem.count <= 0) { cursorItem.id = 0; cursorItem.count = 0; }
+    }
+  } else {
+    if (cursorItem.id === 0) {
+      if (slot.id > 0 && slot.count > 0) { cursorItem.id = slot.id; cursorItem.count = slot.count; slot.id = 0; slot.count = 0; }
+    } else {
+      if (slot.id === 0 || slot.count <= 0) { slot.id = cursorItem.id; slot.count = cursorItem.count; cursorItem.id = 0; cursorItem.count = 0; }
+      else if (slot.id === cursorItem.id) { slot.count += cursorItem.count; cursorItem.id = 0; cursorItem.count = 0; }
+      else { const tmpId = slot.id, tmpCnt = slot.count; slot.id = cursorItem.id; slot.count = cursorItem.count; cursorItem.id = tmpId; cursorItem.count = tmpCnt; }
+    }
+  }
+
+  recomputeInventoryCountsFromSlots();
+  if (chestOpen) syncActiveChestLegacyFields();
+  evaluateCraftingGrid(); sfx.play('step'); saveWorldData(); buildHotbarUI();
+  if (invOpen) renderMinecraftInventoryDOM();
+  if (chestOpen) buildChestModalUI();
+  updateCursorItemDOM();
+  return true;
+}
+
+function createMcSlotEl(itemId, count, container, idx, extraClass = '', keyLabel = '') {
+  const el = document.createElement('div');
+  el.className = 'mc-slot' + (extraClass ? ' ' + extraClass : '');
+  if (itemId > 0 && count > 0) {
+    el.title = `${BLOCK_DEFS[itemId]?.name || 'Objeto'} (${count})`;
+    const cv = document.createElement('canvas'); cv.width = 16; cv.height = 16;
+    drawItemIcon(cv, itemId); el.appendChild(cv);
+    const badge = document.createElement('span'); badge.className = 'count'; badge.textContent = count > 1 ? `${count}` : '';
+    el.appendChild(badge);
+  }
+  if (keyLabel) {
+    const k = document.createElement('span'); k.className = 'key'; k.textContent = keyLabel;
+    el.appendChild(k);
+  }
+  el.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); clickSlot(container, idx, e.button, e.shiftKey); updateCursorItemDOM(e.clientX, e.clientY); });
+  el.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); clickSlot(container, idx, 0, quickMoveMode); }, { passive: false });
+  return el;
+}
+
+function drawPlayerAvatar2D() {
+  const cv = document.getElementById('mc-avatar-canvas');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = '#5c3a21'; ctx.fillRect(16, 4, 16, 5);
+  ctx.fillStyle = '#f1c27d'; ctx.fillRect(16, 9, 16, 12);
+  ctx.fillStyle = '#1e293b'; ctx.fillRect(19, 13, 3, 3); ctx.fillRect(26, 13, 3, 3);
+  ctx.fillStyle = '#b45309'; ctx.fillRect(22, 17, 4, 2);
+  ctx.fillStyle = '#0284c7'; ctx.fillRect(14, 21, 20, 22);
+  ctx.fillStyle = '#f1c27d'; ctx.fillRect(8, 21, 6, 20); ctx.fillRect(34, 21, 6, 20);
+  ctx.fillStyle = '#334155'; ctx.fillRect(15, 43, 9, 21); ctx.fillRect(24, 43, 9, 21);
+}
+
+function renderMinecraftInventoryDOM() {
+  const craftSlotsEl = document.getElementById('mc-craft-slots'), craftOutEl = document.getElementById('mc-craft-output');
+  const invSlotsEl = document.getElementById('mc-inv-slots'), hbSlotsEl = document.getElementById('mc-hotbar-slots');
+  const playerPreviewEl = document.getElementById('mc-player-preview-box'), craftLabelEl = document.getElementById('mc-craft-label');
+  if (!craftSlotsEl || !invSlotsEl || !hbSlotsEl) return;
+
+  if (playerPreviewEl) playerPreviewEl.style.display = craftingTableMode ? 'none' : 'flex';
+  if (!craftingTableMode) drawPlayerAvatar2D();
+  if (craftLabelEl) craftLabelEl.textContent = craftingTableMode ? '⚒ Mesa de Crafteo (Cuadrícula 3×3)' : 'Fabricación Manual (2×2)';
+
+  const maxGrid = craftingTableMode ? 3 : 2;
+  craftSlotsEl.className = craftingTableMode ? 'mc-grid-3x3' : 'mc-grid-2x2';
+  craftSlotsEl.innerHTML = '';
+  for (let i = 0; i < maxGrid * maxGrid; i++) craftSlotsEl.appendChild(createMcSlotEl(craftGridSlots[i].id, craftGridSlots[i].count, 'craft', i));
+
+  evaluateCraftingGrid();
+  if (craftOutEl) {
+    craftOutEl.innerHTML = '';
+    craftOutEl.classList.toggle('ready', craftOutputSlot.id > 0);
+    if (craftOutputSlot.id > 0) {
+      craftOutEl.title = `Fabricar ${craftOutputSlot.count}× ${BLOCK_DEFS[craftOutputSlot.id]?.name || ''}`;
+      const cv = document.createElement('canvas'); cv.width = 16; cv.height = 16;
+      drawItemIcon(cv, craftOutputSlot.id); craftOutEl.appendChild(cv);
+      const b = document.createElement('span'); b.className = 'count'; b.textContent = craftOutputSlot.count > 1 ? `${craftOutputSlot.count}` : '';
+      craftOutEl.appendChild(b);
+    } else craftOutEl.title = 'Resultado de fabricación';
+    craftOutEl.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); craftFromOutputSlot(); };
+    craftOutEl.ontouchend = (e) => { e.preventDefault(); e.stopPropagation(); craftFromOutputSlot(); };
+  }
+
+  invSlotsEl.innerHTML = '';
+  for (let i = 0; i < 27; i++) invSlotsEl.appendChild(createMcSlotEl(invSlots[i].id, invSlots[i].count, 'inv', i));
+  hbSlotsEl.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const hId = hotbarSlots[i] || 0, hCnt = gameMode === 'creative' && hId > 0 ? 1 : (hotbarCounts[i] || 0);
+    hbSlotsEl.appendChild(createMcSlotEl(hId, hCnt, 'hotbar', i, i === selectedSlot ? 'active-hotbar' : '', `${i + 1}`));
+  }
+}
 
 function buildChestModalUI() {
   if (!chestModalEl || !activeChestKey) return;
   const record = chestLootMap[activeChestKey];
   if (!record) return;
-  if (!Array.isArray(record.items)) record.items = [];
-
-  chestItemsGridEl.innerHTML = '';
-  const hasStoredSingle = record.storedCount > 0 && record.storedId > 0;
-  const totalStored = (hasStoredSingle ? 1 : 0) + record.items.length;
-
-  const appendChestSlotCard = (itemId, count, subtitle, onClickFn) => {
-    const def = BLOCK_DEFS[itemId];
-    const card = document.createElement('div');
-    card.className = 'craft-item craftable';
-    const icon = document.createElement('canvas');
-    icon.width = 16; icon.height = 16;
-    drawItemIcon(icon, itemId);
-    const info = document.createElement('div');
-    info.className = 'craft-info';
-    info.innerHTML = `<div class="craft-title">${count}× ${def.name}</div><div class="craft-cost">${subtitle}</div>`;
-    card.appendChild(icon);
-    card.appendChild(info);
-    if (onClickFn) card.addEventListener('click', onClickFn);
-    chestItemsGridEl.appendChild(card);
-  };
-
-  if (totalStored === 0 && Array.isArray(record.lastLoot) && record.lastLoot.length > 0) {
-    record.lastLoot.forEach((entry) => {
-      appendChestSlotCard(entry.id, entry.count, `¡Recogido en tu mochila! (Tienes ${inventoryCounts[entry.id] || 0})`, null);
-    });
-  } else if (totalStored === 0) {
-    chestItemsGridEl.innerHTML = `<div style="color:#94a3b8;font-size:12.5px;padding:8px;">El cofre está vacío. Haz clic en cualquier objeto de tu mochila abajo para guardarlo aquí.</div>`;
-  } else {
-    if (hasStoredSingle) {
-      appendChestSlotCard(record.storedId, record.storedCount, 'Haz clic para retirar a tu mochila', (e) => {
-        e.preventDefault();
-        inventoryCounts[record.storedId] = (inventoryCounts[record.storedId] || 0) + record.storedCount;
-        record.storedId = 0; record.storedCount = 0;
-        sfx.play('chest');
-        refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
-      });
-    }
-    record.items.forEach((slot, sIdx) => {
-      appendChestSlotCard(slot.id, slot.count, 'Haz clic para retirar a tu mochila', (e) => {
-        e.preventDefault();
-        inventoryCounts[slot.id] = (inventoryCounts[slot.id] || 0) + slot.count;
-        record.items.splice(sIdx, 1);
-        sfx.play('chest');
-        refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
-      });
-    });
+  reconcileSlotsFromInventoryCounts();
+  const cSlots = ensureChestSlots(record);
+  if (record.storedCount > 0 && record.storedId > 0 && !cSlots.some(s => s.id === record.storedId && s.count > 0)) {
+    cSlots[0] = { id: record.storedId, count: record.storedCount };
   }
-
+  chestItemsGridEl.innerHTML = '';
+  for (let i = 0; i < 27; i++) chestItemsGridEl.appendChild(createMcSlotEl(cSlots[i].id, cSlots[i].count, 'chest', i));
   chestPlayerGridEl.innerHTML = '';
-  ALL_INVENTORY_ITEMS.forEach((bId) => {
-    const count = inventoryCounts[bId] || 0;
-    if (gameMode === 'survival' && count <= 0) return;
-    if ((bId >= 100 && bId <= 102) || bId === BLOCK.TOOL_GRAPPLING_HOOK) return;
-    const def = BLOCK_DEFS[bId];
-    const card = document.createElement('div');
-    card.className = 'inv-item';
-    const badge = document.createElement('div');
-    badge.className = 'count';
-    badge.textContent = formatItemCountBadge(bId);
-    const icon = document.createElement('canvas');
-    icon.width = 16; icon.height = 16;
-    drawItemIcon(icon, bId);
-    const lbl = document.createElement('span');
-    lbl.textContent = def.name;
-    card.appendChild(badge); card.appendChild(icon); card.appendChild(lbl);
-    card.addEventListener('click', (e) => {
-      e.preventDefault();
-      const moveAmt = gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[bId] || 0);
-      if (moveAmt <= 0) return;
-      if (gameMode === 'survival') inventoryCounts[bId] -= moveAmt;
-      record.lastLoot = null;
-      const existing = record.items.find(it => it.id === bId);
-      if (existing) existing.count += moveAmt;
-      else record.items.push({ id: bId, count: moveAmt });
-      sfx.play('place');
-      refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
-    });
-    chestPlayerGridEl.appendChild(card);
-  });
+  for (let i = 0; i < 27; i++) chestPlayerGridEl.appendChild(createMcSlotEl(invSlots[i].id, invSlots[i].count, 'inv', i));
+  if (chestHotbarGridEl) {
+    chestHotbarGridEl.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+      const hId = hotbarSlots[i] || 0, hCnt = gameMode === 'creative' && hId > 0 ? 1 : (hotbarCounts[i] || 0);
+      chestHotbarGridEl.appendChild(createMcSlotEl(hId, hCnt, 'hotbar', i, i === selectedSlot ? 'active-hotbar' : '', `${i + 1}`));
+    }
+  }
 }
 
 function openChestModalUI(wx, wy, wz, bannerMsg) {
   if (!chestModalEl) return;
   activeChestKey = `${wx},${wy},${wz}`;
-  chestOpen = true; invOpen = false;
-  invModalEl.classList.add('hidden');
-  isMiningHeld = false;
-  if (chestModalTitleEl) chestModalTitleEl.textContent = `🎁 Cofre del Tesoro (${wx}, ${wy}, ${wz})`;
+  chestOpen = true; invOpen = false; craftingTableMode = false;
+  invModalEl.classList.add('hidden'); isMiningHeld = false;
+  if (chestModalTitleEl) chestModalTitleEl.textContent = `🎁 Cofre (${wx}, ${wy}, ${wz})`;
   if (chestStatusBannerEl && bannerMsg) chestStatusBannerEl.textContent = bannerMsg;
   buildChestModalUI();
   chestModalEl.classList.remove('hidden');
-  if (document.pointerLockElement) {
-    try { document.exitPointerLock(); } catch (_) {}
-  }
+  if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (_) {} }
 }
 
 function closeChestModal() {
+  if (cursorItem.id > 0 && cursorItem.count > 0) {
+    putStackIntoPlayerSlots(cursorItem.id, cursorItem.count, true);
+    cursorItem.id = 0; cursorItem.count = 0;
+    recomputeInventoryCountsFromSlots(); updateCursorItemDOM();
+  }
   chestOpen = false; activeChestKey = null;
   if (chestModalEl) chestModalEl.classList.add('hidden');
   startGameplay();
 }
 
+const btnInvCloseEl = document.getElementById('btn-inv-close'), btnRecipeBookEl = document.getElementById('btn-recipe-book');
+const btnInvQuickEl = document.getElementById('btn-inv-quick-move'), recipeDrawerEl = document.getElementById('mc-recipe-drawer');
+
+if (btnInvCloseEl) btnInvCloseEl.addEventListener('click', (e) => { e.preventDefault(); toggleInventory(false); });
+if (btnRecipeBookEl && recipeDrawerEl) {
+  btnRecipeBookEl.addEventListener('click', (e) => {
+    e.preventDefault(); recipeDrawerEl.classList.toggle('hidden');
+    btnRecipeBookEl.classList.toggle('toggled', !recipeDrawerEl.classList.contains('hidden'));
+  });
+}
+const toggleQuickMoveBtn = (e) => {
+  e.preventDefault(); quickMoveMode = !quickMoveMode;
+  for (const b of [btnInvQuickEl, btnChestQuickEl]) if (b) { b.textContent = `⚡ Mover Rápido: ${quickMoveMode ? 'ON' : 'OFF'}`; b.classList.toggle('toggled', quickMoveMode); }
+};
+if (btnInvQuickEl) btnInvQuickEl.addEventListener('click', toggleQuickMoveBtn);
+if (btnChestQuickEl) btnChestQuickEl.addEventListener('click', toggleQuickMoveBtn);
 if (btnChestCloseEl) btnChestCloseEl.addEventListener('click', (e) => { e.preventDefault(); closeChestModal(); });
+
 if (btnChestTakeAllEl) {
   btnChestTakeAllEl.addEventListener('click', (e) => {
     e.preventDefault();
     if (!activeChestKey || !chestLootMap[activeChestKey]) return;
-    const record = chestLootMap[activeChestKey];
-    if (record.storedCount > 0 && record.storedId > 0) {
-      inventoryCounts[record.storedId] = (inventoryCounts[record.storedId] || 0) + record.storedCount;
-      record.storedId = 0; record.storedCount = 0;
+    const record = chestLootMap[activeChestKey], cSlots = ensureChestSlots(record);
+    for (let i = 0; i < 27; i++) {
+      if (cSlots[i].id > 0 && cSlots[i].count > 0) { putStackIntoPlayerSlots(cSlots[i].id, cSlots[i].count, true); cSlots[i].id = 0; cSlots[i].count = 0; }
     }
-    if (Array.isArray(record.items)) {
-      for (const it of record.items) inventoryCounts[it.id] = (inventoryCounts[it.id] || 0) + it.count;
-      record.items.length = 0;
-    }
-    record.lastLoot = null;
-    sfx.play('chest');
-    refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
+    record.storedId = 0; record.storedCount = 0; record.items = []; record.lastLoot = null;
+    recomputeInventoryCountsFromSlots(); sfx.play('chest'); refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
   });
 }
 
+if (btnChestDepositAllEl) {
+  btnChestDepositAllEl.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!activeChestKey || !chestLootMap[activeChestKey]) return;
+    const record = chestLootMap[activeChestKey], cSlots = ensureChestSlots(record);
+    for (let i = 0; i < 27; i++) {
+      if (invSlots[i].id > 0 && invSlots[i].count > 0) {
+        const dst = cSlots.find(s => s.id === invSlots[i].id && s.count > 0) || cSlots.find(s => s.id === 0 || s.count <= 0);
+        if (dst) {
+          if (dst.id === invSlots[i].id) dst.count += invSlots[i].count; else { dst.id = invSlots[i].id; dst.count = invSlots[i].count; }
+          invSlots[i].id = 0; invSlots[i].count = 0;
+        }
+      }
+    }
+    syncActiveChestLegacyFields(); recomputeInventoryCountsFromSlots(); sfx.play('place'); refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
+  });
+}
+
+reconcileSlotsFromInventoryCounts();
+renderMinecraftInventoryDOM();
 requestAnimationFrame(animate);
 
-// Expose zero-overhead testing & introspection hook for automated test suites
 window.__VOXELCRAFT__ = {
-  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES,
-  hotbarSlots, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar, CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS,
-  atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
-  player, playerAvatar, toggleCameraMode, toggleZoom,
-  getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
-  updateFrustumCulling,
-  getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
+  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem,
+  isCraftingTableMode: () => craftingTableMode, openCraftingTable, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
+  evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
+  CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
+  player, playerAvatar, toggleCameraMode, toggleZoom, getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
+  updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
   chunks, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, mobAtlasCanvas, mobAtlasTexture, mobGeos, activeTNTs,
-  particles, particleInstanced, itemDrops, dropInstanced,
-  arrows, arrowInstanced, shootArrow, shootGrappleHook, grapplePullPlayerTo, updateArrows,
-  eatHeldApple, growTreeAt, toggleVoxelDoor, toggleVoxelTrapdoor,
-  triggerVoxelPiston, portals, registerPortalAt, activateObsidianPortal, useVoxelPortal,
+  particles, particleInstanced, itemDrops, dropInstanced, arrows, arrowInstanced, shootArrow, shootGrappleHook, grapplePullPlayerTo, updateArrows,
+  eatHeldApple, growTreeAt, toggleVoxelDoor, toggleVoxelTrapdoor, triggerVoxelPiston, portals, registerPortalAt, activateObsidianPortal, useVoxelPortal,
   chestLootMap, openVoxelChest, openChestModalUI, closeChestModal, isChestOpen: () => chestOpen,
   minecarts, getRidingCart: () => ridingCart, spawnMinecart, toggleRideMinecart, updateMinecarts,
-  boats, getRidingBoat: () => ridingBoat, spawnBoat, toggleRideBoat, updateBoats,
-  toggleShieldBlock, isShieldBlocking: () => isShieldBlocking,
+  boats, getRidingBoat: () => ridingBoat, spawnBoat, toggleRideBoat, updateBoats, toggleShieldBlock, isShieldBlocking: () => isShieldBlocking,
   takeGameScreenshot, getScreenshotState: () => ({ screenshotsTakenCount, lastScreenshotDataUrl }),
   trySummonIronGolem, waypoints, addWaypoint, removeWaypoint, teleportToWaypoint, buildWaypointsUI,
-  weatherInstanced, toggleWeather, triggerLightningFlash, updateWeather,
-  getWeatherState: () => ({ weatherMode, isSnowing, lightningFlash, lightningCount }),
-  toggleVoxelLever, propagateRedstoneSignal,
-  minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
-  applyWorldSeed, teleportToBiome,
-  skyGroup, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay, getCelestialAngle: () => celestialAngle, getMoonAngle: () => moonAngle,
-  solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
-  getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }),
-  getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,
-  computeChunkLighting, buildChunkMeshArrays, applyArraysToMesh, rebuildChunkImmediate,
-  packChunkPaddedBuffers, requestChunkMeshWorker, updateDynamicResolution,
-  getWorkerState: () => ({
-    hasWorker: meshWorker !== null, workerJobsInFlight, workerJobsCompleted,
-    lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio
-  }),
-  raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation,
-  spawnMob, damageMob, removeMobAt, updateMobs,
-  updatePlayerPhysics, checkAABBCollision, damagePlayer, updateMining,
-  updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
-  canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI,
-  sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, updateAmbientAudio, updateDynamicSky,
-  getGenerator: () => generator, updateChunkStreaming,
-  toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
-  updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine,
-  startGameplay, isGameActive,
-  getState: () => ({
-    worldSeed, worldDeltas, selectedSlot, renderDistance, isNight, sunFactor,
-    invOpen, menuOpen, isLocked, touchPlaying, isMiningHeld, mineProgress,
-    currentHit, joyX, joyY, joySprint, gameMode
-  }),
-  setMiningHeld: (v) => { isMiningHeld = v; },
-  setCurrentHit: (h) => { currentHit = h; },
-  setTouchPlaying: (v) => {
-    touchPlaying = v;
-    menuOpen = !v;
-    overlayEl.classList.toggle('hidden', !!v);
-    touchControlsEl.classList.toggle('active', !!v);
-  }
+  weatherInstanced, toggleWeather, triggerLightningFlash, updateWeather, getWeatherState: () => ({ weatherMode, isSnowing, lightningFlash, lightningCount }),
+  toggleVoxelLever, propagateRedstoneSignal, minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
+  applyWorldSeed, teleportToBiome, skyGroup, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay,
+  getCelestialAngle: () => celestialAngle, getMoonAngle: () => moonAngle, solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
+  getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }), getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,
+  computeChunkLighting, buildChunkMeshArrays, applyArraysToMesh, rebuildChunkImmediate, packChunkPaddedBuffers, requestChunkMeshWorker, updateDynamicResolution,
+  getWorkerState: () => ({ hasWorker: meshWorker !== null, workerJobsInFlight, workerJobsCompleted, lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio }),
+  raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation, spawnMob, damageMob, removeMobAt, updateMobs,
+  updatePlayerPhysics, checkAABBCollision, damagePlayer, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
+  canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, updateAmbientAudio, updateDynamicSky,
+  getGenerator: () => generator, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
+  updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine, startGameplay, isGameActive,
+  getState: () => ({ worldSeed, worldDeltas, selectedSlot, renderDistance, isNight, sunFactor, invOpen, menuOpen, isLocked, touchPlaying, isMiningHeld, mineProgress, currentHit, joyX, joyY, joySprint, gameMode }),
+  setMiningHeld: (v) => { isMiningHeld = v; }, setCurrentHit: (h) => { currentHit = h; },
+  setTouchPlaying: (v) => { touchPlaying = v; menuOpen = !v; overlayEl.classList.toggle('hidden', !!v); touchControlsEl.classList.toggle('active', !!v); }
 };

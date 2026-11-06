@@ -398,6 +398,7 @@ function createWorldGenerator(seed) {
       }
       setLocal(8, baseY + 1, 8, BLOCK.TORCH);
       setLocal(7, baseY + 1, 7, BLOCK.CHEST);
+      setLocal(9, baseY + 1, 7, BLOCK.CRAFTING_TABLE);
       return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
     }
   }

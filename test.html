@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=21"></iframe>
+    <iframe id="game-frame" src="./index.html?v=28"></iframe>
   </div>
 
   <script>
@@ -1730,6 +1730,108 @@
           const dataUrl = vc.takeGameScreenshot(true);
           assert(vc.getScreenshotState().screenshotsTakenCount === shotsBefore + 1, 'takeGameScreenshot debe incrementar screenshotsTakenCount');
           assert(typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png'), 'takeGameScreenshot debe generar un DataURL PNG válido del canvas WebGL');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 36: Sistema estilo Minecraft — Inventario 2×2, Mesa de Crafteo 3×3 y Cofres 27 Slots
+      // =========================================================================
+      describe('36. Sistema Minecraft: Inventario (2×2 + 27 Mochila), Mesa de Crafteo (3×3) y Cofres (27 Ranuras)', () => {
+        it('Fabrica Tablones y la Mesa de Crafteo en la cuadrícula manual 2×2 (E) y exige Mesa 3×3 para herramientas avanzadas', () => {
+          vc.toggleGameMode('survival');
+          vc.toggleInventory(true, false);
+          assert(vc.isCraftingTableMode() === false, 'Abrir el inventario con E debe activar el modo de fabricación manual 2×2');
+          const craftGridDOM = doc.getElementById('mc-craft-slots');
+          assert(craftGridDOM && craftGridDOM.classList.contains('mc-grid-2x2') && craftGridDOM.children.length === 4, 'La cuadrícula manual 2×2 debe renderizar exactamente 4 ranuras');
+
+          // Limpiar cuadrícula y colocar 1× BLOCK.WOOD -> debe ofrecer 4× BLOCK.PLANKS
+          for (let i = 0; i < 9; i++) { vc.craftGridSlots[i].id = 0; vc.craftGridSlots[i].count = 0; }
+          vc.craftGridSlots[0].id = vc.BLOCK.WOOD;
+          vc.craftGridSlots[0].count = 1;
+          const outPlanks = vc.evaluateCraftingGrid();
+          assert(outPlanks && outPlanks.id === vc.BLOCK.PLANKS && outPlanks.count === 4, 'Colocar 1× Tronco de Roble en la cuadrícula 2×2 debe producir 4× Tablones de Madera');
+
+          // Colocar 4× BLOCK.PLANKS en las 4 casillas 2×2 -> debe ofrecer 1× BLOCK.CRAFTING_TABLE
+          for (let i = 0; i < 4; i++) { vc.craftGridSlots[i].id = vc.BLOCK.PLANKS; vc.craftGridSlots[i].count = 1; }
+          const outTable = vc.evaluateCraftingGrid();
+          assert(outTable && outTable.id === vc.BLOCK.CRAFTING_TABLE && outTable.count === 1, 'Colocar 4× Tablones en el 2×2 debe producir 1× Mesa de Crafteo (BLOCK.CRAFTING_TABLE)');
+          const craftedTable = vc.craftFromOutputSlot();
+          assert(craftedTable === true && (vc.inventoryCounts[vc.BLOCK.CRAFTING_TABLE] || 0) >= 1, 'craftFromOutputSlot() debe consumir los 4 tablones y entregar 1× Mesa de Crafteo');
+
+          // Verificar que una receta 3×3 (Pico de Diamante, índice 8) está bloqueada en modo 2×2 manual
+          const pickIdx = vc.CRAFTING_RECIPES.findIndex(r => r.outId === vc.BLOCK.TOOL_PICKAXE);
+          vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] = 4;
+          vc.inventoryCounts[vc.BLOCK.PLANKS] = 4;
+          vc.reconcileSlotsFromInventoryCounts();
+          assert(vc.canCraftRecipe(pickIdx, true) === false, 'En Supervivencia sin Mesa de Crafteo (modo 2×2) no debe permitir fabricar recetas 3×3 como el Pico de Diamante');
+          vc.toggleInventory(false);
+        });
+
+        it('Abre la cuadrícula 3×3 al hacer clic derecho sobre una Mesa de Crafteo (BLOCK.CRAFTING_TABLE) y fabrica recetas 3×3', () => {
+          const tx = 11, ty = 53, tz = 11;
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.CRAFTING_TABLE);
+          assert(vc.getVoxelGlobal(tx, ty, tz) === vc.BLOCK.CRAFTING_TABLE, 'Debe poder colocarse BLOCK.CRAFTING_TABLE en el mundo');
+
+          // Simular clic derecho apuntando al bloque BLOCK.CRAFTING_TABLE
+          vc.setCurrentHit({ x: tx, y: ty, z: tz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.CRAFTING_TABLE });
+          vc.placeBlockAtCurrentTarget();
+
+          assert(vc.getState().invOpen === true && vc.isCraftingTableMode() === true, 'Hacer clic derecho en BLOCK.CRAFTING_TABLE debe abrir la interfaz en modo Mesa de Crafteo 3×3');
+          const craftGridDOM = doc.getElementById('mc-craft-slots');
+          assert(craftGridDOM && craftGridDOM.classList.contains('mc-grid-3x3') && craftGridDOM.children.length === 9, 'La Mesa de Crafteo debe mostrar 9 ranuras (.mc-grid-3x3)');
+
+          // Rellenar y fabricar el Pico de Diamante (receta 3×3) usando el Libro de Recetas / cuadrícula 3×3
+          const pickIdx = vc.CRAFTING_RECIPES.findIndex(r => r.outId === vc.BLOCK.TOOL_PICKAXE);
+          vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] = 4;
+          vc.inventoryCounts[vc.BLOCK.PLANKS] = 4;
+          vc.reconcileSlotsFromInventoryCounts();
+          assert(vc.canCraftRecipe(pickIdx, true) === true, 'Con la Mesa de Crafteo 3×3 abierta sí debe permitir recetas de tamaño 3×3');
+          const filled = vc.fillOrCraftRecipeInGrid(pickIdx);
+          assert(filled === true && vc.craftOutputSlot.id === vc.BLOCK.TOOL_PICKAXE, 'fillOrCraftRecipeInGrid debe colocar el patrón 3×3 y mostrar el Pico de Diamante en la salida');
+          const craftedPick = vc.craftFromOutputSlot();
+          assert(craftedPick === true && (vc.inventoryCounts[vc.BLOCK.TOOL_PICKAXE] || 0) >= 1, 'Fabricar desde la ranura de salida 3×3 debe añadir el Pico de Diamante al jugador');
+
+          vc.toggleInventory(false);
+          vc.setVoxelGlobal(tx, ty, tz, vc.BLOCK.AIR);
+        });
+
+        it('Permite arrastrar/dividir pilas (Clic Izq/Der) y mover rápido (Shift+Clic) entre Cofre (27), Mochila (27) y Hotbar (9)', () => {
+          const cx = 13, cy = 53, cz = 13, key = `${cx},${cy},${cz}`;
+          delete vc.chestLootMap[key];
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.CHEST);
+          vc.openVoxelChest(cx, cy, cz);
+          vc.openChestModalUI(cx, cy, cz, 'Cofre de prueba');
+
+          const chestGridDOM = doc.getElementById('chest-items-grid');
+          const playerGridDOM = doc.getElementById('chest-player-grid');
+          const hotbarGridDOM = doc.getElementById('chest-hotbar-grid');
+          assert(chestGridDOM.children.length === 27 && playerGridDOM.children.length === 27 && hotbarGridDOM.children.length === 9, 'El modal de Cofre debe renderizar 27 ranuras de cofre + 27 de mochila + 9 de hotbar');
+
+          // Limpiar ranura 0 de mochila y poner 8× BLOCK.GOLD_ORE
+          vc.cursorItem.id = 0; vc.cursorItem.count = 0;
+          vc.invSlots[0].id = vc.BLOCK.GOLD_ORE; vc.invSlots[0].count = 8;
+
+          // Clic derecho en invSlots[0] -> toma la mitad (4) en el cursor y deja 4 en invSlots[0]
+          vc.clickSlot('inv', 0, 2, false);
+          assert(vc.cursorItem.id === vc.BLOCK.GOLD_ORE && vc.cursorItem.count === 4 && vc.invSlots[0].count === 4, 'Clic derecho con cursor vacío debe dividir la pila a la mitad (4 en cursor, 4 en ranura)');
+
+          // Clic derecho sobre la ranura 10 vacía del cofre -> deposita 1 sola unidad en el cofre y deja 3 en el cursor
+          const cSlots = vc.chestLootMap[key].slots;
+          cSlots[10].id = 0; cSlots[10].count = 0;
+          vc.clickSlot('chest', 10, 2, false);
+          assert(cSlots[10].id === vc.BLOCK.GOLD_ORE && cSlots[10].count === 1 && vc.cursorItem.count === 3, 'Clic derecho con objeto en el cursor debe colocar exactamente 1 unidad en la ranura destino');
+
+          // Clic izquierdo sobre la misma ranura 10 del cofre -> apila las 3 unidades restantes (total 4 en cSlots[10], cursor vacío)
+          vc.clickSlot('chest', 10, 0, false);
+          assert(cSlots[10].count === 4 && vc.cursorItem.id === 0, 'Clic izquierdo sobre el mismo tipo de bloque debe apilar todo el cursor en la ranura');
+
+          // Shift+Clic sobre invSlots[0] (con el cofre abierto) -> transfiere instantáneamente las 4 unidades restantes al cofre
+          vc.clickSlot('inv', 0, 0, true);
+          assert(vc.invSlots[0].id === 0 && cSlots[10].count === 8, 'Shift+Clic en la mochila con el cofre abierto debe transferir y apilar el objeto en el cofre');
+
+          vc.closeChestModal();
+          vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.AIR);
+          delete vc.chestLootMap[key];
         });
       });
 

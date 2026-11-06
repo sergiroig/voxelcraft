@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=27" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=27" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=27" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=27" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=27" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=27" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=27" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=27" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=27" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=27" />
+  <link rel="stylesheet" href="src/styles.css?v=28" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=28" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=28" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=28" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=28" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=28" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=28" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=28" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=28" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=28" />
 </head>
 <body>
 
@@ -85,39 +85,93 @@
 
   <div id="hotbar"></div>
 
-  <!-- Inventory & Crafting Modal (E Key) -->
+  <!-- Floating Cursor Item for Minecraft-style Slot Drag & Drop -->
+  <div id="mc-cursor-item" class="hidden">
+    <canvas id="mc-cursor-canvas" width="16" height="16"></canvas>
+    <span id="mc-cursor-count"></span>
+  </div>
+
+  <!-- Inventory (2x2 Crafting) & Crafting Table (3x3 Crafting) Modal -->
   <div id="inventory-modal" class="hidden">
-    <div class="inv-card">
+    <div class="inv-card mc-window">
       <div class="inv-header">
-        <h2 id="inv-modal-title">Inventario y Crafteo</h2>
+        <h2 id="inv-modal-title">📦 Inventario</h2>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="mode-switch-btn" id="btn-inv-quick-move" title="Mover objetos al instante entre Mochila y Barra Rápida">⚡ Mover Rápido: OFF</button>
+          <button class="mode-switch-btn" id="btn-recipe-book" title="Mostrar/Ocultar Libro de Recetas">📖 Recetas</button>
           <button class="mode-switch-btn" id="btn-add-waypoint" style="display:none;">📍 Marcar Baliza Aquí (B)</button>
           <button class="mode-switch-btn" id="btn-mode-toggle">Modo: Supervivencia (G)</button>
+          <button class="mode-switch-btn" id="btn-inv-close">✕ Cerrar (E)</button>
         </div>
       </div>
+
+      <!-- Top Crafting & Character Row (Minecraft Layout) -->
+      <div class="mc-top-row">
+        <div class="mc-player-box" id="mc-player-preview-box">
+          <div class="mc-armor-col">
+            <div class="mc-slot mc-armor-slot" title="Casco">⛑</div>
+            <div class="mc-slot mc-armor-slot" title="Peto">🦺</div>
+            <div class="mc-slot mc-armor-slot" title="Grebas">👖</div>
+            <div class="mc-slot mc-armor-slot" title="Botas">🥾</div>
+          </div>
+          <div class="mc-avatar-frame" title="Jugador VoxelCraft">
+            <canvas id="mc-avatar-canvas" width="48" height="68"></canvas>
+          </div>
+          <div class="mc-armor-col">
+            <div class="mc-slot mc-armor-slot" title="Mano Secundaria / Escudo">🛡</div>
+          </div>
+        </div>
+
+        <div class="mc-crafting-box">
+          <div class="mc-sub-label" id="mc-craft-label">Fabricación (2×2)</div>
+          <div class="mc-craft-row">
+            <div id="mc-craft-slots" class="mc-grid-2x2"></div>
+            <div class="mc-craft-arrow">➔</div>
+            <div id="mc-craft-output" class="mc-slot mc-output-slot" title="Resultado de fabricación (Haz clic para fabricar)"></div>
+          </div>
+          <div class="mc-craft-hint" id="mc-craft-hint">Coloca bloques (Clic Izq: todo · Clic Der: 1 ud.) o usa 📖 Recetas</div>
+        </div>
+      </div>
+
+      <!-- Interactive Recipe Book Drawer -->
+      <div id="mc-recipe-drawer">
+        <div class="inv-section-title" id="craft-section-title">📖 Libro de Recetas (Clic para rellenar cuadrícula o fabricar)</div>
+        <div class="craft-grid" id="craft-grid"></div>
+      </div>
+
+      <!-- 27-Slot Player Main Inventory (3x9) + 9-Slot Hotbar (1x9) -->
+      <div class="inv-section-title">🎒 Inventario Principal (27 ranuras · 3×9)</div>
+      <div class="mc-slot-grid-9" id="mc-inv-slots"></div>
+      <div class="inv-section-title" style="margin-top:8px;">⚡ Barra Rápida / Hotbar (9 ranuras · Teclas 1–9)</div>
+      <div class="mc-slot-grid-9 mc-hotbar-row" id="mc-hotbar-slots"></div>
+
+      <!-- Creative Mode Catalog & GPS Waypoints -->
       <div class="inv-section-title" id="waypoint-section-title" style="display:none;">📍 Balizas GPS y Teletransporte Rápido (Aparecen en el Radar 2D)</div>
       <div class="craft-grid" id="waypoint-grid" style="margin-bottom:10px;display:none;"></div>
-      <div class="inv-section-title">⚒ Mesa de Crafteo Rápido (Haz clic para fabricar)</div>
-      <div class="craft-grid" id="craft-grid"></div>
-      <div class="inv-section-title">🎒 Mochila de Bloques y Herramientas (Haz clic para equipar en la ranura activa)</div>
-      <div class="inv-grid" id="inv-grid"></div>
+      <div class="inv-section-title" id="creative-catalog-title" style="display:none;">✨ Catálogo Creativo (∞ Bloques y Herramientas — Clic para tomar)</div>
+      <div class="inv-grid" id="inv-grid" style="display:none;"></div>
     </div>
   </div>
 
-  <!-- Treasure Chest Modal (Right-Click on BLOCK.CHEST) -->
+  <!-- Treasure Chest Modal (Right-Click on BLOCK.CHEST -> 27 Chest Slots + 27 Inventory + 9 Hotbar) -->
   <div id="chest-modal" class="hidden">
-    <div class="inv-card" style="max-width: 640px;">
+    <div class="inv-card mc-window" style="max-width: 620px;">
       <div class="inv-header">
-        <h2 id="chest-modal-title">🎁 Cofre del Tesoro</h2>
+        <h2 id="chest-modal-title">🎁 Cofre</h2>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="mode-switch-btn" id="btn-chest-quick" title="Transferir al instante con un clic entre Cofre e Inventario">⚡ Mover Rápido: OFF</button>
           <button class="mode-switch-btn" id="btn-chest-take-all">📥 Recoger Todo</button>
-          <button class="mode-switch-btn" id="btn-chest-close">✕ Cerrar Cofre (E)</button>
+          <button class="mode-switch-btn" id="btn-chest-deposit-all">📤 Guardar Mochila</button>
+          <button class="mode-switch-btn" id="btn-chest-close">✕ Cerrar (E)</button>
         </div>
       </div>
-      <div class="inv-section-title" id="chest-status-banner">✨ Contenido del Cofre (Haz clic en un objeto para retirarlo a tu mochila)</div>
-      <div class="craft-grid" id="chest-items-grid" style="margin-bottom:12px;"></div>
-      <div class="inv-section-title">🎒 Tu Mochila (Haz clic en cualquier objeto para guardarlo en este cofre)</div>
-      <div class="inv-grid" id="chest-player-grid"></div>
+      <div class="mc-craft-hint" id="chest-status-banner" style="margin-bottom:6px;">Cofre (27 ranuras) — Clic Izq: mover pila · Clic Der: mitad/1 ud. · Shift+Clic: transferir</div>
+      <div class="inv-section-title">📦 Cofre (27 ranuras · 3×9)</div>
+      <div class="mc-slot-grid-9" id="chest-items-grid" style="margin-bottom:10px;"></div>
+      <div class="inv-section-title">🎒 Inventario (27 ranuras · 3×9)</div>
+      <div class="mc-slot-grid-9" id="chest-player-grid" style="margin-bottom:8px;"></div>
+      <div class="inv-section-title">⚡ Barra Rápida (Hotbar 1–9)</div>
+      <div class="mc-slot-grid-9 mc-hotbar-row" id="chest-hotbar-grid"></div>
     </div>
   </div>
 
@@ -188,14 +242,14 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <script src="src/01-config-atlas.js?v=27"></script>
-  <script src="src/02-worldgen-lighting.js?v=27"></script>
-  <script src="src/03-mesher-audio.js?v=27"></script>
-  <script src="src/04-world-renderer.js?v=27"></script>
-  <script src="src/05-simulation-entities.js?v=27"></script>
-  <script src="src/06-mobs-worker.js?v=27"></script>
-  <script src="src/07-physics-camera.js?v=27"></script>
-  <script src="src/08-ui-minimap.js?v=27"></script>
-  <script src="src/09-controls-loop.js?v=27"></script>
+  <script src="src/01-config-atlas.js?v=28"></script>
+  <script src="src/02-worldgen-lighting.js?v=28"></script>
+  <script src="src/03-mesher-audio.js?v=28"></script>
+  <script src="src/04-world-renderer.js?v=28"></script>
+  <script src="src/05-simulation-entities.js?v=28"></script>
+  <script src="src/06-mobs-worker.js?v=28"></script>
+  <script src="src/07-physics-camera.js?v=28"></script>
+  <script src="src/08-ui-minimap.js?v=28"></script>
+  <script src="src/09-controls-loop.js?v=28"></script>
 </body>
 </html>

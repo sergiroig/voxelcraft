@@ -53,17 +53,26 @@ function drawItemIcon(canvas, itemId) {
   }
 }
 
-function formatItemCountBadge(itemId) {
+const invSlots = Array.from({ length: 27 }, () => ({ id: 0, count: 0 }));
+const hotbarCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+const craftGridSlots = Array.from({ length: 9 }, () => ({ id: 0, count: 0 }));
+const craftOutputSlot = { id: 0, count: 0, recipeIdx: -1 };
+const cursorItem = { id: 0, count: 0 };
+let craftingTableMode = false;
+let quickMoveMode = false;
+
+function formatItemCountBadge(itemId, customCount) {
   if (!itemId || itemId === BLOCK.AIR) return '';
-  if (gameMode === 'creative') return '∞';
-  const count = inventoryCounts[itemId] || 0;
+  if (gameMode === 'creative' && customCount === undefined) return '∞';
+  const count = customCount !== undefined ? customCount : (inventoryCounts[itemId] || 0);
   if ((itemId >= 100 && itemId <= 102) || itemId === BLOCK.TOOL_GRAPPLING_HOOK) return count > 0 ? '∞' : '0';
-  return `${count}`;
+  return count > 0 ? `${count}` : '0';
 }
 
-function canCraftRecipe(recipeIdx) {
+function canCraftRecipe(recipeIdx, enforceGridSize = false) {
   const rec = CRAFTING_RECIPES[recipeIdx];
   if (!rec) return false;
+  if (enforceGridSize && gameMode === 'survival' && !craftingTableMode && (rec.gridSize || 2) > 2) return false;
   if (gameMode === 'creative') return true;
   for (const ing of rec.ingredients) {
     if ((inventoryCounts[ing.id] || 0) < ing.count) return false;
@@ -71,9 +80,9 @@ function canCraftRecipe(recipeIdx) {
   return true;
 }
 
-function craftRecipe(recipeIdx) {
+function craftRecipe(recipeIdx, enforceGridSize = false) {
   const rec = CRAFTING_RECIPES[recipeIdx];
-  if (!rec || !canCraftRecipe(recipeIdx)) return false;
+  if (!rec || !canCraftRecipe(recipeIdx, enforceGridSize)) return false;
   if (gameMode === 'survival') {
     for (const ing of rec.ingredients) {
       inventoryCounts[ing.id] -= ing.count;
@@ -81,6 +90,7 @@ function craftRecipe(recipeIdx) {
   }
   inventoryCounts[rec.outId] = (inventoryCounts[rec.outId] || 0) + rec.outCount;
   autoEquipToHotbar(rec.outId);
+  if (typeof reconcileSlotsFromInventoryCounts === 'function') reconcileSlotsFromInventoryCounts();
   saveWorldData();
   sfx.play('craft');
   refreshInventoryCountsUI();
@@ -91,7 +101,8 @@ function buildCraftingUI() {
   if (!craftGridEl) return;
   craftGridEl.innerHTML = '';
   CRAFTING_RECIPES.forEach((rec, idx) => {
-    const craftable = canCraftRecipe(idx);
+    const needsTable = gameMode === 'survival' && !craftingTableMode && (rec.gridSize || 2) > 2;
+    const craftable = !needsTable && canCraftRecipe(idx);
     const card = document.createElement('div');
     card.className = 'craft-item ' + (craftable ? 'craftable' : 'locked');
 
@@ -101,15 +112,25 @@ function buildCraftingUI() {
 
     const info = document.createElement('div');
     info.className = 'craft-info';
+    const gridTag = (rec.gridSize || 2) === 3 ? (needsTable ? '🔒 Requiere Mesa 3×3 • ' : '⚒ 3×3 • ') : '✋ 2×2 • ';
     const costStr = rec.ingredients
-      .map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (tienes ${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`)
+      .map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`)
       .join(' + ');
-    info.innerHTML = `<div class="craft-title">${rec.name}</div><div class="craft-cost">Requiere: ${costStr}</div>`;
+    info.innerHTML = `<div class="craft-title">${rec.name}</div><div class="craft-cost">${gridTag}${costStr}</div>`;
 
     card.appendChild(icon);
     card.appendChild(info);
 
-    const onCraft = (e) => { e.preventDefault(); e.stopPropagation(); craftRecipe(idx); };
+    const onCraft = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (needsTable) {
+        const hint = document.getElementById('mc-craft-hint');
+        if (hint) hint.textContent = '⚠ Esta receta es 3×3: fabrica y coloca una Mesa de Crafteo (4× Madera) y haz clic derecho en ella.';
+        return;
+      }
+      if (typeof fillOrCraftRecipeInGrid === 'function') fillOrCraftRecipeInGrid(idx);
+      else craftRecipe(idx, true);
+    };
     card.addEventListener('click', onCraft);
     card.addEventListener('touchend', onCraft, { passive: false });
     craftGridEl.appendChild(card);
@@ -183,7 +204,14 @@ function buildWaypointsUI() {
   const isCreative = gameMode === 'creative';
   if (btnAddWaypointEl) btnAddWaypointEl.style.display = isCreative ? '' : 'none';
   if (waypointSectionTitleEl) waypointSectionTitleEl.style.display = isCreative ? '' : 'none';
-  if (invModalTitleEl) invModalTitleEl.textContent = isCreative ? 'Inventario, Crafteo y Balizas' : 'Inventario y Crafteo';
+  const catTitle = document.getElementById('creative-catalog-title');
+  if (catTitle) catTitle.style.display = isCreative ? '' : 'none';
+  if (invGridEl) invGridEl.style.display = isCreative ? '' : 'none';
+  if (invModalTitleEl) {
+    invModalTitleEl.textContent = craftingTableMode
+      ? '⚒ Mesa de Crafteo (3×3)'
+      : (isCreative ? '📦 Inventario, Crafteo (2×2) y Creativo' : '📦 Inventario (Crafteo 2×2)');
+  }
   const tbtnWp = document.getElementById('tbtn-wp');
   if (tbtnWp) tbtnWp.style.display = isCreative ? '' : 'none';
   if (!waypointGridEl) return;
@@ -207,6 +235,7 @@ if (btnAddWaypointEl) {
 }
 
 function buildInventoryModal() {
+  if (typeof reconcileSlotsFromInventoryCounts === 'function') reconcileSlotsFromInventoryCounts();
   invGridEl.innerHTML = '';
   ALL_INVENTORY_ITEMS.forEach((bId) => {
     const def = BLOCK_DEFS[bId];
@@ -217,23 +246,21 @@ function buildInventoryModal() {
     const badge = document.createElement('div');
     badge.className = 'count';
     badge.textContent = formatItemCountBadge(bId);
-
     const icon = document.createElement('canvas');
     icon.width = 16; icon.height = 16;
     drawItemIcon(icon, bId);
     const lbl = document.createElement('span');
     lbl.textContent = def.name;
-    card.appendChild(badge);
-    card.appendChild(icon);
-    card.appendChild(lbl);
-
+    card.appendChild(badge); card.appendChild(icon); card.appendChild(lbl);
     const selectItem = (e) => {
       e.preventDefault();
+      if (gameMode === 'creative' && typeof giveCreativeStackToSlot === 'function') {
+        giveCreativeStackToSlot(bId);
+        return;
+      }
       if (selectedSlot < 0) selectedSlot = 0;
       hotbarSlots[selectedSlot] = (hasItem && hotbarSlots[selectedSlot] !== bId) ? bId : BLOCK.AIR;
-      saveWorldData();
-      buildHotbarUI();
-      toggleInventory(false);
+      saveWorldData(); buildHotbarUI(); toggleInventory(false);
     };
     card.addEventListener('click', selectItem);
     card.addEventListener('touchend', selectItem, { passive: false });
@@ -241,12 +268,15 @@ function buildInventoryModal() {
   });
   buildWaypointsUI();
   buildCraftingUI();
+  if (typeof renderMinecraftInventoryDOM === 'function') renderMinecraftInventoryDOM();
 }
 
 function refreshInventoryCountsUI() {
+  if (typeof reconcileSlotsFromInventoryCounts === 'function') reconcileSlotsFromInventoryCounts();
   buildHotbarUI();
   buildWaypointsUI();
   if (invOpen) buildInventoryModal();
+  if (chestOpen && typeof buildChestModalUI === 'function') buildChestModalUI();
   const isCreative = gameMode === 'creative';
   if (btnModeToggleEl) btnModeToggleEl.textContent = `Modo: ${isCreative ? 'Creativo (∞)' : 'Supervivencia'} (G)`;
   if (tbtnModeEl) {
@@ -348,8 +378,13 @@ function togglePauseMenu(forceOpen) {
   return menuOpen;
 }
 
-function toggleInventory(force) {
-  invOpen = typeof force === 'boolean' ? force : !invOpen;
+function toggleInventory(force, asCraftingTable = false) {
+  const nextOpen = typeof force === 'boolean' ? force : !invOpen;
+  if (!nextOpen && invOpen && typeof returnCraftAndCursorItemsToInventory === 'function') {
+    returnCraftAndCursorItemsToInventory();
+  }
+  invOpen = nextOpen;
+  craftingTableMode = invOpen ? !!asCraftingTable : false;
   if (invOpen) {
     chestOpen = false;
     const cm = document.getElementById('chest-modal');
@@ -363,6 +398,12 @@ function toggleInventory(force) {
   } else {
     startGameplay();
   }
+}
+
+function openCraftingTable(wx, wy, wz) {
+  sfx.play('wood');
+  toggleInventory(true, true);
+  return true;
 }
 
 function toggleDayNight() {
@@ -379,100 +420,54 @@ function toggleFlyingMode() {
 function placeBlockAtCurrentTarget() {
   const bId = getActiveHeldItem();
 
-  // 1. Always prioritize interacting with targeted interactive world blocks (Chest, Lever, Door, Trapdoor, Portal, Obsidian)
+  // 1. Prioritize interacting with targeted interactive world blocks (Chest, Crafting Table, Lever, Door, Trapdoor, Portal)
   if (currentHit) {
-    if (currentHit.block === BLOCK.PORTAL) {
-      useVoxelPortal(currentHit.x, currentHit.y, currentHit.z);
-      player.swingTime = 1.0;
-      return true;
-    }
+    if (currentHit.block === BLOCK.PORTAL) { useVoxelPortal(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.OBSIDIAN && (bId === BLOCK.AMETHYST || bId === BLOCK.TORCH)) {
-      activateObsidianPortal(currentHit.x, currentHit.y + 1, currentHit.z);
-      player.swingTime = 1.0;
-      return true;
+      activateObsidianPortal(currentHit.x, currentHit.y + 1, currentHit.z); player.swingTime = 1.0; return true;
     }
-    if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) {
-      toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z);
-      player.swingTime = 1.0;
-      return true;
-    }
-    if (currentHit.block === BLOCK.DOOR_CLOSED || currentHit.block === BLOCK.DOOR_OPEN) {
-      toggleVoxelDoor(currentHit.x, currentHit.y, currentHit.z);
-      player.swingTime = 1.0;
-      return true;
-    }
-    if (currentHit.block === BLOCK.TRAPDOOR_CLOSED || currentHit.block === BLOCK.TRAPDOOR_OPEN) {
-      toggleVoxelTrapdoor(currentHit.x, currentHit.y, currentHit.z);
-      player.swingTime = 1.0;
-      return true;
-    }
-    if (currentHit.block === BLOCK.CHEST) {
-      openVoxelChest(currentHit.x, currentHit.y, currentHit.z);
-      player.swingTime = 1.0;
-      return true;
-    }
+    if (currentHit.block === BLOCK.LEVER_OFF || currentHit.block === BLOCK.LEVER_ON) { toggleVoxelLever(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.DOOR_CLOSED || currentHit.block === BLOCK.DOOR_OPEN) { toggleVoxelDoor(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.TRAPDOOR_CLOSED || currentHit.block === BLOCK.TRAPDOOR_OPEN) { toggleVoxelTrapdoor(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.CRAFTING_TABLE) { openCraftingTable(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.CHEST) { openVoxelChest(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
   }
 
-  // 2. Consumable Apple, Bread, Bow, Grappling Hook or Sword Shield can be used without pointing at a nearby block
-  if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) {
-    return eatHeldApple(bId);
-  }
+  // 2. Consumables, Bow, Grappling Hook or Sword Shield
+  if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) return eatHeldApple(bId);
   if (bId === BLOCK.TOOL_BOW) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
-    player.swingTime = 1.0;
-    return true;
+    player.swingTime = 1.0; return true;
   }
   if (bId === BLOCK.TOOL_GRAPPLING_HOOK) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
-    player.swingTime = 1.0;
-    return true;
+    player.swingTime = 1.0; return true;
   }
-  if (bId === BLOCK.TOOL_SWORD) {
-    toggleShieldBlock();
-    return true;
-  }
-
+  if (bId === BLOCK.TOOL_SWORD) { toggleShieldBlock(); return true; }
   if (!currentHit) return false;
 
-  // Placing or mounting a Minecart
   if (bId === BLOCK.ITEM_MINECART) {
     if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
     const ry = currentHit.block === BLOCK.RAIL ? currentHit.y : currentHit.y + currentHit.ny;
     const rx = currentHit.block === BLOCK.RAIL ? currentHit.x : currentHit.x + currentHit.nx;
     const rz = currentHit.block === BLOCK.RAIL ? currentHit.z : currentHit.z + currentHit.nz;
     const cart = spawnMinecart(rx, ry, rz);
-    if (gameMode === 'survival') {
-      inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
-      refreshInventoryCountsUI();
-    }
-    toggleRideMinecart(cart);
-    player.swingTime = 1.0;
-    return true;
+    if (gameMode === 'survival') { inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1); refreshInventoryCountsUI(); }
+    toggleRideMinecart(cart); player.swingTime = 1.0; return true;
   }
 
-  // Placing or mounting a Wooden Boat (Punto 21)
   if (bId === BLOCK.ITEM_BOAT) {
     if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
-    const bx = currentHit.x + currentHit.nx;
-    const by = currentHit.y + currentHit.ny;
-    const bz = currentHit.z + currentHit.nz;
-    const boat = spawnBoat(bx, by, bz);
-    if (gameMode === 'survival') {
-      inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
-      refreshInventoryCountsUI();
-    }
-    toggleRideBoat(boat);
-    player.swingTime = 1.0;
-    return true;
+    const boat = spawnBoat(currentHit.x + currentHit.nx, currentHit.y + currentHit.ny, currentHit.z + currentHit.nz);
+    if (gameMode === 'survival') { inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1); refreshInventoryCountsUI(); }
+    toggleRideBoat(boat); player.swingTime = 1.0; return true;
   }
 
   if (currentHit.block === BLOCK.RAIL && bId !== BLOCK.RAIL) {
-    const cart = spawnMinecart(currentHit.x, currentHit.y, currentHit.z);
-    toggleRideMinecart(cart);
-    player.swingTime = 1.0;
-    return true;
+    toggleRideMinecart(spawnMinecart(currentHit.x, currentHit.y, currentHit.z));
+    player.swingTime = 1.0; return true;
   }
 
   if (bId === BLOCK.AIR || bId === BLOCK.TOOL_PICKAXE) return false;
@@ -484,14 +479,10 @@ function placeBlockAtCurrentTarget() {
   const pz = isReplaceable ? currentHit.z : currentHit.z + currentHit.nz;
 
   const placeDef = BLOCK_DEFS[bId];
-  const minX = player.x - player.radius, maxX = player.x + player.radius;
-  const minY = player.y, maxY = player.y + player.height;
-  const minZ = player.z - player.radius, maxZ = player.z + player.radius;
-
   const overlapsPlayer = placeDef.solid && (
-    px + 1 > minX && px < maxX &&
-    py + 1 > minY && py < maxY &&
-    pz + 1 > minZ && pz < maxZ
+    px + 1 > player.x - player.radius && px < player.x + player.radius &&
+    py + 1 > player.y && py < player.y + player.height &&
+    pz + 1 > player.z - player.radius && pz < player.z + player.radius
   );
 
   if (!overlapsPlayer) {
@@ -501,9 +492,7 @@ function placeBlockAtCurrentTarget() {
         for (let dz = -3; dz <= 3; dz++) {
           for (let dx = -3; dx <= 3; dx++) {
             if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 4 && getVoxelGlobal(px + dx, py + dy, pz + dz) === BLOCK.LEVER_ON) {
-              actualPlaceId = (bId === BLOCK.REDSTONE_LAMP_OFF)
-                ? BLOCK.REDSTONE_LAMP_ON
-                : (bId === BLOCK.DOOR_CLOSED ? BLOCK.DOOR_OPEN : BLOCK.TRAPDOOR_OPEN);
+              actualPlaceId = (bId === BLOCK.REDSTONE_LAMP_OFF) ? BLOCK.REDSTONE_LAMP_ON : (bId === BLOCK.DOOR_CLOSED ? BLOCK.DOOR_OPEN : BLOCK.TRAPDOOR_OPEN);
             }
           }
         }
@@ -511,15 +500,16 @@ function placeBlockAtCurrentTarget() {
     }
     if (setVoxelGlobal(px, py, pz, actualPlaceId)) {
       if (gameMode === 'survival') {
+        if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
         inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
-        if (inventoryCounts[bId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId) hotbarSlots[selectedSlot] = BLOCK.AIR;
-        saveWorldData();
-        refreshInventoryCountsUI();
+        if ((inventoryCounts[bId] <= 0 || hotbarCounts[selectedSlot] <= 0) && selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId) {
+          if (inventoryCounts[bId] <= 0) hotbarSlots[selectedSlot] = BLOCK.AIR;
+        }
+        saveWorldData(); refreshInventoryCountsUI();
       }
       if (actualPlaceId === BLOCK.GLOWSTONE) trySummonIronGolem(px, py, pz);
       if (actualPlaceId === BLOCK.PORTAL) registerPortalAt(px, py, pz);
-      player.swingTime = 1.0;
-      sfx.play('place');
+      player.swingTime = 1.0; sfx.play('place');
       return true;
     }
   }
@@ -527,17 +517,14 @@ function placeBlockAtCurrentTarget() {
 }
 
 function updateHotbarSelection(idx) {
-  if (idx === null || idx === -1) {
-    selectedSlot = -1;
-  } else {
-    selectedSlot = ((idx % hotbarSlots.length) + hotbarSlots.length) % hotbarSlots.length;
-  }
+  if (idx === null || idx === -1) selectedSlot = -1;
+  else selectedSlot = ((idx % hotbarSlots.length) + hotbarSlots.length) % hotbarSlots.length;
   const slots = hotbarEl.querySelectorAll('.slot');
   slots.forEach((s, i) => {
     s.classList.toggle('active', i === selectedSlot);
     const slotItem = (gameMode === 'survival' && (inventoryCounts[hotbarSlots[i]] || 0) <= 0) ? BLOCK.AIR : (hotbarSlots[i] || BLOCK.AIR);
     const cntEl = s.querySelector('.count');
-    if (cntEl) cntEl.textContent = formatItemCountBadge(slotItem);
+    if (cntEl) cntEl.textContent = formatItemCountBadge(slotItem, hotbarCounts[i] > 0 ? hotbarCounts[i] : undefined);
     const cv = s.querySelector('canvas');
     if (cv) drawItemIcon(cv, slotItem);
   });
@@ -550,15 +537,10 @@ function updateHotbarSelection(idx) {
 buildHotbarUI();
 buildInventoryModal();
 
-const overlayEl = document.getElementById('overlay');
-const btnPlay = document.getElementById('btn-play');
-const btnReset = document.getElementById('btn-reset-world');
-const btnExport = document.getElementById('btn-export');
-const rngDist = document.getElementById('rng-dist');
-const lblDist = document.getElementById('lbl-dist');
-const rngFov = document.getElementById('rng-fov');
-const lblFov = document.getElementById('lbl-fov');
-
+const overlayEl = document.getElementById('overlay'), btnPlay = document.getElementById('btn-play');
+const btnReset = document.getElementById('btn-reset-world'), btnExport = document.getElementById('btn-export');
+const rngDist = document.getElementById('rng-dist'), lblDist = document.getElementById('lbl-dist');
+const rngFov = document.getElementById('rng-fov'), lblFov = document.getElementById('lbl-fov');
 if (isTouchMode) btnPlay.textContent = 'Jugar (Controles Táctiles)';
 btnPlay.addEventListener('click', startGameplay);
 overlayEl.addEventListener('click', (e) => { if (e.target === overlayEl) startGameplay(); });
@@ -613,6 +595,10 @@ function applyWorldSeed(newSeed) {
   chestLootMap = {};
   for (const bId of ALL_INVENTORY_ITEMS) inventoryCounts[bId] = 0;
   hotbarSlots.fill(BLOCK.AIR);
+  hotbarCounts.fill(0);
+  for (const s of invSlots) { s.id = 0; s.count = 0; }
+  for (const s of craftGridSlots) { s.id = 0; s.count = 0; }
+  cursorItem.id = 0; cursorItem.count = 0;
   refreshInventoryCountsUI();
   saveWorldData();
   generator = createWorldGenerator(worldSeed);
