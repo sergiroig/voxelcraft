@@ -61,6 +61,7 @@ function triggerPrimaryAttackOrMine() {
     const dmg = heldId === BLOCK.TOOL_SWORD ? 5 : (isSwordItem(heldId) || heldId === BLOCK.TOOL_AXE ? 4 : (isPickaxeItem(heldId) ? 3 : 1));
     damageMob(hitMob, dmg, dir.x, dir.z); isMiningHeld = false; return;
   }
+  if (!currentHit) sfx.play('step');
   isMiningHeld = true;
 }
 
@@ -762,7 +763,7 @@ window.__VOXELCRAFT__ = {
   getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, sleepInBed, useAnvilAt, useEnchantingTableAt, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
-  handGroup, handMesh, handMat, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,
+  handGroup, handMesh, handMat, handArmMesh, handSleeveMesh, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,
   player, playerAvatar, toggleCameraMode, toggleZoom, getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
   updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
   chunks, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, mobAtlasCanvas, mobAtlasTexture, mobGeos, activeTNTs,

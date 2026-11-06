@@ -631,20 +631,21 @@ function updatePlayerPhysics(dt) {
     if (player.regenTimer > 4.0) { player.regenTimer = 0; player.health++; renderHeartsUI(); }
   }
 
-  // 1st-person hand bobbing, shield block pose & swing animation
+  // 1st-person hand bobbing, shield block pose & 3D arm+item attack/swing animation
   if (moveMag > 0.1 && (player.onGround || player.flying)) player.bobTime += dt * speed * moveMag * 1.6;
   if (player.swingTime > 0) player.swingTime = Math.max(0, player.swingTime - dt * 5.0);
-  const swingAngle = Math.sin(player.swingTime * Math.PI);
+  const swingProg = player.swingTime > 0 ? 1.0 - player.swingTime : 0;
+  const swingAngle = Math.sin(Math.sqrt(swingProg) * Math.PI);
   if (isShieldBlocking) {
     handGroup.position.set(0.18, -0.22, -0.46);
     handGroup.rotation.set(-0.35, 0.55, 0.85);
   } else {
     handGroup.position.set(
-      0.42 + Math.cos(player.bobTime) * 0.022 - swingAngle * 0.08,
-      -0.34 + Math.abs(Math.sin(player.bobTime)) * 0.025 - swingAngle * 0.06,
-      -0.58 - swingAngle * 0.14
+      0.42 + Math.cos(player.bobTime) * 0.022 - swingAngle * 0.19,
+      -0.34 + Math.abs(Math.sin(player.bobTime)) * 0.025 + Math.sin(swingProg * Math.PI * 2) * 0.05 - swingAngle * 0.09,
+      -0.58 - swingAngle * 0.18
     );
-    handGroup.rotation.set(-swingAngle * 0.65, 0, 0);
+    handGroup.rotation.set(-swingAngle * 0.82, swingAngle * 0.46, swingAngle * 0.54);
   }
 
   // Update 3rd-person player avatar position & limb animations
@@ -674,10 +675,10 @@ function updatePlayerPhysics(dt) {
   document.getElementById('water-overlay').style.display = headBlock === BLOCK.WATER ? 'block' : 'none';
 }
 
-const mineBarWrap = document.getElementById('mine-progress-wrap');
-const mineBarEl   = document.getElementById('mine-progress-bar');
+const mineBarWrap = document.getElementById('mine-progress-wrap'), mineBarEl = document.getElementById('mine-progress-bar');
 
 function updateMining(dt, currentHit) {
+  if (isGameActive() && isMiningHeld && player.swingTime <= 0.04) player.swingTime = 1.0;
   if (!isGameActive() || !isMiningHeld || !currentHit || currentHit.block === BLOCK.BEDROCK) {
     mineProgress = 0; mineTargetKey = '';
     crackBox.visible = false; mineBarWrap.style.display = 'none';

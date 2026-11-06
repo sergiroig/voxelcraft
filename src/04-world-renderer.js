@@ -387,7 +387,7 @@ const crackBox = new THREE.Mesh(new THREE.BoxGeometry(1.004, 1.004, 1.004), crac
 crackBox.visible = false;
 scene.add(crackBox);
 
-// 1st-Person Held Item / Hand attached to Camera (renders exact 16x16 item icon)
+// 1st-Person Held Item + Gripping 3D Voxel Arm/Hand attached to Camera
 const handGroup = new THREE.Group();
 camera.add(handGroup);
 handGroup.position.set(0.42, -0.34, -0.58);
@@ -399,8 +399,25 @@ handIconTex.magFilter = THREE.NearestFilter;
 handIconTex.minFilter = THREE.NearestFilter;
 handIconTex.generateMipmaps = false;
 
+function shadeBoxGeo(geo, hex) {
+  const c = new THREE.Color(hex), shades = [0.82, 0.88, 1.0, 0.64, 0.78, 0.94], cols = new Float32Array(72);
+  for (let f = 0; f < 6; f++) for (let v = 0; v < 4; v++) { const i = (f * 4 + v) * 3, s = shades[f]; cols[i] = c.r * s; cols[i + 1] = c.g * s; cols[i + 2] = c.b * s; }
+  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  return geo;
+}
 const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
 const handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
+const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.36), 0xf1c27d);
+const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.144, 0.144, 0.18), 0x0284c7);
+const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, depthTest: false, depthWrite: false });
+const handArmMesh = new THREE.Mesh(handArmGeo, handArmMat);
+handArmMesh.renderOrder = 997;
+const handSleeveMesh = new THREE.Mesh(handSleeveGeo, handArmMat);
+handSleeveMesh.position.set(0, 0, 0.10);
+handSleeveMesh.renderOrder = 998;
+handArmMesh.add(handSleeveMesh);
+handGroup.add(handArmMesh);
+
 const handMat = new THREE.MeshBasicMaterial({ vertexColors: false, color: 0xf1c27d, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
 const handMesh = new THREE.Mesh(handGeo, handMat);
 handMesh.renderOrder = 999;
@@ -409,46 +426,42 @@ handGroup.add(handMesh);
 function updateHeldItemVisual() {
   const bId = getActiveHeldItem();
   const avHeld = typeof playerAvatar !== 'undefined' && playerAvatar.userData ? playerAvatar.userData.heldIcon : null;
+  handArmMesh.visible = true;
   if (bId === BLOCK.AIR || typeof drawItemIcon !== 'function') {
     handMesh.geometry = handGeo; handMat.map = null; handMat.color.setHex(0xf1c27d); handMat.needsUpdate = true;
-    handMesh.scale.set(0.48, 0.48, 1.15); handMesh.rotation.set(0.35, -0.35, 0.12);
+    handMesh.position.set(0, 0, 0); handMesh.scale.set(0.48, 0.48, 1.15); handMesh.rotation.set(0.35, -0.35, 0.12);
+    handArmMesh.position.set(0.05, -0.06, 0.09); handArmMesh.rotation.set(0.35, -0.35, 0.12);
     if (avHeld) avHeld.visible = false;
     return;
   }
   drawItemIcon(handIconCanvas, bId);
   handIconTex.needsUpdate = true;
   handMesh.geometry = handIconGeo; handMat.map = handIconTex; handMat.color.setHex(0xffffff); handMat.needsUpdate = true;
-  handMesh.scale.set(1, 1, 1); handMesh.rotation.set(0, 0, 0);
+  handMesh.position.set(0, 0, 0); handMesh.scale.set(1, 1, 1); handMesh.rotation.set(0, 0, 0);
+  handArmMesh.position.set(0.09, -0.09, 0.08); handArmMesh.rotation.set(0.42, -0.38, 0.18);
   if (avHeld) avHeld.visible = true;
 }
 
 // Object-Pooled InstancedMesh Particle System (120 particles = 1 Draw Call!)
 const MAX_PARTICLES = 120;
-const partGeo = new THREE.BoxGeometry(0.13, 0.13, 0.13);
-const partMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const partGeo = new THREE.BoxGeometry(0.13, 0.13, 0.13), partMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const particleInstanced = new THREE.InstancedMesh(partGeo, partMat, MAX_PARTICLES);
 particleInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 scene.add(particleInstanced);
 
-const particles = [];
-const dummyMatrix = new THREE.Matrix4();
-const dummyColor = new THREE.Color();
+const particles = [], dummyMatrix = new THREE.Matrix4(), dummyColor = new THREE.Color();
 for (let i = 0; i < MAX_PARTICLES; i++) {
   particles.push({ active: false, x: 0, y: -999, z: 0, vx: 0, vy: 0, vz: 0, life: 0 });
-  dummyMatrix.makeTranslation(0, -999, 0);
-  particleInstanced.setMatrixAt(i, dummyMatrix);
-  particleInstanced.setColorAt(i, dummyColor.setHex(0xffffff));
+  dummyMatrix.makeTranslation(0, -999, 0); particleInstanced.setMatrixAt(i, dummyMatrix); particleInstanced.setColorAt(i, dummyColor.setHex(0xffffff));
 }
 let partCursor = 0;
 
 function spawnBlockParticles(wx, wy, wz, blockId, count = 16) {
   const baseColor = BLOCK_DEFS[blockId]?.color || 0xaaaaaa;
   for (let i = 0; i < count; i++) {
-    const p = particles[partCursor];
-    p.active = true;
+    const p = particles[partCursor]; p.active = true;
     p.x = wx + 0.2 + Math.random() * 0.6; p.y = wy + 0.2 + Math.random() * 0.6; p.z = wz + 0.2 + Math.random() * 0.6;
-    p.vx = (Math.random() - 0.5) * 3.8; p.vy = 1.5 + Math.random() * 3.2; p.vz = (Math.random() - 0.5) * 3.8;
-    p.life = 0.45 + Math.random() * 0.35;
+    p.vx = (Math.random() - 0.5) * 3.8; p.vy = 1.5 + Math.random() * 3.2; p.vz = (Math.random() - 0.5) * 3.8; p.life = 0.45 + Math.random() * 0.35;
     dummyColor.setHex(baseColor).multiplyScalar(0.75 + Math.random() * 0.35);
     particleInstanced.setColorAt(partCursor, dummyColor);
     partCursor = (partCursor + 1) % MAX_PARTICLES;
@@ -461,38 +474,26 @@ function updateParticles(dt) {
   for (let i = 0; i < MAX_PARTICLES; i++) {
     const p = particles[i];
     if (!p.active) continue;
-    anyUpdated = true;
-    p.life -= dt;
-    if (p.life <= 0) {
-      p.active = false;
-      dummyMatrix.makeTranslation(0, -999, 0);
-      particleInstanced.setMatrixAt(i, dummyMatrix);
-      continue;
-    }
-    p.vy -= 14.0 * dt;
-    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
-    dummyMatrix.makeTranslation(p.x, p.y, p.z);
-    particleInstanced.setMatrixAt(i, dummyMatrix);
+    anyUpdated = true; p.life -= dt;
+    if (p.life <= 0) { p.active = false; dummyMatrix.makeTranslation(0, -999, 0); particleInstanced.setMatrixAt(i, dummyMatrix); continue; }
+    p.vy -= 14.0 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    dummyMatrix.makeTranslation(p.x, p.y, p.z); particleInstanced.setMatrixAt(i, dummyMatrix);
   }
   if (anyUpdated) particleInstanced.instanceMatrix.needsUpdate = true;
 }
 
 // Object-Pooled InstancedMesh 3D Magnetized Item Drops (64 drops = 1 Draw Call!)
 const MAX_DROPS = 64;
-const dropGeo = new THREE.BoxGeometry(0.28, 0.28, 0.28);
-const dropMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const dropGeo = new THREE.BoxGeometry(0.28, 0.28, 0.28), dropMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const dropInstanced = new THREE.InstancedMesh(dropGeo, dropMat, MAX_DROPS);
 dropInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 scene.add(dropInstanced);
 
 const itemDrops = [];
 const dropPosVec = new THREE.Vector3(), dropQuat = new THREE.Quaternion(), dropEuler = new THREE.Euler(), dropScaleVec = new THREE.Vector3(1, 1, 1);
-
 for (let i = 0; i < MAX_DROPS; i++) {
   itemDrops.push({ active: false, x: 0, y: -999, z: 0, vx: 0, vy: 0, vz: 0, itemId: BLOCK.COBBLE, count: 1, age: 0, pickupDelay: 0 });
-  dummyMatrix.makeTranslation(0, -999, 0);
-  dropInstanced.setMatrixAt(i, dummyMatrix);
-  dropInstanced.setColorAt(i, dummyColor.setHex(0xffffff));
+  dummyMatrix.makeTranslation(0, -999, 0); dropInstanced.setMatrixAt(i, dummyMatrix); dropInstanced.setColorAt(i, dummyColor.setHex(0xffffff));
 }
 let dropCursor = 0;
 
@@ -501,21 +502,14 @@ function spawnItemDrop(wx, wy, wz, blockOrItemId, count = 1, pickupDelay = 0.22)
   if (itemId === BLOCK.AIR || itemId === BLOCK.WATER || itemId === BLOCK.BEDROCK) return null;
   const d = itemDrops[dropCursor], idx = dropCursor;
   dropCursor = (dropCursor + 1) % MAX_DROPS;
-  d.active = true;
-  d.x = wx + 0.35 + Math.random() * 0.3; d.y = wy + 0.35; d.z = wz + 0.35 + Math.random() * 0.3;
+  d.active = true; d.x = wx + 0.35 + Math.random() * 0.3; d.y = wy + 0.35; d.z = wz + 0.35 + Math.random() * 0.3;
   d.vx = (Math.random() - 0.5) * 2.2; d.vy = 2.6 + Math.random() * 1.4; d.vz = (Math.random() - 0.5) * 2.2;
   d.itemId = itemId; d.count = count; d.age = Math.random() * 3.0; d.pickupDelay = pickupDelay;
-
   dummyColor.setHex(BLOCK_DEFS[itemId]?.color || 0xffffff);
-  dropInstanced.setColorAt(idx, dummyColor);
-  dropInstanced.instanceColor.needsUpdate = true;
-
-  dropPosVec.set(d.x, d.y, d.z);
-  dropEuler.set(0.2, d.age * 2.4, 0.15);
-  dropQuat.setFromEuler(dropEuler);
+  dropInstanced.setColorAt(idx, dummyColor); dropInstanced.instanceColor.needsUpdate = true;
+  dropPosVec.set(d.x, d.y, d.z); dropEuler.set(0.2, d.age * 2.4, 0.15); dropQuat.setFromEuler(dropEuler);
   dummyMatrix.compose(dropPosVec, dropQuat, dropScaleVec);
-  dropInstanced.setMatrixAt(idx, dummyMatrix);
-  dropInstanced.instanceMatrix.needsUpdate = true;
+  dropInstanced.setMatrixAt(idx, dummyMatrix); dropInstanced.instanceMatrix.needsUpdate = true;
   return d;
 }
 
@@ -528,9 +522,7 @@ function addInventoryItem(itemId, count = 1) {
 
 function updateItemDrops(dt) {
   let anyUpdated = false;
-  const px = player.x;
-  const py = player.y + 0.9;
-  const pz = player.z;
+  const px = player.x, py = player.y + 0.9, pz = player.z;
 
   for (let i = 0; i < MAX_DROPS; i++) {
     const d = itemDrops[i];
