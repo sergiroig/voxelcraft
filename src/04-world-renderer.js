@@ -189,16 +189,9 @@ shadowDepthMaterial.onBeforeCompile = (sh) => {
 
 // Shared GPU Shader Uniforms (0 CPU overhead per vertex: animated entirely on GPU!)
 const gpuShaderUniforms = {
-  uTime:          { value: 0.0 },
-  uWindStrength:  { value: 1.0 },
-  uSunFactor:     { value: 1.0 },
-  uUnderwater:    { value: 0.0 },
-  uSunLightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
-  uLightDir:      { value: new THREE.Vector3(0.45, 0.85, -0.25).normalize() },
-  uCloudDrift:    { value: 0.0 },
-  uUseShadowMap:  { value: lightingMode === 'shadowmap' ? 1.0 : 0.0 },
-  uShadowMap:     { value: shadowMapTarget.texture },
-  uShadowMatrix:  { value: shadowMatrix }
+  uTime: { value: 0.0 }, uWindStrength: { value: 1.0 }, uWetness: { value: 0.0 }, uSunFactor: { value: 1.0 }, uUnderwater: { value: 0.0 },
+  uSunLightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) }, uLightDir: { value: new THREE.Vector3(0.45, 0.85, -0.25).normalize() },
+  uCloudDrift: { value: 0.0 }, uUseShadowMap: { value: lightingMode === 'shadowmap' ? 1.0 : 0.0 }, uShadowMap: { value: shadowMapTarget.texture }, uShadowMatrix: { value: shadowMatrix }
 };
 let solidShaderRef = null, waterShaderRef = null, isCameraUnderwater = false;
 const waterFogColorDay = new THREE.Color(0x0b4f7c), waterFogColorNight = new THREE.Color(0x052036);
@@ -235,15 +228,9 @@ function updateShadowMapPass() {
 const solidMaterial = new THREE.MeshBasicMaterial({ map: atlasTexture, vertexColors: true, alphaTest: 0.15 });
 
 solidMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uTime = gpuShaderUniforms.uTime;
-  shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
-  shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
-  shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor;
-  shader.uniforms.uLightDir = gpuShaderUniforms.uLightDir;
-  shader.uniforms.uCloudDrift = gpuShaderUniforms.uCloudDrift;
-  shader.uniforms.uUseShadowMap = gpuShaderUniforms.uUseShadowMap;
-  shader.uniforms.uShadowMap = gpuShaderUniforms.uShadowMap;
-  shader.uniforms.uShadowMatrix = gpuShaderUniforms.uShadowMatrix;
+  shader.uniforms.uTime = gpuShaderUniforms.uTime; shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength; shader.uniforms.uWetness = gpuShaderUniforms.uWetness;
+  shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor; shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor; shader.uniforms.uLightDir = gpuShaderUniforms.uLightDir;
+  shader.uniforms.uCloudDrift = gpuShaderUniforms.uCloudDrift; shader.uniforms.uUseShadowMap = gpuShaderUniforms.uUseShadowMap; shader.uniforms.uShadowMap = gpuShaderUniforms.uShadowMap; shader.uniforms.uShadowMatrix = gpuShaderUniforms.uShadowMatrix;
   solidShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
@@ -275,7 +262,7 @@ solidMaterial.onBeforeCompile = (shader) => {
     );
 
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\n#include <packing>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nuniform float uUseShadowMap;\nuniform sampler2D uShadowMap;\nuniform mat4 uShadowMatrix;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
+    .replace('#include <common>', `#include <common>\n#include <packing>\nuniform float uTime;\nuniform float uWetness;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nuniform float uUseShadowMap;\nuniform sampler2D uShadowMap;\nuniform mat4 uShadowMatrix;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
       `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
@@ -312,6 +299,17 @@ solidMaterial.onBeforeCompile = (shader) => {
       vec3 directSunCol = uSunLightColor * (1.16 + 0.16 * sunLow);
       vec3 dynamicShaderLight = mix(shadowAmbient, directSunCol, directLit);
       gl_FragColor.rgb *= mix(dynamicShaderLight, vec3(1.0), max(isEmissiveTile, torchMask));
+      if (uWetness > 0.01 && faceN.y > 0.7 && isEmissiveTile < 0.5) {
+        vec3 viewDir = normalize(cameraPosition - vWorldPos);
+        float puddle = smoothstep(-0.2, 0.55, sin(vWorldPos.x * 0.55 + cos(vWorldPos.z * 0.45)) * cos(vWorldPos.z * 0.55 - sin(vWorldPos.x * 0.45)));
+        float ringD = length(fract(vWorldPos.xz * 1.6 + vec2(sin(floor(vWorldPos.z * 1.6) * 3.1), cos(floor(vWorldPos.x * 1.6) * 2.7)) * 0.22) - 0.5);
+        float rainRing = max(0.0, sin(ringD * 28.0 - uTime * 16.0)) * smoothstep(0.42, 0.06, ringD);
+        float fresnelWet = pow(1.0 - max(dot(faceN, viewDir), 0.0), 2.6);
+        float specWet = pow(max(dot(faceN, normalize(uLightDir + viewDir)), 0.0), 22.0);
+        gl_FragColor.rgb *= 1.0 - 0.14 * uWetness * (0.4 + 0.6 * puddle);
+        vec3 wetSkyCol = mix(vec3(0.18, 0.20, 0.24), uSunLightColor * vec3(0.82, 0.86, 0.92), uSunFactor);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, wetSkyCol, clamp(uWetness * (0.35 + 0.65 * puddle) * (fresnelWet * 0.45 + specWet * 0.38 + rainRing * 0.22) * clamp(bakedLuma, 0.18, 1.0), 0.0, 0.55));
+      }
       if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5)) {
         float flicker = 1.0 + 0.09 * sin(uTime * 9.5 + vWorldPos.x * 2.3 + vWorldPos.z * 2.3);
         gl_FragColor.rgb *= vec3(flicker * 1.04, flicker, flicker * 0.92);

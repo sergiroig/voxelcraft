@@ -256,7 +256,7 @@ function updateVoxelSimulation(dt) {
 // ============================================================================
 const MAX_WEATHER_DROPS = 180;
 const weatherGeo = new THREE.BoxGeometry(0.05, 0.55, 0.05);
-const weatherMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.22, depthWrite: false });
+const weatherMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.14, depthWrite: false });
 const weatherInstanced = new THREE.InstancedMesh(weatherGeo, weatherMat, MAX_WEATHER_DROPS);
 weatherInstanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 weatherInstanced.visible = false;
@@ -264,18 +264,19 @@ scene.add(weatherInstanced);
 
 const weatherDrops = [];
 for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
-  weatherDrops.push({ ox: (Math.random() - 0.5) * 22, oy: Math.random() * 16, oz: (Math.random() - 0.5) * 22, phase: Math.random() * Math.PI * 2 });
+  weatherDrops.push({ ox: (Math.random() - 0.5) * 22, oy: Math.random() * 14, oz: (Math.random() - 0.5) * 22, phase: Math.random() * Math.PI * 2, splash: 0, sx: 0, sy: 0, sz: 0 });
 }
 
 let weatherMode = 'clear', isSnowing = false, isSandstorm = false;
 let lightningFlash = 0.0, stormThunderAccum = 0.0, lightningCount = 0, autoWeatherTimer = 0.0;
-const weatherScaleVec = new THREE.Vector3(1, 1, 1), weatherPosVec = new THREE.Vector3(), weatherQuat = new THREE.Quaternion();
+const weatherScaleVec = new THREE.Vector3(1, 1, 1), weatherSplashVec = new THREE.Vector3(1, 1, 1), weatherPosVec = new THREE.Vector3(), weatherQuat = new THREE.Quaternion();
 
 function toggleWeather(forceMode) {
   const modes = ['clear', 'rain', 'storm'];
   weatherMode = modes.includes(forceMode) ? forceMode : modes[(modes.indexOf(weatherMode) + 1) % modes.length];
   weatherInstanced.visible = weatherMode !== 'clear';
   gpuShaderUniforms.uWindStrength.value = weatherMode === 'storm' ? 2.2 : (weatherMode === 'rain' ? 1.45 : 1.0);
+  if (gpuShaderUniforms.uWetness) gpuShaderUniforms.uWetness.value = weatherMode === 'storm' ? 1.0 : (weatherMode === 'rain' ? 0.82 : 0.0);
   const btn = document.getElementById('tbtn-weather');
   if (btn) {
     btn.classList.toggle('toggled', weatherMode !== 'clear');
@@ -297,35 +298,50 @@ function updateWeather(dt) {
     lightningFlash = Math.max(0, lightningFlash - dt * 3.2);
     if (!isCameraUnderwater) scene.background.lerp(new THREE.Color(0xf8fafc), lightningFlash * 0.75);
   }
-  if (weatherMode === 'clear') { isSnowing = false; isSandstorm = false; return; }
+  if (weatherMode === 'clear') {
+    isSnowing = false; isSandstorm = false;
+    if (gpuShaderUniforms.uWetness && gpuShaderUniforms.uWetness.value > 0) gpuShaderUniforms.uWetness.value = Math.max(0, gpuShaderUniforms.uWetness.value - dt * 0.35);
+    return;
+  }
 
   const curBiome = generator.getBiomeAt(player.x, player.z);
   isSnowing = (curBiome === 'Taiga Nevada' || curBiome === 'Cumbres Heladas' || player.y >= 42);
   isSandstorm = !isSnowing && (curBiome === 'Desierto' || curBiome === 'Meseta');
-  const dayBri = Math.max(0.18, typeof sunFactor === 'number' ? sunFactor : 1.0);
-  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0xe2e8f0)).multiplyScalar(isSnowing || isSandstorm ? (0.30 + 0.70 * dayBri) : (0.40 + 0.60 * dayBri));
-  weatherMat.opacity = isSnowing ? (0.20 + 0.28 * dayBri) : (isSandstorm ? (0.18 + 0.22 * dayBri) : (0.08 + 0.16 * dayBri));
-  weatherScaleVec.set(isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.42), isSnowing ? 0.25 : (isSandstorm ? 0.18 : 1.0), isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.42));
+  if (gpuShaderUniforms.uWetness) gpuShaderUniforms.uWetness.value = (isSnowing || isSandstorm) ? 0.0 : (weatherMode === 'storm' ? 1.0 : 0.82);
+  const dayBri = Math.max(0.0, typeof sunFactor === 'number' ? sunFactor : 1.0);
+  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0xffffff)).multiplyScalar(isSnowing || isSandstorm ? (0.30 + 0.70 * dayBri) : (0.35 + 0.65 * dayBri));
+  weatherMat.opacity = isSnowing ? (0.20 + 0.28 * dayBri) : (isSandstorm ? (0.18 + 0.22 * dayBri) : (0.035 + 0.115 * dayBri));
+  weatherScaleVec.set(isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.34), isSnowing ? 0.25 : (isSandstorm ? 0.18 : 0.92), isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.34));
 
-  if (weatherMode === 'storm') {
-    stormThunderAccum += dt;
-    if (stormThunderAccum > 9.5) { stormThunderAccum = 0; triggerLightningFlash(); }
-  }
+  if (weatherMode === 'storm') { stormThunderAccum += dt; if (stormThunderAccum > 9.5) { stormThunderAccum = 0; triggerLightningFlash(); } }
 
   const fallSpeed = isSnowing ? 3.2 : (isSandstorm ? 5.5 : (weatherMode === 'storm' ? 21.0 : 16.0));
-  const px = player.x, py = player.y, pz = player.z, timeVal = gpuShaderUniforms.uTime.value;
+  const px = player.x, py = player.y, pz = player.z, timeVal = gpuShaderUniforms.uTime.value, isRain = !isSnowing && !isSandstorm;
 
   for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
     const d = weatherDrops[i];
+    if (isRain && d.splash > 0) {
+      d.splash -= dt;
+      if (d.splash <= 0) { d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
+      else { const p = 1.0 - d.splash / 0.11, sr = 1.1 + p * 2.6; dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(sr, 0.06 * (1.0 - p * 0.5), sr)); }
+      weatherInstanced.setMatrixAt(i, dummyMatrix); continue;
+    }
     d.oy -= fallSpeed * dt;
-    if (d.oy < -4) d.oy += 16;
+    if (d.oy < -4) d.oy = 8 + Math.random() * 6;
     const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (isSandstorm ? Math.sin(timeVal * 4.5 + d.phase) * 2.2 + 1.6 : (weatherMode === 'storm' ? 0.6 : 0.15));
     const wx = px + d.ox + swayX, wy = py + d.oy, wz = pz + d.oz, ix = Math.floor(wx), iy = Math.floor(wy), iz = Math.floor(wz);
-    if ((getLightGlobal(ix, iy, iz) >> 4) < 15 || getVoxelGlobal(ix, iy, iz) !== BLOCK.AIR) {
+    const blkAt = getVoxelGlobal(ix, iy, iz), blkBelow = getVoxelGlobal(ix, iy - 1, iz);
+    if (isRain && (blkAt !== BLOCK.AIR || (wy - iy <= 0.32 && blkBelow !== BLOCK.AIR))) {
+      const surfY = blkAt === BLOCK.AIR ? iy : iy + 1;
+      if (getVoxelGlobal(ix, surfY, iz) === BLOCK.AIR && getVoxelGlobal(ix, surfY - 1, iz) !== BLOCK.AIR && (getLightGlobal(ix, surfY, iz) >> 4) === 15) {
+        d.splash = 0.11; d.sx = wx; d.sy = surfY + 0.025; d.sz = wz;
+        dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(1.1, 0.06, 1.1));
+        if ((i & 15) === 0 && Math.random() < 0.35) spawnParticles(wx, surfY + 0.04, wz, 0xe2e8f0, 1);
+      } else { d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
+    } else if ((getLightGlobal(ix, iy, iz) >> 4) < 15 || blkAt !== BLOCK.AIR) {
       dummyMatrix.makeTranslation(0, -999, 0);
     } else {
-      weatherPosVec.set(wx, wy, wz);
-      dummyMatrix.compose(weatherPosVec, weatherQuat, weatherScaleVec);
+      dummyMatrix.compose(weatherPosVec.set(wx, wy, wz), weatherQuat, weatherScaleVec);
     }
     weatherInstanced.setMatrixAt(i, dummyMatrix);
   }
@@ -717,20 +733,11 @@ function isRailAt(bx, by, bz) { return getVoxelGlobal(bx, by, bz) === BLOCK.RAIL
 function toggleRideMinecart(cartOverride) {
   const btn = document.getElementById('tbtn-cart');
   if (typeof ridingBoat !== 'undefined' && ridingBoat) return toggleRideBoat();
-  if (ridingCart) {
-    ridingCart.speed = 0; ridingCart = null; player.vy = 4.2;
-    if (btn) btn.classList.remove('toggled');
-    sfx.play('step');
-    return false;
-  }
-
+  if (ridingCart) { ridingCart.speed = 0; ridingCart = null; player.vy = 4.2; if (btn) btn.classList.remove('toggled'); sfx.play('step'); return false; }
   let targetCart = cartOverride || null;
   if (!targetCart) {
     let bestDist = 4.5;
-    for (const c of minecarts) {
-      const d = Math.hypot(c.x - player.x, (c.y + 0.5) - (player.y + 0.8), c.z - player.z);
-      if (d < bestDist) { bestDist = d; targetCart = c; }
-    }
+    for (const c of minecarts) { const d = Math.hypot(c.x - player.x, (c.y + 0.5) - (player.y + 0.8), c.z - player.z); if (d < bestDist) { bestDist = d; targetCart = c; } }
   }
   if (!targetCart) {
     const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
@@ -739,10 +746,8 @@ function toggleRideMinecart(cartOverride) {
     else if (getVoxelGlobal(px, py, pz) === BLOCK.WATER || getVoxelGlobal(px, py - 1, pz) === BLOCK.WATER) return toggleRideBoat();
   }
   if (!targetCart) return false;
-
   ridingCart = targetCart;
-  const lookX = -Math.sin(player.yaw), lookZ = -Math.cos(player.yaw);
-  const bx = Math.floor(targetCart.x), by = Math.floor(targetCart.y + 0.1), bz = Math.floor(targetCart.z);
+  const lookX = -Math.sin(player.yaw), lookZ = -Math.cos(player.yaw), bx = Math.floor(targetCart.x), by = Math.floor(targetCart.y + 0.1), bz = Math.floor(targetCart.z);
   let bestDir = [targetCart.dirX, targetCart.dirZ], bestScore = -999;
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const hasRail = isRailAt(bx + dx, by, bz + dz) || isRailAt(bx + dx, by + 1, bz + dz) || isRailAt(bx + dx, by - 1, bz + dz);
@@ -752,8 +757,7 @@ function toggleRideMinecart(cartOverride) {
   targetCart.dirX = bestDir[0]; targetCart.dirZ = bestDir[1]; targetCart.speed = 11.5;
   player.x = targetCart.x; player.y = targetCart.y + 0.35; player.z = targetCart.z;
   player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
-  if (btn) btn.classList.add('toggled');
-  sfx.play('rail');
+  if (btn) btn.classList.add('toggled'); sfx.play('rail');
   return true;
 }
 
@@ -763,33 +767,21 @@ function updateMinecarts(dt) {
     if (c.speed <= 0.05) continue;
     let stepRem = c.speed * dt;
     while (stepRem > 0.0001) {
-      const step = Math.min(stepRem, 0.25);
-      stepRem -= step;
-      const nextX = c.x + c.dirX * step, nextZ = c.z + c.dirZ * step;
-      const bx = Math.floor(nextX), by = Math.floor(c.y + 0.15), bz = Math.floor(nextZ);
-
+      const step = Math.min(stepRem, 0.25); stepRem -= step;
+      const nextX = c.x + c.dirX * step, nextZ = c.z + c.dirZ * step, bx = Math.floor(nextX), by = Math.floor(c.y + 0.15), bz = Math.floor(nextZ);
       if (isRailAt(bx, by, bz)) { c.x = nextX; c.z = nextZ; c.y = by + 0.05; }
       else if (isRailAt(bx, by + 1, bz)) { c.x = nextX; c.z = nextZ; c.y = by + 1.05; }
       else if (isRailAt(bx, by - 1, bz)) { c.x = nextX; c.z = nextZ; c.y = by - 0.95; }
       else {
-        const curBx = Math.floor(c.x), curBz = Math.floor(c.z);
-        const leftX = -c.dirZ, leftZ = c.dirX, rightX = c.dirZ, rightZ = -c.dirX;
-        if (isRailAt(curBx + leftX, by, curBz + leftZ) || isRailAt(curBx + leftX, by + 1, curBz + leftZ)) {
-          c.x = curBx + 0.5; c.z = curBz + 0.5; c.dirX = leftX; c.dirZ = leftZ;
-        } else if (isRailAt(curBx + rightX, by, curBz + rightZ) || isRailAt(curBx + rightX, by + 1, curBz + rightZ)) {
-          c.x = curBx + 0.5; c.z = curBz + 0.5; c.dirX = rightX; c.dirZ = rightZ;
-        } else if (isRailAt(curBx - c.dirX, by, curBz - c.dirZ) && BLOCK_DEFS[getVoxelGlobal(bx, by, bz)]?.solid) {
-          c.dirX = -c.dirX; c.dirZ = -c.dirZ; sfx.play('rail');
-        } else { c.speed = 0; break; }
+        const curBx = Math.floor(c.x), curBz = Math.floor(c.z), leftX = -c.dirZ, leftZ = c.dirX, rightX = c.dirZ, rightZ = -c.dirX;
+        if (isRailAt(curBx + leftX, by, curBz + leftZ) || isRailAt(curBx + leftX, by + 1, curBz + leftZ)) { c.x = curBx + 0.5; c.z = curBz + 0.5; c.dirX = leftX; c.dirZ = leftZ; }
+        else if (isRailAt(curBx + rightX, by, curBz + rightZ) || isRailAt(curBx + rightX, by + 1, curBz + rightZ)) { c.x = curBx + 0.5; c.z = curBz + 0.5; c.dirX = rightX; c.dirZ = rightZ; }
+        else if (isRailAt(curBx - c.dirX, by, curBz - c.dirZ) && BLOCK_DEFS[getVoxelGlobal(bx, by, bz)]?.solid) { c.dirX = -c.dirX; c.dirZ = -c.dirZ; sfx.play('rail'); }
+        else { c.speed = 0; break; }
       }
     }
-    c.root.position.set(c.x, c.y, c.z);
-    c.root.rotation.y = Math.atan2(c.dirX, c.dirZ);
-    c.soundTimer += dt;
-    if (c.soundTimer > 0.28) { c.soundTimer = 0; sfx.play('rail'); }
-    if (ridingCart === c) {
-      player.x = c.x; player.y = c.y + 0.35; player.z = c.z;
-      player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0;
-    }
+    c.root.position.set(c.x, c.y, c.z); c.root.rotation.y = Math.atan2(c.dirX, c.dirZ);
+    c.soundTimer += dt; if (c.soundTimer > 0.28) { c.soundTimer = 0; sfx.play('rail'); }
+    if (ridingCart === c) { player.x = c.x; player.y = c.y + 0.35; player.z = c.z; player.vx = 0; player.vy = 0; player.vz = 0; player.maxFallVel = 0; }
   }
 }

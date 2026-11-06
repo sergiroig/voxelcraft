@@ -941,11 +941,14 @@
           vc.updateDynamicSky(0.016);
           vc.updateWeather(0.016);
           const dayRainOpacity = vc.weatherInstanced.material.opacity;
+          const rainColor = vc.weatherInstanced.material.color;
+          assert(Math.abs(rainColor.r - rainColor.b) < 1e-4, 'La lluvia debe ser acromática/transparente sin tinte azul');
+          assert(vc.gpuShaderUniforms.uWetness.value >= 0.8 && vc.getShaders().solidShaderRef.fragmentShader.includes('fresnelWet'), 'La lluvia debe activar uWetness y el reflejo especular/Fresnel de suelo húmedo en el Shader GPU');
           vc.setTimeOfDay(Math.PI);
           vc.updateDynamicSky(0.016);
           vc.updateWeather(0.016);
           const nightRainOpacity = vc.weatherInstanced.material.opacity;
-          assert(dayRainOpacity <= 0.28 && nightRainOpacity <= 0.14 && nightRainOpacity < dayRainOpacity, `La lluvia debe ser translúcida de día (opacidad=${dayRainOpacity.toFixed(2)}) y aún más tenue de noche (opacidad=${nightRainOpacity.toFixed(2)})`);
+          assert(dayRainOpacity <= 0.16 && nightRainOpacity <= 0.06 && nightRainOpacity < dayRainOpacity, `La lluvia debe ser translúcida de día (opacidad=${dayRainOpacity.toFixed(3)}) y muy tenue de noche (opacidad=${nightRainOpacity.toFixed(3)})`);
           vc.setTimeOfDay(origTime);
           vc.updateDynamicSky(0.016);
           vc.player.x = origXRain; vc.player.y = origYRain; vc.player.z = origZRain;
