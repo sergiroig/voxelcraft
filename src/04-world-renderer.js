@@ -406,6 +406,7 @@ function updateGPUShaders(dt) {
     const armSun = (Math.max(pL1 >> 4, pL2 >> 4) / 15) * sunFactor, armBlk = Math.max(pL1 & 15, pL2 & 15) / 15, armLit = Math.min(1.0, Math.max(0.05, Math.max(armSun, armBlk))), sc = gpuShaderUniforms.uSunLightColor.value;
     handArmMat.color.setRGB(armLit * sc.x, armLit * (1 - armBlk * 0.08) * sc.y, armLit * (1 - armBlk * 0.24) * sc.z);
     if (handMesh.visible) { const hEmit = (BLOCK_DEFS[getActiveHeldItem()]?.light || 0) > 5; handMat.color.setRGB(hEmit ? 1 : handArmMat.color.r, hEmit ? 1 : handArmMat.color.g, hEmit ? 1 : handArmMat.color.b); }
+    if (typeof farHorizonMesh !== 'undefined' && farHorizonMesh) farHorizonMesh.material.color.setRGB(sc.x, sc.y, sc.z);
   }
 
   const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));

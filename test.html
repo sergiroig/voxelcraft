@@ -2769,6 +2769,7 @@
           const testCh = vc.getChunkData(2, 2);
           vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), true);
           assert(testCh.lightReady === 'surface', `computeChunkLighting(..., true) debe marcar lightReady='surface' sin ejecutar la cola BFS 3D subterránea (obtuvo ${testCh.lightReady})`);
+          assert((testCh.light[(8 * 16 + 8) * 64 + vc.SEA_LEVEL] >> 4) >= 12, 'En modo surfaceOnly (LOD lejano), los bloques de superficie y troncos no deben quedar negros (sun >= 12)');
           vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), false);
           assert(testCh.lightReady === true, 'computeChunkLighting(..., false) debe completar el BFS 3D y marcar lightReady=true');
 

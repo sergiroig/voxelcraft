@@ -709,8 +709,8 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
           const bl = Math.min(255, (hex & 255) * hShade) | 0;
           mapColors[lz * CHUNK_SIZE + lx] = (255 << 24) | (bl << 16) | (g << 8) | r;
         }
-        if (def.opaque) sun = 0;
-        else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(0, sun - 2);
+        if (def.opaque) sun = surfaceOnly ? (y >= SEA_LEVEL - 4 ? 12 : 0) : 0;
+        else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(surfaceOnly ? 12 : 0, sun - 2);
         const emit = def.light;
         light[idx] = (sun << 4) | emit;
         if (!surfaceOnly && (sun > 0 || emit > 0)) bfsQueue[qTail++] = idx;

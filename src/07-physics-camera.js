@@ -556,7 +556,7 @@ function updateMining(dt, currentHit) {
 // ============================================================================
 // 11. DISTANT HORIZONS RING (1 DRAW CALL, 0 CHUNKS IN RAM) & STREAMING MANAGER
 // ============================================================================
-const farHorizonMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true });
+const farHorizonMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true, side: THREE.DoubleSide });
 const farHorizonMesh = new THREE.Mesh(new THREE.BufferGeometry(), farHorizonMat);
 farHorizonMesh.frustumCulled = false;
 scene.add(farHorizonMesh);
@@ -569,7 +569,7 @@ function updateFarHorizon(force = false) {
   lastHorizonCx = hcx; lastHorizonCz = hcz; lastHorizonDist = renderDistance; lastHorizonSeed = worldSeed;
 
   const STEP = 4, outerChunks = renderDistance + 6;
-  const innerR = Math.max(16, (renderDistance - 0.35) * CHUNK_SIZE), outerR = outerChunks * CHUNK_SIZE;
+  const innerR = Math.max(16, (renderDistance + 0.15) * CHUNK_SIZE), outerR = outerChunks * CHUNK_SIZE;
   const innerRSq = innerR * innerR, outerRSq = outerR * outerR;
   const halfSteps = Math.ceil(outerR / STEP), gridN = halfSteps * 2 + 1;
   const centerX = pcx * CHUNK_SIZE + 8, centerZ = pcz * CHUNK_SIZE + 8;
@@ -579,36 +579,33 @@ function updateFarHorizon(force = false) {
     const wz = centerZ + (gz - halfSteps) * STEP;
     for (let gx = 0; gx < gridN; gx++) {
       const s = generator.sampleSurfaceAt(centerX + (gx - halfSteps) * STEP, wz), idx = gz * gridN + gx;
-      gridY[idx] = s.topBlock === BLOCK.WATER ? s.y - 0.15 : s.y;
+      gridY[idx] = s.topBlock === BLOCK.WATER ? s.y + 0.88 : s.y + 1.0;
       gridCol[idx] = s.color;
     }
   }
 
   const maxCells = gridN * gridN;
-  const pos = new Float32Array(maxCells * 12), col = new Float32Array(maxCells * 12), indices = new Uint32Array(maxCells * 6);
+  const pos = new Float32Array(maxCells * 36), col = new Float32Array(maxCells * 36), indices = new Uint32Array(maxCells * 18);
   let vCount = 0, iCount = 0;
+  const pushQuad = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, hex, shade) => {
+    const baseV = vCount, hShade = Math.min(1.18, Math.max(0.68, 0.80 + (Math.max(ay, cy) - SEA_LEVEL) * 0.012)) * shade;
+    const r = Math.min(1, (((hex >> 16) & 255) / 255) * hShade), g = Math.min(1, (((hex >> 8) & 255) / 255) * hShade), b = Math.min(1, ((hex & 255) / 255) * hShade);
+    const q = [ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz];
+    for (let c = 0; c < 4; c++) { const o = (baseV + c) * 3, qO = c * 3; pos[o] = q[qO]; pos[o + 1] = q[qO + 1]; pos[o + 2] = q[qO + 2]; col[o] = r; col[o + 1] = g; col[o + 2] = b; }
+    indices[iCount++] = baseV; indices[iCount++] = baseV + 1; indices[iCount++] = baseV + 2;
+    indices[iCount++] = baseV; indices[iCount++] = baseV + 2; indices[iCount++] = baseV + 3;
+    vCount += 4;
+  };
 
   for (let gz = 0; gz < gridN - 1; gz++) {
     const z0 = centerZ + (gz - halfSteps) * STEP, z1 = z0 + STEP, dz = (z0 + 2) - centerZ;
     for (let gx = 0; gx < gridN - 1; gx++) {
       const x0 = centerX + (gx - halfSteps) * STEP, x1 = x0 + STEP, dx = (x0 + 2) - centerX, dSq = dx * dx + dz * dz;
       if (dSq < innerRSq || dSq > outerRSq) continue;
-      const i00 = gz * gridN + gx, i10 = i00 + 1, i01 = i00 + gridN, i11 = i01 + 1;
-      const y00 = gridY[i00], y10 = gridY[i10], y11 = gridY[i11], y01 = gridY[i01];
-      const slopeShade = Math.min(1.18, Math.max(0.68, 0.92 + ((y00 - y10) + (y00 - y01)) * 0.04));
-      const pts = [[x0, y00, z0, gridCol[i00]], [x0, y01, z1, gridCol[i01]], [x1, y11, z1, gridCol[i11]], [x1, y10, z0, gridCol[i10]]];
-      const baseV = vCount;
-      for (let c = 0; c < 4; c++) {
-        const pt = pts[c], pOff = (baseV + c) * 3, hex = pt[3];
-        pos[pOff] = pt[0]; pos[pOff + 1] = pt[1]; pos[pOff + 2] = pt[2];
-        const hShade = Math.min(1.22, Math.max(0.65, 0.78 + (pt[1] - SEA_LEVEL) * 0.015)) * slopeShade;
-        col[pOff] = Math.min(1, (((hex >> 16) & 255) / 255) * hShade);
-        col[pOff + 1] = Math.min(1, (((hex >> 8) & 255) / 255) * hShade);
-        col[pOff + 2] = Math.min(1, ((hex & 255) / 255) * hShade);
-      }
-      indices[iCount++] = baseV; indices[iCount++] = baseV + 1; indices[iCount++] = baseV + 2;
-      indices[iCount++] = baseV; indices[iCount++] = baseV + 2; indices[iCount++] = baseV + 3;
-      vCount += 4;
+      const i00 = gz * gridN + gx, y00 = gridY[i00], y10 = gridY[i00 + 1], y01 = gridY[i00 + gridN], c00 = gridCol[i00];
+      pushQuad(x0, y00, z0, x0, y00, z1, x1, y00, z1, x1, y00, z0, c00, 1.0);
+      if (y00 !== y10) pushQuad(x1, y00, z0, x1, y00, z1, x1, y10, z1, x1, y10, z0, y00 > y10 ? c00 : gridCol[i00 + 1], 0.78);
+      if (y00 !== y01) pushQuad(x0, y00, z1, x1, y00, z1, x1, y01, z1, x0, y01, z1, y00 > y01 ? c00 : gridCol[i00 + gridN], 0.84);
     }
   }
 
