@@ -262,14 +262,9 @@ for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
   weatherDrops.push({ ox: (Math.random() - 0.5) * 22, oy: Math.random() * 16, oz: (Math.random() - 0.5) * 22, phase: Math.random() * Math.PI * 2 });
 }
 
-let weatherMode = 'clear';
-let isSnowing = false;
-let lightningFlash = 0.0;
-let stormThunderAccum = 0.0;
-let lightningCount = 0;
-const weatherScaleVec = new THREE.Vector3(1, 1, 1);
-const weatherPosVec = new THREE.Vector3();
-const weatherQuat = new THREE.Quaternion();
+let weatherMode = 'clear', isSnowing = false, isSandstorm = false;
+let lightningFlash = 0.0, stormThunderAccum = 0.0, lightningCount = 0, autoWeatherTimer = 0.0;
+const weatherScaleVec = new THREE.Vector3(1, 1, 1), weatherPosVec = new THREE.Vector3(), weatherQuat = new THREE.Quaternion();
 
 function toggleWeather(forceMode) {
   const modes = ['clear', 'rain', 'storm'];
@@ -285,37 +280,39 @@ function toggleWeather(forceMode) {
 }
 
 function triggerLightningFlash() {
-  lightningFlash = 1.0;
-  lightningCount++;
-  sfx.play('thunder');
-  return true;
+  lightningFlash = 1.0; lightningCount++; sfx.play('thunder'); return true;
 }
 
 function updateWeather(dt) {
+  if (typeof isGameActive === 'function' && isGameActive()) {
+    autoWeatherTimer += dt;
+    if (autoWeatherTimer > 180.0) { autoWeatherTimer = 0; toggleWeather(); }
+  }
   if (lightningFlash > 0) {
     lightningFlash = Math.max(0, lightningFlash - dt * 3.2);
     if (!isCameraUnderwater) scene.background.lerp(new THREE.Color(0xf8fafc), lightningFlash * 0.75);
   }
-  if (weatherMode === 'clear') return;
+  if (weatherMode === 'clear') { isSnowing = false; isSandstorm = false; return; }
 
   const curBiome = generator.getBiomeAt(player.x, player.z);
   isSnowing = (curBiome === 'Taiga Nevada' || curBiome === 'Cumbres Heladas' || player.y >= 42);
-  weatherMat.color.setHex(isSnowing ? 0xf8fafc : 0x7dd3fc);
-  weatherScaleVec.set(isSnowing ? 2.4 : 0.9, isSnowing ? 0.25 : 1.0, isSnowing ? 2.4 : 0.9);
+  isSandstorm = !isSnowing && (curBiome === 'Desierto' || curBiome === 'Meseta');
+  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0x7dd3fc));
+  weatherScaleVec.set(isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.9), isSnowing ? 0.25 : (isSandstorm ? 0.18 : 1.0), isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.9));
 
   if (weatherMode === 'storm') {
     stormThunderAccum += dt;
     if (stormThunderAccum > 9.5) { stormThunderAccum = 0; triggerLightningFlash(); }
   }
 
-  const fallSpeed = isSnowing ? 3.2 : (weatherMode === 'storm' ? 21.0 : 16.0);
+  const fallSpeed = isSnowing ? 3.2 : (isSandstorm ? 5.5 : (weatherMode === 'storm' ? 21.0 : 16.0));
   const px = player.x, py = player.y, pz = player.z, timeVal = gpuShaderUniforms.uTime.value;
 
   for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
     const d = weatherDrops[i];
     d.oy -= fallSpeed * dt;
     if (d.oy < -4) d.oy += 16;
-    const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (weatherMode === 'storm' ? 0.6 : 0.15);
+    const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (isSandstorm ? Math.sin(timeVal * 4.5 + d.phase) * 2.2 + 1.6 : (weatherMode === 'storm' ? 0.6 : 0.15));
     const wx = px + d.ox + swayX, wy = py + d.oy, wz = pz + d.oz;
     if ((getLightGlobal(Math.floor(wx), Math.floor(wy), Math.floor(wz)) >> 4) === 0) {
       dummyMatrix.makeTranslation(0, -999, 0);

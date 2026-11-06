@@ -344,27 +344,33 @@ function updateGPUShaders(dt) {
   gpuShaderUniforms.uTime.value += dt;
   gpuShaderUniforms.uSunFactor.value = sunFactor;
 
-  const headBlock = getVoxelGlobal(
-    Math.floor(camera.position.x),
-    Math.floor(camera.position.y),
-    Math.floor(camera.position.z)
-  );
-  const submerged = headBlock === BLOCK.WATER;
-  gpuShaderUniforms.uUnderwater.value = submerged ? 1.0 : 0.0;
-
-  if (submerged !== isCameraUnderwater) {
+  const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
+  const submerged = headBlock === BLOCK.WATER, inLavaCam = headBlock === BLOCK.LAVA;
+  gpuShaderUniforms.uUnderwater.value = (submerged || inLavaCam) ? 1.0 : 0.0;
+  const wOv = document.getElementById('water-overlay');
+  if (submerged !== isCameraUnderwater || inLavaCam) {
     isCameraUnderwater = submerged;
-    document.getElementById('water-overlay').style.display = submerged ? 'block' : 'none';
+    wOv.style.display = (submerged || inLavaCam) ? 'block' : 'none';
+    wOv.style.background = inLavaCam ? 'rgba(234, 88, 12, 0.55)' : '';
+  } else if (!submerged && !inLavaCam && wOv.style.display !== 'none') {
+    wOv.style.display = 'none'; wOv.style.background = '';
   }
 
   if (submerged) {
     const targetWaterCol = isNight ? waterFogColorNight : waterFogColorDay;
-    scene.fog.color.copy(targetWaterCol);
-    scene.background.copy(targetWaterCol);
+    scene.fog.color.copy(targetWaterCol); scene.background.copy(targetWaterCol);
     scene.fog.density = 0.068;
+  } else if (inLavaCam) {
+    scene.fog.color.setHex(0xd97706); scene.background.setHex(0xd97706);
+    scene.fog.density = 0.14;
   } else {
-    scene.fog.color.copy(currentSkyColor);
-    scene.background.copy(currentSkyColor);
+    scene.fog.color.copy(currentSkyColor); scene.background.copy(currentSkyColor);
+    if (typeof weatherMode !== 'undefined' && weatherMode !== 'clear') {
+      const tint = (typeof isSandstorm !== 'undefined' && isSandstorm) ? 0xd97706 : 0x334155;
+      const strength = weatherMode === 'storm' ? 0.52 : 0.32;
+      scene.fog.color.lerp(dummyColor.setHex(tint), strength);
+      scene.background.lerp(dummyColor.setHex(tint), strength);
+    }
     scene.fog.density = 0.055 / renderDistance;
   }
 }

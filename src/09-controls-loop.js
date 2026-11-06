@@ -774,7 +774,7 @@ window.__VOXELCRAFT__ = {
   boats, getRidingBoat: () => ridingBoat, spawnBoat, toggleRideBoat, updateBoats, toggleShieldBlock, isShieldBlocking: () => isShieldBlocking,
   takeGameScreenshot, getScreenshotState: () => ({ screenshotsTakenCount, lastScreenshotDataUrl }),
   trySummonIronGolem, waypoints, addWaypoint, removeWaypoint, teleportToWaypoint, buildWaypointsUI,
-  weatherInstanced, toggleWeather, triggerLightningFlash, updateWeather, getWeatherState: () => ({ weatherMode, isSnowing, lightningFlash, lightningCount }),
+  weatherInstanced, toggleWeather, triggerLightningFlash, updateWeather, getWeatherState: () => ({ weatherMode, isSnowing, isSandstorm, lightningFlash, lightningCount }),
   toggleVoxelLever, propagateRedstoneSignal, minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
   applyWorldSeed, teleportToBiome, skyGroup, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay,
   getCelestialAngle: () => celestialAngle, getMoonAngle: () => moonAngle, solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
@@ -785,7 +785,7 @@ window.__VOXELCRAFT__ = {
   updatePlayerPhysics, checkAABBCollision, damagePlayer, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
   canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, updateAmbientAudio, updateDynamicSky,
   getGenerator: () => generator, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
-  updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine, startGameplay, isGameActive,
+  updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine, startGameplay, isGameActive, keys,
   getState: () => ({ worldSeed, worldDeltas, selectedSlot, renderDistance, isNight, sunFactor, invOpen, menuOpen, isLocked, touchPlaying, isMiningHeld, mineProgress, currentHit, joyX, joyY, joySprint, gameMode }),
   setMiningHeld: (v) => { isMiningHeld = v; }, setCurrentHit: (h) => { currentHit = h; },
   setTouchPlaying: (v) => { touchPlaying = v; menuOpen = !v; overlayEl.classList.toggle('hidden', !!v); touchControlsEl.classList.toggle('active', !!v); }

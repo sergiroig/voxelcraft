@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=37"></iframe>
+    <iframe id="game-frame" src="./index.html?v=40"></iframe>
   </div>
 
   <script>
@@ -2376,6 +2376,96 @@
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.player.health = 10;
           vc.player.lavaBurnTimer = 0;
+        });
+      });
+
+      // =========================================================================
+      // SUITE 43: Natación Avanzada (Inmersión Shift, Oxígeno, Overlay Magma) y Tormentas de Arena
+      // =========================================================================
+      describe('43. Natación Avanzada (Buceo Shift, Oxígeno Subacuático, Overlay de Magma) y Tormentas de Arena', () => {
+        it('Permite bucear hacia abajo con Shift, consume oxígeno bajo el Agua en Supervivencia y activa atmósfera de Magma bajo la Lava', () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          const wx = 12, wy = 50, wz = 12;
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE);
+          vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER);
+          vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.WATER);
+          vc.setVoxelGlobal(wx, wy + 2, wz, vc.BLOCK.WATER);
+
+          vc.toggleGameMode('survival');
+          vc.player.flying = false;
+          vc.player.wasInFluid = false;
+          vc.player.air = 10;
+          vc.player.airTimer = 0;
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.2; vc.player.z = wz + 0.5;
+          vc.startGameplay();
+
+          // 1) Entrada al agua y buceo activo con ShiftLeft
+          vc.keys['ShiftLeft'] = true;
+          vc.updatePlayerPhysics(0.05);
+          vc.keys['ShiftLeft'] = false;
+          assert(vc.player.wasInFluid === true, 'Entrar al agua debe activar player.wasInFluid = true');
+          assert(vc.player.vy < -3.0, `Pulsar Shift en el agua debe sumergir activamente al jugador hacia abajo (vy=${vc.player.vy.toFixed(2)})`);
+
+          // 2) Consumo de oxígeno con la cabeza sumergida en BLOCK.WATER durante > 1.5s
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.1; vc.player.z = wz + 0.5; vc.player.vy = 0;
+          for (let i = 0; i < 16; i++) vc.updatePlayerPhysics(0.1);
+          assert(vc.player.air === 9, `Estar sumergido bajo el agua 1.6s en Supervivencia debe reducir player.air a 9 (actual=${vc.player.air})`);
+
+          // Salir a la superficie recarga el aire a 10
+          vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(wx, wy + 2, wz, vc.BLOCK.AIR);
+          vc.player.y = wy;
+          vc.updatePlayerPhysics(0.05);
+          assert(vc.player.air === 10, 'Sacar la cabeza a la superficie debe restaurar player.air = 10 inmediatamente');
+
+          // 3) Sumergir la cámara en BLOCK.LAVA activa el overlay y niebla incandescente de magma
+          vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.LAVA);
+          vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.LAVA);
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.1; vc.player.z = wz + 0.5;
+          vc.updatePlayerPhysics(0.05);
+          vc.updateGPUShaders(0.016);
+          const overlayEl = doc.getElementById('water-overlay');
+          assert(overlayEl.style.display === 'block' && Math.abs(vc.scene.fog.density - 0.14) < 0.005, 'Sumergir la cámara en Lava debe activar #water-overlay con niebla densa de magma (0.14)');
+
+          // Restaurar
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR);
+          vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.AIR);
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.player.health = 10; vc.player.air = 10; vc.player.wasInFluid = false;
+          vc.updatePlayerPhysics(0.016);
+          vc.updateGPUShaders(0.016);
+        });
+
+        it('Adapta las precipitaciones al bioma: Tormenta de Arena en Desierto/Meseta, Nieve en biomas helados y Lluvia en templados', () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+
+          // 1) Desierto -> Tormenta de Arena (isSandstorm = true, color ocre 0xeab308)
+          vc.teleportToBiome('Desierto');
+          vc.player.y = 30;
+          vc.toggleWeather('rain');
+          vc.updateWeather(0.016);
+          let ws = vc.getWeatherState();
+          assert(ws.isSandstorm === true && ws.isSnowing === false, 'En el bioma Desierto el clima activo debe transformarse en Tormenta de Arena (isSandstorm=true)');
+          assert(vc.weatherInstanced.material.color.getHex() === 0xeab308, 'Las partículas de la Tormenta de Arena deben teñirse de color arena dorada (0xeab308)');
+
+          // 2) Taiga Nevada -> Nevada (isSnowing = true, isSandstorm = false)
+          vc.teleportToBiome('Taiga Nevada');
+          vc.player.y = 30;
+          vc.updateWeather(0.016);
+          ws = vc.getWeatherState();
+          assert(ws.isSnowing === true && ws.isSandstorm === false, 'En Taiga Nevada el clima activo debe ser Nieve (isSnowing=true)');
+
+          // 3) Llanura -> Lluvia templada (isSnowing = false, isSandstorm = false)
+          vc.teleportToBiome('Llanura');
+          vc.player.y = 30;
+          vc.updateWeather(0.016);
+          ws = vc.getWeatherState();
+          assert(ws.isSnowing === false && ws.isSandstorm === false, 'En Llanura el clima activo debe ser Lluvia templada');
+
+          vc.toggleWeather('clear');
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.updateChunkStreaming(true);
         });
       });
 

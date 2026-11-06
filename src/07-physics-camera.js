@@ -53,15 +53,11 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
 // 10. PLAYER PHYSICS, SHIELD BLOCK (PUNTO 25), SLIPPERY ICE (PUNTO 26) & BOATS/PORTALS
 // ============================================================================
 const player = {
-  x: 8.5, y: 42, z: 8.5,
-  vx: 0, vy: 0, vz: 0,
-  iceVx: 0, iceVz: 0,
-  yaw: 0, pitch: -0.15,
-  radius: 0.3, height: 1.75, eyeHeight: 1.58,
-  onGround: false, flying: false,
-  stepAccum: 0, bobTime: 0, swingTime: 0,
-  health: 10, maxHealth: 10, regenTimer: 0,
-  maxFallVel: 0, portalCooldown: 0
+  x: 8.5, y: 42, z: 8.5, vx: 0, vy: 0, vz: 0, iceVx: 0, iceVz: 0,
+  yaw: 0, pitch: -0.15, radius: 0.3, height: 1.75, eyeHeight: 1.58,
+  onGround: false, flying: false, stepAccum: 0, bobTime: 0, swingTime: 0,
+  health: 10, maxHealth: 10, regenTimer: 0, air: 10, maxAir: 10, airTimer: 0,
+  wasInFluid: false, maxFallVel: 0, portalCooldown: 0
 };
 
 let isShieldBlocking = false;
@@ -496,19 +492,17 @@ function updatePlayerPhysics(dt) {
 
   const inWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
   const inLava = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LAVA || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.LAVA;
-  const wantJump = keys['Space'] || touchJump;
-  const wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown;
-  const sprint   = keys['ShiftLeft'] || keys['ShiftRight'] || joySprint;
+  if ((inWater || inLava) !== !!player.wasInFluid) {
+    player.wasInFluid = inWater || inLava;
+    sfx.play(inLava ? 'hiss' : 'splash');
+    spawnBlockParticles(player.x, player.y + 0.5, player.z, inLava ? BLOCK.LAVA : BLOCK.WATER, 10);
+  }
+  const wantJump = keys['Space'] || touchJump, wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown, sprint = keys['ShiftLeft'] || keys['ShiftRight'] || joySprint;
 
   const groundBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z));
-  const onIce = !player.flying && !inWater && !inLava && (
-    groundBlock === BLOCK.ICE ||
-    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.55), Math.floor(player.z)) === BLOCK.ICE
-  );
+  const onIce = !player.flying && !inWater && !inLava && (groundBlock === BLOCK.ICE || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.55), Math.floor(player.z)) === BLOCK.ICE);
 
-  const baseSpeed = player.flying
-    ? (sprint ? 22 : 12)
-    : (inLava ? 2.4 : (inWater ? 3.8 : (sprint ? 7.2 : 4.7)));
+  const baseSpeed = player.flying ? (sprint ? 22 : 12) : (inLava ? 2.4 : (inWater ? (sprint ? 5.1 : 3.8) : (sprint ? 7.2 : 4.7)));
   const speed = baseSpeed * (onIce ? 1.45 : 1.0) * (isShieldBlocking ? 0.65 : 1.0);
 
   if (onIce) {
@@ -570,6 +564,11 @@ function updatePlayerPhysics(dt) {
       player.vy *= (inLava ? 0.72 : 0.88);
       player.maxFallVel = 0;
       if (wantJump) player.vy = inLava ? 3.4 : 4.2;
+      else if (wantDown) player.vy = inLava ? -2.2 : -3.8;
+      if (moveMag > 0.15) {
+        player.stepAccum += dt * speed * moveMag;
+        if (player.stepAccum > 1.9) { player.stepAccum = 0; sfx.play('splash'); }
+      }
       if (inLava && gameMode === 'survival') {
         player.lavaBurnTimer = (player.lavaBurnTimer || 0) + dt;
         if (player.lavaBurnTimer >= 0.6) { player.lavaBurnTimer = 0; damagePlayer(2); spawnBlockParticles(player.x, player.y + 0.5, player.z, BLOCK.LAVA, 8); }
@@ -579,54 +578,36 @@ function updatePlayerPhysics(dt) {
       if (player.vy < -38) player.vy = -38;
       if (player.vy < player.maxFallVel) player.maxFallVel = player.vy;
       if (wantJump && player.onGround) {
-        if (groundBlock === BLOCK.SLIME) {
-          player.vy = 12.8; sfx.play('boing');
-        } else {
-          player.vy = 8.6;
-        }
+        if (groundBlock === BLOCK.SLIME) { player.vy = 12.8; sfx.play('boing'); }
+        else player.vy = 8.6;
         player.onGround = false;
       }
     }
 
     const nextX = player.x + player.vx * dt;
     if (!checkAABBCollision(nextX, player.y, player.z)) player.x = nextX;
-
     const nextZ = player.z + player.vz * dt;
     if (!checkAABBCollision(player.x, player.y, nextZ)) player.z = nextZ;
-
     const nextY = player.y + player.vy * dt;
     if (!checkAABBCollision(player.x, nextY, player.z)) {
-      player.y = nextY;
-      player.onGround = false;
+      player.y = nextY; player.onGround = false;
     } else {
       if (player.vy < 0) {
         const landBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(nextY - 0.08), Math.floor(player.z));
         if (landBlock === BLOCK.SLIME) {
           player.maxFallVel = 0;
-          if (player.vy < -3.0 && !wantDown) {
-            player.vy = Math.min(16.5, Math.max(9.2, -player.vy * 0.86));
-            player.onGround = false;
-            sfx.play('boing');
-          } else {
-            player.vy = 0; player.onGround = true;
-          }
+          if (player.vy < -3.0 && !wantDown) { player.vy = Math.min(16.5, Math.max(9.2, -player.vy * 0.86)); player.onGround = false; sfx.play('boing'); }
+          else { player.vy = 0; player.onGround = true; }
         } else {
-          if (player.maxFallVel < -16.5) {
-            damagePlayer(Math.max(1, Math.floor((-player.maxFallVel - 15.0) * 0.45)));
-          }
+          if (player.maxFallVel < -16.5) damagePlayer(Math.max(1, Math.floor((-player.maxFallVel - 15.0) * 0.45)));
           player.maxFallVel = 0; player.onGround = true; player.vy = 0;
         }
-      } else {
-        player.vy = 0;
-      }
+      } else player.vy = 0;
     }
 
     if (player.onGround && moveMag > 0.15) {
       player.stepAccum += dt * speed * moveMag;
-      if (player.stepAccum > 2.2) {
-        player.stepAccum = 0;
-        sfx.play(groundBlock === BLOCK.AMETHYST ? 'chime' : 'step');
-      }
+      if (player.stepAccum > 2.2) { player.stepAccum = 0; sfx.play(groundBlock === BLOCK.AMETHYST ? 'chime' : 'step'); }
     }
   }
 
@@ -637,7 +618,7 @@ function updatePlayerPhysics(dt) {
   }
 
   // 1st-person hand bobbing, shield block pose & 3D arm+item attack/swing animation
-  if (moveMag > 0.1 && (player.onGround || player.flying)) player.bobTime += dt * speed * moveMag * 1.6;
+  if (moveMag > 0.1 && (player.onGround || player.flying || inWater || inLava)) player.bobTime += dt * speed * moveMag * 1.6;
   if (player.swingTime > 0) player.swingTime = Math.max(0, player.swingTime - dt * 5.0);
   const swingProg = player.swingTime > 0 ? 1.0 - player.swingTime : 0;
   const swingAngle = Math.sin(Math.sqrt(swingProg) * Math.PI);
@@ -656,7 +637,8 @@ function updatePlayerPhysics(dt) {
   // Update 3rd-person player avatar position & limb animations
   playerAvatar.position.set(player.x, player.y, player.z);
   playerAvatar.rotation.y = player.yaw;
-  const av = playerAvatar.userData, limbSwing = moveMag > 0.08 ? Math.sin(player.bobTime * 1.2) * 0.65 : 0;
+  playerAvatar.rotation.x = (inWater && moveMag > 0.15) ? 0.35 : 0;
+  const av = playerAvatar.userData, limbSwing = moveMag > 0.08 ? Math.sin(player.bobTime * 1.2) * (inWater ? 0.95 : 0.65) : 0;
   av.leftLeg.rotation.x  =  limbSwing; av.rightLeg.rotation.x = -limbSwing;
   av.leftArm.rotation.x  = -limbSwing * 0.8; av.rightArm.rotation.x = limbSwing * 0.8 - swingAngle * 1.25;
   av.head.rotation.x     =  player.pitch * 0.65;
@@ -677,7 +659,15 @@ function updatePlayerPhysics(dt) {
 
   camera.rotation.order = 'YXZ'; camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
   const headBlock = getVoxelGlobal(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
-  document.getElementById('water-overlay').style.display = headBlock === BLOCK.WATER ? 'block' : 'none';
+  if (headBlock === BLOCK.WATER && gameMode === 'survival' && !player.flying) {
+    player.airTimer = (player.airTimer || 0) + dt;
+    if (player.airTimer >= 1.5) { player.airTimer = 0; if (player.air > 0) player.air--; else damagePlayer(1); }
+  } else {
+    player.air = player.maxAir || 10; player.airTimer = 0;
+  }
+  const wOv = document.getElementById('water-overlay');
+  wOv.style.display = (headBlock === BLOCK.WATER || headBlock === BLOCK.LAVA) ? 'block' : 'none';
+  wOv.style.background = headBlock === BLOCK.LAVA ? 'rgba(234, 88, 12, 0.55)' : '';
 }
 
 const mineBarWrap = document.getElementById('mine-progress-wrap'), mineBarEl = document.getElementById('mine-progress-bar');

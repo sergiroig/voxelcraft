@@ -96,17 +96,17 @@ function createWorldGenerator(seed) {
   }
 
   function getBiomeAt(wx, wz) {
-    const temp = noise2D(wx * 0.0045 + 500, wz * 0.0045 + 500);
-    const moist = noise2D(wx * 0.0045 - 500, wz * 0.0045 - 500);
-    const weird = noise2D(wx * 0.006 + 1234, wz * 0.006 - 1234);
-    if (temp < -0.18) return (weird > 0.12 || temp < -0.30) ? 'Cumbres Heladas' : 'Taiga Nevada';
-    if (temp > 0.16) {
-      if (moist < -0.05) return 'Desierto';
-      if (moist < 0.08) return weird > 0.03 ? 'Meseta' : 'Sabana';
+    const temp = noise2D(wx * 0.0055 + 500.37, wz * 0.0055 + 500.37);
+    const moist = noise2D(wx * 0.0055 - 500.73, wz * 0.0055 - 500.73);
+    const weird = noise2D(wx * 0.0075 + 1234.51, wz * 0.0075 - 1234.51);
+    if (temp < -0.14) return (weird > 0.0 || temp < -0.28) ? 'Cumbres Heladas' : 'Taiga Nevada';
+    if (temp > 0.14) {
+      if (moist < -0.04) return 'Desierto';
+      if (moist < 0.06) return weird > 0.0 ? 'Meseta' : 'Sabana';
       return 'Jungla';
     }
-    if (moist > 0.15) return weird < -0.02 ? 'Pantano' : 'Bosque';
-    if (moist > 0.05) return 'Bosque';
+    if (moist > 0.09) return weird < 0.0 ? 'Pantano' : 'Bosque';
+    if (moist > 0.01) return 'Bosque';
     return 'Llanura';
   }
 
@@ -369,7 +369,7 @@ function createWorldGenerator(seed) {
             for (let ty = 1; ty <= ch; ty++) data[colOffset + sy + ty] = BLOCK.CACTUS;
           } else if (biome === 'Desierto' && r < 0.0025 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'oasis');
-          } else if (r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
+          } else if ((cx !== 0 || cz !== 0) && r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'lava_pool');
           } else if (biome === 'Meseta' && r < 0.006) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
@@ -387,11 +387,11 @@ function createWorldGenerator(seed) {
           } else if (r > treeThr - 0.005 && (biome === 'Taiga Nevada' || biome === 'Llanura')) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
           } else if (r > treeThr - 0.0065 && sy > SEA_LEVEL + 2 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, biome === 'Sabana' ? 'lava_pool' : 'water_spring');
+            placeEnvFeatureInChunk(data, lx, sy, lz, (biome === 'Sabana' && (cx !== 0 || cz !== 0)) ? 'lava_pool' : 'water_spring');
           } else if (topBlock === BLOCK.GRASS && data[colOffset + sy + 1] === BLOCK.AIR) {
             const grassLim = (biome === 'Jungla' || biome === 'Sabana') ? 0.16 : 0.085;
             if (r < grassLim) data[colOffset + sy + 1] = BLOCK.TALL_GRASS;
-            else if (r < grassLim + 0.012) data[colOffset + sy + 1] = (biome === 'Pantano') ? BLOCK.GLOW_MUSHROOM : BLOCK.FLOWER_RED;
+            else if (r < grassLim + 0.012) data[colOffset + sy + 1] = (biome === 'Pantano' && (cx !== 0 || cz !== 0)) ? BLOCK.GLOW_MUSHROOM : BLOCK.FLOWER_RED;
             else if (r < grassLim + 0.022) data[colOffset + sy + 1] = BLOCK.FLOWER_YELLOW;
             else if (r < grassLim + 0.027) data[colOffset + sy + 1] = BLOCK.WHEAT_1;
           }
