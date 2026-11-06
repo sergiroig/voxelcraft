@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=33"></iframe>
+    <iframe id="game-frame" src="./index.html?v=34"></iframe>
   </div>
 
   <script>
@@ -2189,6 +2189,39 @@
           assert(craftGridDOM.children.length === 2, `Con solo 1× Tronco de Roble en el inventario, 'Solo fabricables' debe mostrar exactamente 2 opciones (4× Tablones y 1× Carbón en Horno), obtenido ${craftGridDOM.children.length}`);
 
           vc.setRecipeBookFilter({ category: 'all', search: '', craftableOnly: false });
+          vc.toggleInventory(false);
+        });
+
+        it('Descomprime Bloques Compactos (Hierro/Oro/Diamante/Esmeralda ➔ 4× Lingotes/Gemas) y acepta Gema de Diamante / Carbón Mineral indistintamente de sus Menas', () => {
+          vc.toggleGameMode('survival');
+
+          // 1) Descomprimir 1× Bloque de Hierro en 4× Lingotes de Hierro en la cuadrícula manual 2×2
+          vc.toggleInventory(true, false);
+          for (let i = 0; i < 9; i++) { vc.craftGridSlots[i].id = 0; vc.craftGridSlots[i].count = 0; }
+          vc.craftGridSlots[0].id = vc.BLOCK.IRON_BLOCK; vc.craftGridSlots[0].count = 1;
+          const outIron = vc.evaluateCraftingGrid();
+          assert(outIron && outIron.id === vc.BLOCK.ITEM_IRON_INGOT && outIron.count === 4, 'Colocar 1× Bloque de Hierro en 2×2 debe descomprimirlo en 4× Lingotes de Hierro');
+
+          // 2) Fabricar 4× Antorchas clásicas con 1× Carbón Mineral (ITEM_COAL) + 1× Palo de Madera (ITEM_STICK) en 2×2
+          for (let i = 0; i < 9; i++) { vc.craftGridSlots[i].id = 0; vc.craftGridSlots[i].count = 0; }
+          vc.craftGridSlots[0].id = vc.BLOCK.ITEM_COAL; vc.craftGridSlots[0].count = 1;
+          vc.craftGridSlots[2].id = vc.BLOCK.ITEM_STICK; vc.craftGridSlots[2].count = 1;
+          const outTorches = vc.evaluateCraftingGrid();
+          assert(outTorches && outTorches.id === vc.BLOCK.TORCH && outTorches.count === 4, 'Colocar Carbón Mineral + Palo de Madera en vertical debe producir 4× Antorchas');
+          vc.toggleInventory(false);
+
+          // 3) En Mesa 3×3, fabricar Pico de Diamante usando Gema de Diamante fundida (ITEM_DIAMOND) en vez de Mena (DIAMOND_ORE)
+          vc.toggleInventory(true, true);
+          for (const bId of vc.ALL_INVENTORY_ITEMS) vc.inventoryCounts[bId] = 0;
+          vc.inventoryCounts[vc.BLOCK.ITEM_DIAMOND] = 2;
+          vc.inventoryCounts[vc.BLOCK.PLANKS] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          const pickIdx = vc.CRAFTING_RECIPES.findIndex(r => r.outId === vc.BLOCK.TOOL_PICKAXE);
+          assert(vc.canCraftRecipe(pickIdx, true) === true, 'canCraftRecipe debe aceptar Gema de Diamante (ITEM_DIAMOND) como equivalente a DIAMOND_ORE');
+          const filledPick = vc.fillOrCraftRecipeInGrid(pickIdx);
+          assert(filledPick === true && vc.craftOutputSlot.id === vc.BLOCK.TOOL_PICKAXE, 'fillOrCraftRecipeInGrid debe rellenar la cuadrícula 3×3 con ITEM_DIAMOND y ofrecer el Pico de Diamante');
+          const craftedPick = vc.craftFromOutputSlot();
+          assert(craftedPick === true && (vc.inventoryCounts[vc.BLOCK.TOOL_PICKAXE] || 0) >= 1, 'craftFromOutputSlot debe consumir las Gemas de Diamante y fabricar el Pico de Diamante');
           vc.toggleInventory(false);
         });
       });

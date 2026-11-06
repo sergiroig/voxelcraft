@@ -268,8 +268,40 @@ const CRAFTING_RECIPES = [
   { name: '1× Bloque de Esmeralda',     outId: BLOCK.EMERALD_BLOCK,            outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_EMERALD, BLOCK.ITEM_EMERALD, 0, BLOCK.ITEM_EMERALD, BLOCK.ITEM_EMERALD, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_EMERALD, count: 4 }] },
   { name: '2× Perla de Ender (TP)',     outId: BLOCK.ITEM_ENDER_PEARL,         outCount: 2, gridSize: 2, pattern: [BLOCK.OBSIDIAN, BLOCK.AMETHYST, 0, 0], ingredients: [{ id: BLOCK.OBSIDIAN, count: 1 }, { id: BLOCK.AMETHYST, count: 1 }] },
   { name: '1× Brújula Magnética',       outId: BLOCK.ITEM_COMPASS,             outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.COAL_ORE, BLOCK.ITEM_IRON_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 3 }, { id: BLOCK.COAL_ORE, count: 1 }] },
-  { name: '1× Reloj Solar',             outId: BLOCK.ITEM_CLOCK,               outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_GOLD_INGOT, BLOCK.COAL_ORE, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 3 }, { id: BLOCK.COAL_ORE, count: 1 }] }
+  { name: '1× Reloj Solar',             outId: BLOCK.ITEM_CLOCK,               outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_GOLD_INGOT, BLOCK.COAL_ORE, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 3 }, { id: BLOCK.COAL_ORE, count: 1 }] },
+  { name: '4× Lingotes de Hierro (De Bloque)', outId: BLOCK.ITEM_IRON_INGOT,  outCount: 4, gridSize: 2, pattern: [BLOCK.IRON_BLOCK, 0, 0, 0], ingredients: [{ id: BLOCK.IRON_BLOCK, count: 1 }] },
+  { name: '4× Lingotes de Oro (De Bloque)',    outId: BLOCK.ITEM_GOLD_INGOT,  outCount: 4, gridSize: 2, pattern: [BLOCK.GOLD_BLOCK, 0, 0, 0], ingredients: [{ id: BLOCK.GOLD_BLOCK, count: 1 }] },
+  { name: '4× Gemas de Diamante (De Bloque)',  outId: BLOCK.ITEM_DIAMOND,     outCount: 4, gridSize: 2, pattern: [BLOCK.DIAMOND_BLOCK, 0, 0, 0], ingredients: [{ id: BLOCK.DIAMOND_BLOCK, count: 1 }] },
+  { name: '4× Esmeraldas (De Bloque)',         outId: BLOCK.ITEM_EMERALD,     outCount: 4, gridSize: 2, pattern: [BLOCK.EMERALD_BLOCK, 0, 0, 0], ingredients: [{ id: BLOCK.EMERALD_BLOCK, count: 1 }] },
+  { name: '4× Antorchas (Carbón + Palo)',      outId: BLOCK.TORCH,            outCount: 4, gridSize: 2, pattern: [BLOCK.ITEM_COAL, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.ITEM_COAL, count: 1 }, { id: BLOCK.ITEM_STICK, count: 1 }] },
+  { name: '4× Escalera Clásica (7× Palos)',    outId: BLOCK.LADDER,           outCount: 4, gridSize: 3, pattern: [BLOCK.ITEM_STICK, 0, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, 0, BLOCK.ITEM_STICK], ingredients: [{ id: BLOCK.ITEM_STICK, count: 7 }] },
+  { name: '1× Pan Clásico (3× Trigo)',         outId: BLOCK.ITEM_BREAD,       outCount: 1, gridSize: 3, pattern: [BLOCK.WHEAT_3, BLOCK.WHEAT_3, BLOCK.WHEAT_3, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.WHEAT_3, count: 3 }] },
+  { name: '1× Cofre Clásico (8× Tablones)',    outId: BLOCK.CHEST,            outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS], ingredients: [{ id: BLOCK.PLANKS, count: 8 }] }
 ];
+
+function normalizeCraftingId(id) {
+  if (id === BLOCK.ITEM_DIAMOND) return BLOCK.DIAMOND_ORE;
+  if (id === BLOCK.ITEM_COAL) return BLOCK.COAL_ORE;
+  return id || 0;
+}
+function areCraftingItemsEquivalent(idA, idB) {
+  return idA > 0 && idB > 0 && normalizeCraftingId(idA) === normalizeCraftingId(idB);
+}
+function getAvailIngredientCount(ingId) {
+  const norm = normalizeCraftingId(ingId);
+  if (norm === BLOCK.DIAMOND_ORE) return (inventoryCounts[BLOCK.DIAMOND_ORE] || 0) + (inventoryCounts[BLOCK.ITEM_DIAMOND] || 0);
+  if (norm === BLOCK.COAL_ORE) return (inventoryCounts[BLOCK.COAL_ORE] || 0) + (inventoryCounts[BLOCK.ITEM_COAL] || 0);
+  return inventoryCounts[ingId] || 0;
+}
+function consumeInventoryIngredient(ingId, count) {
+  const norm = normalizeCraftingId(ingId);
+  const candidates = norm === BLOCK.DIAMOND_ORE ? [BLOCK.ITEM_DIAMOND, BLOCK.DIAMOND_ORE] : (norm === BLOCK.COAL_ORE ? [BLOCK.ITEM_COAL, BLOCK.COAL_ORE] : [ingId]);
+  let rem = count;
+  for (const cid of candidates) {
+    const take = Math.min(rem, inventoryCounts[cid] || 0);
+    if (take > 0) { inventoryCounts[cid] -= take; rem -= take; }
+  }
+}
 
 const SMELT_RECIPES = [
   { inId: BLOCK.IRON_ORE, outId: BLOCK.ITEM_IRON_INGOT, count: 1 },

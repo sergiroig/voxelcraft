@@ -362,7 +362,7 @@ function getPatternTrimSignature(ids, size) {
   }
   if (maxR < 0) return '';
   const out = [];
-  for (let r = minR; r <= maxR; r++) for (let c = minC; c <= maxC; c++) out.push(ids[r * size + c] || 0);
+  for (let r = minR; r <= maxR; r++) for (let c = minC; c <= maxC; c++) out.push(normalizeCraftingId(ids[r * size + c]));
   return `${maxC - minC + 1}x${maxR - minR + 1}:${out.join(',')}`;
 }
 
@@ -371,9 +371,9 @@ function evaluateCraftingGrid() {
   const activeIds = [], gridCounts = {};
   let nonEmptyCells = 0;
   for (let i = 0; i < cellCount; i++) {
-    const s = craftGridSlots[i], id = (s && s.count > 0) ? s.id : 0;
+    const s = craftGridSlots[i], id = (s && s.count > 0) ? s.id : 0, normId = normalizeCraftingId(id);
     activeIds.push(id);
-    if (id > 0) { nonEmptyCells++; gridCounts[id] = (gridCounts[id] || 0) + s.count; }
+    if (normId > 0) { nonEmptyCells++; gridCounts[normId] = (gridCounts[normId] || 0) + s.count; }
   }
   if (nonEmptyCells === 0) { craftOutputSlot.id = 0; craftOutputSlot.count = 0; craftOutputSlot.recipeIdx = -1; return null; }
   const inputSig = getPatternTrimSignature(activeIds, maxGrid), distinctTypes = Object.keys(gridCounts).map(Number);
@@ -392,7 +392,7 @@ function evaluateCraftingGrid() {
     const rec = CRAFTING_RECIPES[idx];
     if ((rec.gridSize || 2) > maxGrid || rec.ingredients.length !== distinctTypes.length) continue;
     let ok = true;
-    for (const ing of rec.ingredients) if ((gridCounts[ing.id] || 0) < ing.count) { ok = false; break; }
+    for (const ing of rec.ingredients) if ((gridCounts[normalizeCraftingId(ing.id)] || 0) < ing.count) { ok = false; break; }
     if (ok) {
       craftOutputSlot.id = rec.outId; craftOutputSlot.count = rec.outCount; craftOutputSlot.recipeIdx = idx;
       return craftOutputSlot;
@@ -415,7 +415,7 @@ function craftFromOutputSlot() {
       while (rem > 0) {
         let progressed = false;
         for (let i = 0; i < cellCount && rem > 0; i++) {
-          if (craftGridSlots[i].id === ing.id && craftGridSlots[i].count > 0) {
+          if (areCraftingItemsEquivalent(craftGridSlots[i].id, ing.id) && craftGridSlots[i].count > 0) {
             craftGridSlots[i].count--; rem--; progressed = true;
             if (craftGridSlots[i].count <= 0) { craftGridSlots[i].id = 0; craftGridSlots[i].count = 0; }
           }
@@ -448,26 +448,28 @@ function fillOrCraftRecipeInGrid(recipeIdx) {
     for (let c = 0; c < patSize; c++) {
       const bId = pat[r * patSize + c] || 0;
       if (bId) {
+        const norm = normalizeCraftingId(bId);
+        const actualId = (norm === BLOCK.DIAMOND_ORE && (inventoryCounts[BLOCK.ITEM_DIAMOND] || 0) > 0) ? BLOCK.ITEM_DIAMOND : ((norm === BLOCK.COAL_ORE && (inventoryCounts[BLOCK.ITEM_COAL] || 0) > 0) ? BLOCK.ITEM_COAL : bId);
         const dstIdx = r * maxGrid + c;
-        craftGridSlots[dstIdx].id = bId; craftGridSlots[dstIdx].count = 1;
-        placedCounts[bId] = (placedCounts[bId] || 0) + 1;
+        craftGridSlots[dstIdx].id = actualId; craftGridSlots[dstIdx].count = 1;
+        placedCounts[norm] = (placedCounts[norm] || 0) + 1;
       }
     }
   }
   for (const ing of rec.ingredients) {
-    const extra = Math.max(0, ing.count - (placedCounts[ing.id] || 0));
-    if (extra > 0) { const slot = craftGridSlots.find(s => s.id === ing.id); if (slot) slot.count += extra; }
+    const norm = normalizeCraftingId(ing.id), extra = Math.max(0, ing.count - (placedCounts[norm] || 0));
+    if (extra > 0) { const slot = craftGridSlots.find(s => areCraftingItemsEquivalent(s.id, ing.id)); if (slot) slot.count += extra; }
     if (gameMode === 'survival') {
       let rem = ing.count;
       for (let i = 26; i >= 0 && rem > 0; i--) {
-        if (invSlots[i].id === ing.id) {
+        if (areCraftingItemsEquivalent(invSlots[i].id, ing.id)) {
           const take = Math.min(rem, invSlots[i].count);
           invSlots[i].count -= take; rem -= take;
           if (invSlots[i].count <= 0) { invSlots[i].id = 0; invSlots[i].count = 0; }
         }
       }
       for (let i = 8; i >= 0 && rem > 0; i--) {
-        if (hotbarSlots[i] === ing.id) {
+        if (areCraftingItemsEquivalent(hotbarSlots[i], ing.id)) {
           const take = Math.min(rem, hotbarCounts[i]);
           hotbarCounts[i] -= take; rem -= take;
           if (hotbarCounts[i] <= 0) hotbarSlots[i] = 0;
@@ -755,7 +757,7 @@ renderMinecraftInventoryDOM();
 requestAnimationFrame(animate);
 
 window.__VOXELCRAFT__ = {
-  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, SMELT_RECIPES, recipeBookState, setRecipeBookFilter, getRecipeCategory, buildMiniPatternHTML, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
+  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, SMELT_RECIPES, recipeBookState, setRecipeBookFilter, getRecipeCategory, buildMiniPatternHTML, normalizeCraftingId, areCraftingItemsEquivalent, getAvailIngredientCount, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
   isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isArmorItem, getArmorSlotForItem, isFoodItem, isNonStackTool,
   getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, sleepInBed, useAnvilAt, useEnchantingTableAt, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,

@@ -145,7 +145,7 @@ function canCraftRecipe(recipeIdx, enforceGridSize = false) {
   if (enforceGridSize && gameMode === 'survival' && !craftingTableMode && (rec.gridSize || 2) > 2) return false;
   if (gameMode === 'creative') return true;
   for (const ing of rec.ingredients) {
-    if ((inventoryCounts[ing.id] || 0) < ing.count) return false;
+    if (getAvailIngredientCount(ing.id) < ing.count) return false;
   }
   return true;
 }
@@ -154,9 +154,7 @@ function craftRecipe(recipeIdx, enforceGridSize = false) {
   const rec = CRAFTING_RECIPES[recipeIdx];
   if (!rec || !canCraftRecipe(recipeIdx, enforceGridSize)) return false;
   if (gameMode === 'survival') {
-    for (const ing of rec.ingredients) {
-      inventoryCounts[ing.id] -= ing.count;
-    }
+    for (const ing of rec.ingredients) consumeInventoryIngredient(ing.id, ing.count);
   }
   inventoryCounts[rec.outId] = (inventoryCounts[rec.outId] || 0) + rec.outCount;
   autoEquipToHotbar(rec.outId);
@@ -193,7 +191,7 @@ function buildCraftingUI() {
       const needsTable = gameMode === 'survival' && !craftingTableMode && (rec.gridSize || 2) > 2;
       const craftable = !needsTable && canCraftRecipe(idx);
       if (recipeBookState.craftableOnly && !craftable) return;
-      const costStr = rec.ingredients.map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`).join(' + ');
+      const costStr = rec.ingredients.map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (${gameMode === 'creative' ? '∞' : getAvailIngredientCount(ing.id)})`).join(' + ');
       if (q && !rec.name.toLowerCase().includes(q) && !costStr.toLowerCase().includes(q)) return;
 
       const card = document.createElement('div');
