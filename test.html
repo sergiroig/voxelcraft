@@ -2346,7 +2346,7 @@
           // 3) Acacia de Sabana ('acacia'): tronco inclinado en diagonal + dosel plano
           const dAca = new Uint8Array(vc.CHUNK_VOLUME);
           const aInfo = gen.placeTreeInChunk(dAca, 8, 25, 8, 'acacia', 0.995);
-          assert(aInfo.type === 'acacia' && dAca[idx(9, 29, 9)] === vc.BLOCK.WOOD && dAca[idx(9, 30, 9)] === vc.BLOCK.WOOD && dAca[idx(9, 31, 9)] === vc.BLOCK.LEAVES, 'La Acacia de Sabana debe inclinar su tronco en diagonal y formar un dosel en parasol');
+          assert(aInfo.type === 'acacia' && dAca[idx(8, 29, 8)] === vc.BLOCK.WOOD && dAca[idx(8, 30, 8)] === vc.BLOCK.WOOD && dAca[idx(8, 31, 8)] === vc.BLOCK.LEAVES && dAca[idx(9, 29, 9)] === vc.BLOCK.AIR, 'La Acacia de Sabana debe tener su tronco 100% conectado en vertical sin bloques desconectados y formar un dosel en parasol');
 
           // 4) Sauce de Pantano ('swamp'): lianas colgantes (BLOCK.VINE) + Hongo Luminoso en la base
           const dSwp = new Uint8Array(vc.CHUNK_VOLUME);

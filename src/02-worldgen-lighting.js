@@ -120,18 +120,14 @@ function createWorldGenerator(seed) {
       return { type: 'jungle', trunkH };
     }
     if (treeType === 'acacia') {
-      const leanX = r > 0.99 ? 1 : -1, leanZ = (((r * 100) | 0) & 1) ? 1 : 0;
-      for (let ty = 1; ty <= 4; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
-      if (leanZ !== 0) setT(lx + leanX, sy + 4, lz, BLOCK.WOOD);
-      setT(lx + leanX, sy + 4, lz + leanZ, BLOCK.WOOD);
-      setT(lx + leanX, sy + 5, lz + leanZ, BLOCK.WOOD);
-      const cxT = lx + leanX, czT = lz + leanZ, topY = sy + 5;
+      const topY = sy + 5;
+      for (let ty = 1; ty <= 5; ty++) setT(lx, sy + ty, lz, BLOCK.WOOD);
       for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
         if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
-        setT(cxT + dx, topY, czT + dz, BLOCK.LEAVES, true);
+        setT(lx + dx, topY, lz + dz, BLOCK.LEAVES, true);
       }
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-        if (Math.abs(dx) + Math.abs(dz) <= 1) setT(cxT + dx, topY + 1, czT + dz, BLOCK.LEAVES, true);
+        if (Math.abs(dx) + Math.abs(dz) <= 1) setT(lx + dx, topY + 1, lz + dz, BLOCK.LEAVES, true);
       }
       return { type: 'acacia', trunkH: 5 };
     }
