@@ -287,6 +287,7 @@ window.addEventListener('touchstart', () => {
 
 function startGameplay() {
   sfx.init(); invOpen = false; chestOpen = false; menuOpen = false;
+  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
   invModalEl.classList.add('hidden');
   const cm = document.getElementById('chest-modal'); if (cm) cm.classList.add('hidden');
   overlayEl.classList.add('hidden');
@@ -302,6 +303,8 @@ function togglePauseMenu(forceOpen) {
   const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !menuOpen;
   if (nextOpen) {
     menuOpen = true; isMiningHeld = false; invOpen = false; chestOpen = false;
+    if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+    for (const k in keys) keys[k] = false;
     invModalEl.classList.add('hidden');
     const cm = document.getElementById('chest-modal'); if (cm) cm.classList.add('hidden');
     overlayEl.classList.remove('hidden');
@@ -608,9 +611,12 @@ document.addEventListener('pointerlockchange', () => {
   isLocked = document.pointerLockElement === canvasEl;
   if (!isLocked) {
     isMiningHeld = false;
+    for (const k in keys) keys[k] = false;
+    player.vx = 0; player.vz = 0;
     if (typeof isShieldBlocking !== 'undefined' && isShieldBlocking) toggleShieldBlock(false);
   } else { menuOpen = false; overlayEl.classList.add('hidden'); }
 });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; player.vx = 0; player.vz = 0; isMiningHeld = false; });
 
 rngDist.addEventListener('input', (e) => {
   userSettings.renderDistance = parseInt(e.target.value, 10); lastPlayerChunkX = null;
@@ -653,6 +659,8 @@ function applyWorldSeed(newSeed) {
   while (mobs.length > 0) removeMobAt(0);
   for (const t of activeTNTs) scene.remove(t.mesh);
   activeTNTs.length = 0; lastPlayerChunkX = null;
+  if (typeof ridingCart !== 'undefined') ridingCart = null;
+  if (typeof ridingBoat !== 'undefined') ridingBoat = null;
 
   player.x = 8.5; player.z = 8.5; player.y = findSpawnHeight(player.x, player.z);
   if (typeof updateFarHorizon === 'function') updateFarHorizon(true);
@@ -670,6 +678,8 @@ function teleportToBiome(targetBiome) {
       if (generator.getBiomeAt(wx + 0.5, wz + 0.5) === targetBiome && generator.getBiomeAt(wx, wz) === targetBiome) {
         const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
         getChunkData(cx, cz); rebuildChunkImmediate(cx, cz);
+        if (typeof ridingCart !== 'undefined') ridingCart = null;
+        if (typeof ridingBoat !== 'undefined') ridingBoat = null;
         player.x = wx + 0.5; player.z = wz + 0.5; player.y = findSpawnHeight(player.x, player.z);
         player.vx = 0; player.vy = 0; player.vz = 0; lastPlayerChunkX = null; updateMinimap(0, true);
         if (typeof updateFarHorizon === 'function') updateFarHorizon(true);

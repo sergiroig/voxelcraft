@@ -1004,8 +1004,12 @@
           assert(mapRect.width >= 116 && mapRect.height >= 116, `El minimapa debe mostrarse con un tamaño legible >= 116px (actual=${mapRect.width}x${mapRect.height})`);
         });
 
-        it('Localiza y teletransporta al jugador a un bioma específico (Desierto / Taiga Nevada)', () => {
+        it('Localiza y teletransporta al jugador a un bioma específico (Desierto / Taiga Nevada) y limpia el foco del botón para evitar teletransportes involuntarios con Espacio/Enter', () => {
           const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          const btnTpBiome = doc.getElementById('btn-tp-biome');
+          btnTpBiome.focus();
+          btnTpBiome.click();
+          assert(doc.activeElement !== btnTpBiome, 'Tras clicar #btn-tp-biome y volver a la partida, el botón no debe retener el foco (activeElement) para no re-ejecutarse al saltar con Espacio');
           const dest = vc.teleportToBiome('Desierto');
           assert(dest !== null && dest.biome === 'Desierto', 'teleportToBiome("Desierto") debe encontrar un bioma Desierto');
           assert(vc.getGenerator().getBiomeAt(vc.player.x, vc.player.z) === 'Desierto', 'La posición actual del jugador debe estar en Desierto');

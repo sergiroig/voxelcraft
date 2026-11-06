@@ -2,7 +2,7 @@
 'use strict';
 
 window.addEventListener('mousemove', (e) => {
-  if (!isLocked) return;
+  if (!isLocked || Math.abs(e.movementX) > 350 || Math.abs(e.movementY) > 350) return;
   player.yaw -= e.movementX * 0.0022; player.pitch -= e.movementY * 0.0022;
   const maxPitch = Math.PI / 2 - 0.02;
   if (player.pitch > maxPitch) player.pitch = maxPitch;
@@ -15,6 +15,7 @@ window.addEventListener('keydown', (e) => {
     if (e.code === 'Enter' && menuOpen) { e.preventDefault(); if (e.target === seedInputEl) applyWorldSeed(parseInt(seedInputEl.value, 10) || 0); togglePauseMenu(false); }
     return;
   }
+  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur(); }
   keys[e.code] = true;
   if (e.code === 'KeyP') { e.preventDefault(); togglePauseMenu(); return; }
   if (e.code === 'Enter' && menuOpen) { e.preventDefault(); togglePauseMenu(false); return; }
@@ -36,7 +37,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'KeyH') { hudVisible = !hudVisible; userSettings.showHud = hudVisible; applyUserSettingsToUI(); document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; saveUserSettings(); }
 });
 
-window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('keyup', (e) => { if (e.code === 'Space') e.preventDefault(); keys[e.code] = false; });
 let lastWheelStepTime = -1000, lastWheelEventTime = -1000, lastWheelDir = 0, wheelDeltaAccum = 0;
 function handleHotbarWheel(deltaY, nowMs = performance.now(), deltaMode = 0) {
   if (!deltaY) return selectedSlot;
