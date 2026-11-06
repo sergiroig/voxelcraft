@@ -271,6 +271,43 @@ const CRAFTING_RECIPES = [
   { name: '1× Reloj Solar',             outId: BLOCK.ITEM_CLOCK,               outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_GOLD_INGOT, BLOCK.COAL_ORE, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 3 }, { id: BLOCK.COAL_ORE, count: 1 }] }
 ];
 
+const SMELT_RECIPES = [
+  { inId: BLOCK.IRON_ORE, outId: BLOCK.ITEM_IRON_INGOT, count: 1 },
+  { inId: BLOCK.GOLD_ORE, outId: BLOCK.ITEM_GOLD_INGOT, count: 1 },
+  { inId: BLOCK.DIAMOND_ORE, outId: BLOCK.ITEM_DIAMOND, count: 1 },
+  { inId: BLOCK.ITEM_RAW_PORKCHOP, outId: BLOCK.ITEM_COOKED_PORKCHOP, count: 1 },
+  { inId: BLOCK.ITEM_RAW_FISH, outId: BLOCK.ITEM_COOKED_FISH, count: 1 },
+  { inId: BLOCK.CLAY, outId: BLOCK.BRICK, count: 2 },
+  { inId: BLOCK.SAND, outId: BLOCK.GLASS, count: 1 },
+  { inId: BLOCK.COBBLE, outId: BLOCK.STONE, count: 1 },
+  { inId: BLOCK.WOOD, outId: BLOCK.ITEM_COAL, count: 1 }
+];
+
+const recipeBookState = { category: 'all', search: '', craftableOnly: false };
+
+function getRecipeCategory(rec) {
+  const id = rec.outId;
+  if (isPickaxeItem(id) || isSwordItem(id) || id === BLOCK.TOOL_BOW || id === BLOCK.TOOL_GRAPPLING_HOOK || id === BLOCK.TOOL_FISHING_ROD || (id >= BLOCK.TOOL_AXE && id <= BLOCK.ITEM_LAVA_BUCKET)) return 'tools';
+  if (isArmorItem(id) || isFoodItem(id) || id === BLOCK.CAKE || id === BLOCK.BED || id === BLOCK.ITEM_BONE_MEAL) return 'equip';
+  if (id === BLOCK.LEVER_OFF || id === BLOCK.REDSTONE_LAMP_OFF || id === BLOCK.PISTON || id === BLOCK.DOOR_CLOSED || id === BLOCK.TRAPDOOR_CLOSED || id === BLOCK.RAIL || id === BLOCK.ITEM_MINECART || id === BLOCK.ITEM_BOAT || id === BLOCK.PORTAL || id === BLOCK.TNT || id === BLOCK.ITEM_ENDER_PEARL || id === BLOCK.ITEM_COMPASS || id === BLOCK.ITEM_CLOCK) return 'redstone';
+  return 'blocks';
+}
+
+function buildMiniPatternHTML(rec) {
+  const gSize = rec.gridSize || 2, pat = rec.pattern || [], total = gSize * gSize;
+  let cells = '';
+  for (let i = 0; i < total; i++) {
+    const bId = pat[i] || 0;
+    if (bId > 0 && BLOCK_DEFS[bId]) {
+      const hex = '#' + (BLOCK_DEFS[bId].color || 0x94a3b8).toString(16).padStart(6, '0');
+      cells += `<span class="mc-mini-cell" style="background:${hex};" title="${BLOCK_DEFS[bId].name}"></span>`;
+    } else {
+      cells += `<span class="mc-mini-cell"></span>`;
+    }
+  }
+  return `<div class="mc-mini-pattern p${gSize}" title="Patrón ${gSize}×${gSize}">${cells}</div>`;
+}
+
 function createInitialInventoryCounts() {
   const counts = {};
   for (const bId of ALL_INVENTORY_ITEMS) counts[bId] = 0;

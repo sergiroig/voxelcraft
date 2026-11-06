@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=32"></iframe>
+    <iframe id="game-frame" src="./index.html?v=33"></iframe>
   </div>
 
   <script>
@@ -2153,6 +2153,43 @@
             for (let p = 3; p < data.length; p += 4) if (data[p] > 0) nonTransparent++;
             assert(nonTransparent >= 14, `El icono 16×16 de ${vc.BLOCK_DEFS[id].name} (ID ${id}) debe dibujarse correctamente (${nonTransparent} px visibles)`);
           }
+        });
+      });
+
+      // =========================================================================
+      // SUITE 40: Libro de Recetas estilo Minecraft — Pestañas, Buscador, Filtro Fabricables, Mini-Patrón y Horno
+      // =========================================================================
+      describe('40. Libro de Recetas estilo Minecraft (Fase 1): Pestañas por Categoría, Buscador, Mini-Patrón y Horno', () => {
+        it('Filtra el Libro de Recetas por las 6 categorías (Todo, Bloques, Herramientas, Armadura/Comida, Redstone, Horno), buscador de texto y solo fabricables', () => {
+          vc.toggleGameMode('survival');
+          vc.toggleInventory(true, true);
+          const craftGridDOM = doc.getElementById('craft-grid');
+
+          // 1) Categoría 'all' muestra las 73 recetas de fabricación + las 9 de Horno (82 tarjetas en total)
+          vc.setRecipeBookFilter({ category: 'all', search: '', craftableOnly: false });
+          const totalCards = craftGridDOM.children.length;
+          assert(totalCards === vc.CRAFTING_RECIPES.length + vc.SMELT_RECIPES.length, `En pestaña 'all' deben mostrarse las ${vc.CRAFTING_RECIPES.length} recetas + ${vc.SMELT_RECIPES.length} de Horno (obtenido ${totalCards})`);
+
+          // 2) Verificar que cada tarjeta de crafteo renderiza su mini-cuadrícula visual .mc-mini-pattern (2×2 o 3×3)
+          const miniPatterns = craftGridDOM.querySelectorAll('.mc-mini-pattern');
+          assert(miniPatterns.length === vc.CRAFTING_RECIPES.length, `Cada receta de crafteo debe incluir su esquema visual .mc-mini-pattern (${miniPatterns.length})`);
+
+          // 3) Filtrar por pestaña 'smelt' (🔥 Horno) -> muestra exactamente las 9 recetas de fundición/cocina
+          vc.setRecipeBookFilter({ category: 'smelt' });
+          assert(craftGridDOM.children.length === vc.SMELT_RECIPES.length, `La pestaña 'smelt' debe mostrar las ${vc.SMELT_RECIPES.length} recetas del Horno`);
+
+          // 4) Filtrar por búsqueda de texto (' Cama ') en 'all'
+          vc.setRecipeBookFilter({ category: 'all', search: 'cama' });
+          assert(craftGridDOM.children.length >= 1 && craftGridDOM.textContent.includes('Cama Roja'), 'El buscador debe encontrar la receta de la Cama Roja');
+
+          // 5) Filtro 'Solo fabricables' (craftableOnly: true) cuando solo tenemos 1× Tronco de Roble
+          for (const bId of vc.ALL_INVENTORY_ITEMS) vc.inventoryCounts[bId] = 0;
+          vc.inventoryCounts[vc.BLOCK.WOOD] = 1;
+          vc.setRecipeBookFilter({ category: 'all', search: '', craftableOnly: true });
+          assert(craftGridDOM.children.length === 2, `Con solo 1× Tronco de Roble en el inventario, 'Solo fabricables' debe mostrar exactamente 2 opciones (4× Tablones y 1× Carbón en Horno), obtenido ${craftGridDOM.children.length}`);
+
+          vc.setRecipeBookFilter({ category: 'all', search: '', craftableOnly: false });
+          vc.toggleInventory(false);
         });
       });
 

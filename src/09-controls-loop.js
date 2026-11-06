@@ -679,21 +679,18 @@ function buildChestModalUI() {
 
 function openChestModalUI(wx, wy, wz, bannerMsg) {
   if (!chestModalEl) return;
-  activeChestKey = `${wx},${wy},${wz}`;
-  chestOpen = true; invOpen = false; craftingTableMode = false;
+  activeChestKey = `${wx},${wy},${wz}`; chestOpen = true; invOpen = false; craftingTableMode = false;
   invModalEl.classList.add('hidden'); isMiningHeld = false;
   if (chestModalTitleEl) chestModalTitleEl.textContent = `🎁 Cofre (${wx}, ${wy}, ${wz})`;
   if (chestStatusBannerEl && bannerMsg) chestStatusBannerEl.textContent = bannerMsg;
-  buildChestModalUI();
-  chestModalEl.classList.remove('hidden');
+  buildChestModalUI(); chestModalEl.classList.remove('hidden');
   if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (_) {} }
 }
 
 function closeChestModal() {
   if (cursorItem.id > 0 && cursorItem.count > 0) {
     putStackIntoPlayerSlots(cursorItem.id, cursorItem.count, true);
-    cursorItem.id = 0; cursorItem.count = 0;
-    recomputeInventoryCountsFromSlots(); updateCursorItemDOM();
+    cursorItem.id = 0; cursorItem.count = 0; recomputeInventoryCountsFromSlots(); updateCursorItemDOM();
   }
   chestOpen = false; activeChestKey = null;
   if (chestModalEl) chestModalEl.classList.add('hidden');
@@ -702,6 +699,8 @@ function closeChestModal() {
 
 const btnInvCloseEl = document.getElementById('btn-inv-close'), btnRecipeBookEl = document.getElementById('btn-recipe-book');
 const btnInvQuickEl = document.getElementById('btn-inv-quick-move'), recipeDrawerEl = document.getElementById('mc-recipe-drawer');
+const recipeTabsEl = document.getElementById('mc-recipe-tabs'), recipeSearchEl = document.getElementById('mc-recipe-search');
+const recipeCraftOnlyEl = document.getElementById('mc-recipe-craftable-only');
 
 if (btnInvCloseEl) btnInvCloseEl.addEventListener('click', (e) => { e.preventDefault(); toggleInventory(false); });
 if (btnRecipeBookEl && recipeDrawerEl) {
@@ -710,6 +709,13 @@ if (btnRecipeBookEl && recipeDrawerEl) {
     btnRecipeBookEl.classList.toggle('toggled', !recipeDrawerEl.classList.contains('hidden'));
   });
 }
+if (recipeTabsEl) recipeTabsEl.querySelectorAll('.mc-recipe-tab').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ category: btn.dataset.cat }); }));
+if (recipeSearchEl) {
+  recipeSearchEl.addEventListener('input', () => setRecipeBookFilter({ search: recipeSearchEl.value }));
+  recipeSearchEl.addEventListener('keydown', (e) => e.stopPropagation());
+}
+if (recipeCraftOnlyEl) recipeCraftOnlyEl.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ craftableOnly: !recipeBookState.craftableOnly }); });
+
 const toggleQuickMoveBtn = (e) => {
   e.preventDefault(); quickMoveMode = !quickMoveMode;
   for (const b of [btnInvQuickEl, btnChestQuickEl]) if (b) { b.textContent = `⚡ Mover Rápido: ${quickMoveMode ? 'ON' : 'OFF'}`; b.classList.toggle('toggled', quickMoveMode); }
@@ -723,9 +729,7 @@ if (btnChestTakeAllEl) {
     e.preventDefault();
     if (!activeChestKey || !chestLootMap[activeChestKey]) return;
     const record = chestLootMap[activeChestKey], cSlots = ensureChestSlots(record);
-    for (let i = 0; i < 27; i++) {
-      if (cSlots[i].id > 0 && cSlots[i].count > 0) { putStackIntoPlayerSlots(cSlots[i].id, cSlots[i].count, true); cSlots[i].id = 0; cSlots[i].count = 0; }
-    }
+    for (let i = 0; i < 27; i++) if (cSlots[i].id > 0 && cSlots[i].count > 0) { putStackIntoPlayerSlots(cSlots[i].id, cSlots[i].count, true); cSlots[i].id = 0; cSlots[i].count = 0; }
     record.storedId = 0; record.storedCount = 0; record.items = []; record.lastLoot = null;
     recomputeInventoryCountsFromSlots(); sfx.play('chest'); refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
   });
@@ -739,10 +743,7 @@ if (btnChestDepositAllEl) {
     for (let i = 0; i < 27; i++) {
       if (invSlots[i].id > 0 && invSlots[i].count > 0) {
         const dst = cSlots.find(s => s.id === invSlots[i].id && s.count > 0) || cSlots.find(s => s.id === 0 || s.count <= 0);
-        if (dst) {
-          if (dst.id === invSlots[i].id) dst.count += invSlots[i].count; else { dst.id = invSlots[i].id; dst.count = invSlots[i].count; }
-          invSlots[i].id = 0; invSlots[i].count = 0;
-        }
+        if (dst) { if (dst.id === invSlots[i].id) dst.count += invSlots[i].count; else { dst.id = invSlots[i].id; dst.count = invSlots[i].count; } invSlots[i].id = 0; invSlots[i].count = 0; }
       }
     }
     syncActiveChestLegacyFields(); recomputeInventoryCountsFromSlots(); sfx.play('place'); refreshInventoryCountsUI(); saveWorldData(); buildChestModalUI();
@@ -754,7 +755,7 @@ renderMinecraftInventoryDOM();
 requestAnimationFrame(animate);
 
 window.__VOXELCRAFT__ = {
-  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
+  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, SMELT_RECIPES, recipeBookState, setRecipeBookFilter, getRecipeCategory, buildMiniPatternHTML, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
   isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isArmorItem, getArmorSlotForItem, isFoodItem, isNonStackTool,
   getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, sleepInBed, useAnvilAt, useEnchantingTableAt, throwEnderPearl, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,

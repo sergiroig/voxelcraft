@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=32" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=32" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=32" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=32" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=32" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=32" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=32" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=32" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=32" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=32" />
+  <link rel="stylesheet" href="src/styles.css?v=33" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=33" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=33" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=33" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=33" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=33" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=33" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=33" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=33" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=33" />
 </head>
 <body>
 
@@ -135,7 +135,21 @@
 
       <!-- Interactive Recipe Book Drawer -->
       <div id="mc-recipe-drawer">
-        <div class="inv-section-title" id="craft-section-title">📖 Libro de Recetas (Clic para rellenar cuadrícula o fabricar)</div>
+        <div class="mc-recipe-header">
+          <div class="inv-section-title" id="craft-section-title" style="margin:0;">📖 Libro de Recetas (Clic para rellenar cuadrícula o fabricar)</div>
+          <div class="mc-recipe-controls">
+            <input type="text" id="mc-recipe-search" placeholder="🔍 Buscar receta o material..." autocomplete="off" />
+            <button class="mode-switch-btn" id="mc-recipe-craftable-only" title="Mostrar solo recetas que puedes fabricar ahora">✅ Fabricables: OFF</button>
+          </div>
+        </div>
+        <div class="mc-recipe-tabs" id="mc-recipe-tabs">
+          <button class="mc-recipe-tab active" data-cat="all">📦 Todo</button>
+          <button class="mc-recipe-tab" data-cat="blocks">🧱 Bloques</button>
+          <button class="mc-recipe-tab" data-cat="tools">⛏ Herramientas</button>
+          <button class="mc-recipe-tab" data-cat="equip">🛡 Armadura/Comida</button>
+          <button class="mc-recipe-tab" data-cat="redstone">⚡ Redstone/Transp.</button>
+          <button class="mc-recipe-tab" data-cat="smelt">🔥 Horno</button>
+        </div>
         <div class="craft-grid" id="craft-grid"></div>
       </div>
 
@@ -242,14 +256,14 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <script src="src/01-config-atlas.js?v=32"></script>
-  <script src="src/02-worldgen-lighting.js?v=32"></script>
-  <script src="src/03-mesher-audio.js?v=32"></script>
-  <script src="src/04-world-renderer.js?v=32"></script>
-  <script src="src/05-simulation-entities.js?v=32"></script>
-  <script src="src/06-mobs-worker.js?v=32"></script>
-  <script src="src/07-physics-camera.js?v=32"></script>
-  <script src="src/08-ui-minimap.js?v=32"></script>
-  <script src="src/09-controls-loop.js?v=32"></script>
+  <script src="src/01-config-atlas.js?v=33"></script>
+  <script src="src/02-worldgen-lighting.js?v=33"></script>
+  <script src="src/03-mesher-audio.js?v=33"></script>
+  <script src="src/04-world-renderer.js?v=33"></script>
+  <script src="src/05-simulation-entities.js?v=33"></script>
+  <script src="src/06-mobs-worker.js?v=33"></script>
+  <script src="src/07-physics-camera.js?v=33"></script>
+  <script src="src/08-ui-minimap.js?v=33"></script>
+  <script src="src/09-controls-loop.js?v=33"></script>
 </body>
 </html>

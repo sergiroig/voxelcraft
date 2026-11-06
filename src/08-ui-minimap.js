@@ -167,44 +167,84 @@ function craftRecipe(recipeIdx, enforceGridSize = false) {
   return true;
 }
 
+function setRecipeBookFilter(opts = {}) {
+  if (opts.category !== undefined) recipeBookState.category = opts.category;
+  if (opts.search !== undefined) recipeBookState.search = String(opts.search).trim().toLowerCase();
+  if (opts.craftableOnly !== undefined) recipeBookState.craftableOnly = !!opts.craftableOnly;
+  const tabsEl = document.getElementById('mc-recipe-tabs');
+  if (tabsEl) tabsEl.querySelectorAll('.mc-recipe-tab').forEach(b => b.classList.toggle('active', b.dataset.cat === recipeBookState.category));
+  const craftBtn = document.getElementById('mc-recipe-craftable-only');
+  if (craftBtn) {
+    craftBtn.textContent = `✅ Fabricables: ${recipeBookState.craftableOnly ? 'ON' : 'OFF'}`;
+    craftBtn.classList.toggle('toggled', recipeBookState.craftableOnly);
+  }
+  buildCraftingUI();
+  return recipeBookState;
+}
+
 function buildCraftingUI() {
   if (!craftGridEl) return;
   craftGridEl.innerHTML = '';
-  CRAFTING_RECIPES.forEach((rec, idx) => {
-    const needsTable = gameMode === 'survival' && !craftingTableMode && (rec.gridSize || 2) > 2;
-    const craftable = !needsTable && canCraftRecipe(idx);
-    const card = document.createElement('div');
-    card.className = 'craft-item ' + (craftable ? 'craftable' : 'locked');
+  const q = recipeBookState.search, cat = recipeBookState.category;
 
-    const icon = document.createElement('canvas');
-    icon.width = 16; icon.height = 16;
-    drawItemIcon(icon, rec.outId);
+  if (cat !== 'smelt') {
+    CRAFTING_RECIPES.forEach((rec, idx) => {
+      if (cat !== 'all' && getRecipeCategory(rec) !== cat) return;
+      const needsTable = gameMode === 'survival' && !craftingTableMode && (rec.gridSize || 2) > 2;
+      const craftable = !needsTable && canCraftRecipe(idx);
+      if (recipeBookState.craftableOnly && !craftable) return;
+      const costStr = rec.ingredients.map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`).join(' + ');
+      if (q && !rec.name.toLowerCase().includes(q) && !costStr.toLowerCase().includes(q)) return;
 
-    const info = document.createElement('div');
-    info.className = 'craft-info';
-    const gridTag = (rec.gridSize || 2) === 3 ? (needsTable ? '🔒 Requiere Mesa 3×3 • ' : '⚒ 3×3 • ') : '✋ 2×2 • ';
-    const costStr = rec.ingredients
-      .map(ing => `${ing.count}× ${BLOCK_DEFS[ing.id].name} (${gameMode === 'creative' ? '∞' : (inventoryCounts[ing.id] || 0)})`)
-      .join(' + ');
-    info.innerHTML = `<div class="craft-title">${rec.name}</div><div class="craft-cost">${gridTag}${costStr}</div>`;
+      const card = document.createElement('div');
+      card.className = 'craft-item ' + (craftable ? 'craftable' : 'locked');
+      const icon = document.createElement('canvas'); icon.width = 16; icon.height = 16; drawItemIcon(icon, rec.outId);
+      const patWrap = document.createElement('div'); patWrap.innerHTML = buildMiniPatternHTML(rec);
+      const info = document.createElement('div'); info.className = 'craft-info';
+      const gridTag = (rec.gridSize || 2) === 3 ? (needsTable ? '🔒 Requiere Mesa 3×3 • ' : '⚒ 3×3 • ') : '✋ 2×2 • ';
+      info.innerHTML = `<div class="craft-title">${rec.name}</div><div class="craft-cost">${gridTag}${costStr}</div>`;
+      card.appendChild(icon); card.appendChild(patWrap.firstElementChild); card.appendChild(info);
 
-    card.appendChild(icon);
-    card.appendChild(info);
+      const onCraft = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (needsTable) {
+          const hint = document.getElementById('mc-craft-hint');
+          if (hint) hint.textContent = '⚠ Esta receta es 3×3: fabrica y coloca una Mesa de Crafteo (4× Madera) y haz clic derecho en ella.';
+          return;
+        }
+        if (typeof fillOrCraftRecipeInGrid === 'function') fillOrCraftRecipeInGrid(idx);
+        else craftRecipe(idx, true);
+      };
+      card.addEventListener('click', onCraft); card.addEventListener('touchend', onCraft, { passive: false });
+      craftGridEl.appendChild(card);
+    });
+  }
 
-    const onCraft = (e) => {
-      e.preventDefault(); e.stopPropagation();
-      if (needsTable) {
-        const hint = document.getElementById('mc-craft-hint');
-        if (hint) hint.textContent = '⚠ Esta receta es 3×3: fabrica y coloca una Mesa de Crafteo (4× Madera) y haz clic derecho en ella.';
-        return;
-      }
-      if (typeof fillOrCraftRecipeInGrid === 'function') fillOrCraftRecipeInGrid(idx);
-      else craftRecipe(idx, true);
-    };
-    card.addEventListener('click', onCraft);
-    card.addEventListener('touchend', onCraft, { passive: false });
-    craftGridEl.appendChild(card);
-  });
+  if (cat === 'smelt' || cat === 'all') {
+    SMELT_RECIPES.forEach((sRec) => {
+      const canSmelt = gameMode === 'creative' || (inventoryCounts[sRec.inId] || 0) > 0;
+      if (recipeBookState.craftableOnly && !canSmelt) return;
+      const titleStr = `🔥 ${sRec.count}× ${BLOCK_DEFS[sRec.outId].name}`;
+      const costStr = `Horno: 1× ${BLOCK_DEFS[sRec.inId].name} (${gameMode === 'creative' ? '∞' : (inventoryCounts[sRec.inId] || 0)})`;
+      if (q && !titleStr.toLowerCase().includes(q) && !costStr.toLowerCase().includes(q)) return;
+
+      const card = document.createElement('div');
+      card.className = 'craft-item smelt-recipe-card ' + (canSmelt ? 'craftable' : 'locked');
+      const icon = document.createElement('canvas'); icon.width = 16; icon.height = 16; drawItemIcon(icon, sRec.outId);
+      const info = document.createElement('div'); info.className = 'craft-info';
+      info.innerHTML = `<div class="craft-title">${titleStr}</div><div class="craft-cost">${costStr}</div>`;
+      card.appendChild(icon); card.appendChild(info);
+      const onSmelt = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (!canSmelt) return;
+        if (selectedSlot < 0) selectedSlot = 0;
+        hotbarSlots[selectedSlot] = sRec.inId;
+        smeltInFurnace(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z));
+      };
+      card.addEventListener('click', onSmelt); card.addEventListener('touchend', onSmelt, { passive: false });
+      craftGridEl.appendChild(card);
+    });
+  }
 }
 
 function buildHotbarUI() {
@@ -300,59 +340,41 @@ function buildWaypointsUI() {
   });
 }
 
-if (btnAddWaypointEl) {
-  btnAddWaypointEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); addWaypoint(); });
-}
+if (btnAddWaypointEl) btnAddWaypointEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); addWaypoint(); });
 
 function buildInventoryModal() {
   if (typeof reconcileSlotsFromInventoryCounts === 'function') reconcileSlotsFromInventoryCounts();
   invGridEl.innerHTML = '';
   ALL_INVENTORY_ITEMS.forEach((bId) => {
-    const def = BLOCK_DEFS[bId];
-    const hasItem = gameMode === 'creative' || (inventoryCounts[bId] || 0) > 0;
-    const card = document.createElement('div');
-    card.className = 'inv-item';
+    const def = BLOCK_DEFS[bId], hasItem = gameMode === 'creative' || (inventoryCounts[bId] || 0) > 0;
+    const card = document.createElement('div'); card.className = 'inv-item';
     if (!hasItem) card.style.opacity = '0.42';
-    const badge = document.createElement('div');
-    badge.className = 'count';
-    badge.textContent = formatItemCountBadge(bId);
-    const icon = document.createElement('canvas');
-    icon.width = 16; icon.height = 16;
-    drawItemIcon(icon, bId);
-    const lbl = document.createElement('span');
-    lbl.textContent = def.name;
+    const badge = document.createElement('div'); badge.className = 'count'; badge.textContent = formatItemCountBadge(bId);
+    const icon = document.createElement('canvas'); icon.width = 16; icon.height = 16; drawItemIcon(icon, bId);
+    const lbl = document.createElement('span'); lbl.textContent = def.name;
     card.appendChild(badge); card.appendChild(icon); card.appendChild(lbl);
     const selectItem = (e) => {
       e.preventDefault();
-      if (gameMode === 'creative' && typeof giveCreativeStackToSlot === 'function') {
-        giveCreativeStackToSlot(bId);
-        return;
-      }
+      if (gameMode === 'creative' && typeof giveCreativeStackToSlot === 'function') { giveCreativeStackToSlot(bId); return; }
       if (selectedSlot < 0) selectedSlot = 0;
       hotbarSlots[selectedSlot] = (hasItem && hotbarSlots[selectedSlot] !== bId) ? bId : BLOCK.AIR;
       saveWorldData(); buildHotbarUI(); toggleInventory(false);
     };
-    card.addEventListener('click', selectItem);
-    card.addEventListener('touchend', selectItem, { passive: false });
+    card.addEventListener('click', selectItem); card.addEventListener('touchend', selectItem, { passive: false });
     invGridEl.appendChild(card);
   });
-  buildWaypointsUI();
-  buildCraftingUI();
+  buildWaypointsUI(); buildCraftingUI();
   if (typeof renderMinecraftInventoryDOM === 'function') renderMinecraftInventoryDOM();
 }
 
 function refreshInventoryCountsUI() {
   if (typeof reconcileSlotsFromInventoryCounts === 'function') reconcileSlotsFromInventoryCounts();
-  buildHotbarUI();
-  buildWaypointsUI();
+  buildHotbarUI(); buildWaypointsUI();
   if (invOpen) buildInventoryModal();
   if (chestOpen && typeof buildChestModalUI === 'function') buildChestModalUI();
   const isCreative = gameMode === 'creative';
   if (btnModeToggleEl) btnModeToggleEl.textContent = `Modo: ${isCreative ? 'Creativo (∞)' : 'Supervivencia'} (G)`;
-  if (tbtnModeEl) {
-    tbtnModeEl.textContent = isCreative ? '⚒ Creat.' : '⚒ Superv.';
-    tbtnModeEl.classList.toggle('toggled', isCreative);
-  }
+  if (tbtnModeEl) { tbtnModeEl.textContent = isCreative ? '⚒ Creat.' : '⚒ Superv.'; tbtnModeEl.classList.toggle('toggled', isCreative); }
 }
 
 function toggleGameMode(forceMode) {
@@ -360,45 +382,27 @@ function toggleGameMode(forceMode) {
   else gameMode = gameMode === 'survival' ? 'creative' : 'survival';
   refreshInventoryCountsUI();
 }
-
-if (btnModeToggleEl) {
-  btnModeToggleEl.addEventListener('click', (e) => { e.preventDefault(); toggleGameMode(); });
-}
+if (btnModeToggleEl) btnModeToggleEl.addEventListener('click', (e) => { e.preventDefault(); toggleGameMode(); });
 
 // ============================================================================
 // 12A-0. SCREENSHOT / PHOTO MODE (F2 / KeyK / 📷)
 // ============================================================================
-let screenshotsTakenCount = 0;
-let lastScreenshotDataUrl = '';
+let screenshotsTakenCount = 0, lastScreenshotDataUrl = '';
 
 function takeGameScreenshot(skipDownload = false) {
   renderer.render(scene, camera);
-  try {
-    lastScreenshotDataUrl = canvasEl.toDataURL('image/png');
-  } catch (_) {
-    lastScreenshotDataUrl = 'data:image/png;base64,';
-  }
-  screenshotsTakenCount++;
-  sfx.play('shutter');
-  if (blockLabelEl) {
-    blockLabelEl.textContent = `📷 ¡Captura #${screenshotsTakenCount} guardada! (${canvasEl.width}×${canvasEl.height}px)`;
-  }
+  try { lastScreenshotDataUrl = canvasEl.toDataURL('image/png'); } catch (_) { lastScreenshotDataUrl = 'data:image/png;base64,'; }
+  screenshotsTakenCount++; sfx.play('shutter');
+  if (blockLabelEl) blockLabelEl.textContent = `📷 ¡Captura #${screenshotsTakenCount} guardada! (${canvasEl.width}×${canvasEl.height}px)`;
   if (!skipDownload && lastScreenshotDataUrl.length > 32) {
-    const a = document.createElement('a');
-    a.href = lastScreenshotDataUrl;
-    a.download = `voxelcraft_foto_${worldSeed}_${screenshotsTakenCount}.png`;
-    a.click();
+    const a = document.createElement('a'); a.href = lastScreenshotDataUrl; a.download = `voxelcraft_foto_${worldSeed}_${screenshotsTakenCount}.png`; a.click();
   }
   return lastScreenshotDataUrl;
 }
 
 const touchControlsEl = document.getElementById('touch-controls');
-
 window.addEventListener('touchstart', () => {
-  if (!isTouchMode) {
-    isTouchMode = true;
-    btnPlay.textContent = 'Jugar (Controles Táctiles)';
-  }
+  if (!isTouchMode) { isTouchMode = true; btnPlay.textContent = 'Jugar (Controles Táctiles)'; }
 }, { once: true, passive: true });
 
 function startGameplay() {
@@ -438,18 +442,6 @@ function toggleInventory(force, asCraftingTable = false) {
 }
 
 function openCraftingTable(wx, wy, wz) { sfx.play('wood'); toggleInventory(true, true); return true; }
-
-const SMELT_RECIPES = [
-  { inId: BLOCK.IRON_ORE, outId: BLOCK.ITEM_IRON_INGOT, count: 1 },
-  { inId: BLOCK.GOLD_ORE, outId: BLOCK.ITEM_GOLD_INGOT, count: 1 },
-  { inId: BLOCK.DIAMOND_ORE, outId: BLOCK.ITEM_DIAMOND, count: 1 },
-  { inId: BLOCK.ITEM_RAW_PORKCHOP, outId: BLOCK.ITEM_COOKED_PORKCHOP, count: 1 },
-  { inId: BLOCK.ITEM_RAW_FISH, outId: BLOCK.ITEM_COOKED_FISH, count: 1 },
-  { inId: BLOCK.CLAY, outId: BLOCK.BRICK, count: 2 },
-  { inId: BLOCK.SAND, outId: BLOCK.GLASS, count: 1 },
-  { inId: BLOCK.COBBLE, outId: BLOCK.STONE, count: 1 },
-  { inId: BLOCK.WOOD, outId: BLOCK.ITEM_COAL, count: 1 }
-];
 
 function smeltInFurnace(wx, wy, wz) {
   const heldId = getActiveHeldItem();
