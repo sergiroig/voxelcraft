@@ -7,23 +7,23 @@
 const MC_EXTRA_MOB_TILE_CROPS = [
   ['entity/villager/villager.png', 8, 8, 8, 8, 0, 0],
   ['entity/wandering_trader/wandering_trader.png', 8, 8, 8, 8, 0, 0],
-  ['entity/horse/horse_brown.png', 8, 20, 8, 8, 0, 0],
-  ['entity/bee/bee.png', 7, 7, 8, 8, 0, 0],
+  ['entity/horse/horse_brown.png', 8, 17, 8, 8, 0, 0],
+  ['entity/bee/bee.png', 10, 7, 8, 8, 0, 0],
   ['entity/fox/fox.png', 8, 8, 8, 8, 0, 0],
-  ['entity/bear/polarbear.png', 8, 8, 8, 8, 0, 0],
+  ['entity/bear/polarbear.png', 8, 6, 8, 8, 0, 0],
   ['entity/rabbit/rabbit_brown.png', 12, 0, 8, 8, 0, 0],
   ['entity/snow_golem/snow_golem.png', 8, 8, 8, 8, 0, 0],
   ['entity/panda/panda.png', 10, 12, 8, 8, 0, 0],
   ['entity/parrot/parrot_red_blue.png', 4, 4, 8, 8, 0, 0],
-  ['entity/cat/ocelot.png', 5, 5, 8, 8, 0, 0],
-  ['entity/frog/frog_temperate.png', 8, 8, 8, 8, 0, 0],
-  ['entity/axolotl/axolotl_lucy.png', 8, 8, 8, 8, 0, 0],
+  ['entity/cat/ocelot.png', 5, 2, 8, 8, 0, 0],
+  ['entity/frog/frog_temperate.png', 19, 5, 8, 8, 0, 0],
+  ['entity/axolotl/axolotl_lucy.png', 10, 8, 8, 8, 0, 0],
   ['entity/squid/squid.png', 12, 12, 8, 8, 0, 0],
-  ['entity/fish/cod.png', 12, 4, 8, 8, 0, 0],
+  ['entity/fish/cod.png', 10, 3, 8, 8, 0, 0],
   ['entity/fish/salmon.png', 12, 4, 8, 8, 0, 0],
-  ['entity/dolphin/dolphin.png', 8, 8, 8, 8, 0, 0],
+  ['entity/dolphin/dolphin.png', 9, 5, 8, 8, 0, 0],
   ['entity/turtle/turtle.png', 12, 0, 8, 8, 0, 0],
-  ['entity/camel/camel.png', 8, 24, 8, 8, 0, 0],
+  ['entity/camel/camel.png', 7, 23, 8, 8, 0, 0],
   ['entity/witch/witch.png', 8, 8, 8, 8, 0, 0],
   ['entity/illager/pillager.png', 8, 8, 8, 8, 0, 0],
   ['entity/zombie/drowned.png', 8, 8, 8, 8, 0, 0],
@@ -83,7 +83,8 @@ for (const [mType, tile, hp, loot, geoName, w, h, d, hostile] of EXTRA_MOB_SPECS
   MOB_HP_MAP[mType] = hp;
   MOB_LOOT_MAP[mType] = loot;
   mobGeos[geoName] = makeMobBox(w, h, d, tile, tile, tile, tile);
-  EXTRA_MOB_MAP[mType] = { tile, hp, loot, geoName, w, h, d, hostile };
+  const legGeo = makeMobBox(0.18, 0.36, 0.18, tile, tile, tile, tile);
+  EXTRA_MOB_MAP[mType] = { tile, hp, loot, geoName, legGeo, w, h, d, hostile };
 }
 
 const _origCreateMobMesh = createMobMesh;
@@ -96,7 +97,7 @@ createMobMesh = function(type) {
   const head = new THREE.Mesh(mobGeos[spec.geoName], mat);
   head.position.set(0, spec.h * 0.65, 0);
   root.add(head);
-  const legGeo = mobGeos.legSheep;
+  const legGeo = spec.legGeo || mobGeos.legSheep;
   const l1 = new THREE.Mesh(legGeo, mat), l2 = new THREE.Mesh(legGeo, mat);
   l1.position.set(-spec.w * 0.25, 0.21, 0); l2.position.set(spec.w * 0.25, 0.21, 0);
   root.add(l1, l2);

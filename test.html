@@ -3337,25 +3337,25 @@
             chicken:  { tiles: [26, 27],           geos: ['headChicken', 'bodyChicken', 'legChicken'], check: (px) => px(26, 4, 4)[0] === 226 && px(27, 2, 3)[0] === 226 },
             spider:   { tiles: [28, 29],           geos: ['headSpider', 'bodySpider', 'legSpider'], check: (px) => px(28, 4, 4)[0] === 166 && px(29, 2, 3)[0] === 61 },
             enderman: { tiles: [30, 31],           geos: ['headEnderman', 'bodyEnderman', 'limbEnderman'], check: (px) => px(30, 4, 4)[0] === 22 && px(30, 0, 4)[0] === 224 },
-            wolf:     { tiles: [32, 33],           geos: ['headWolf', 'bodyWolf', 'legWolf'], check: (px) => px(32, 4, 4)[0] === 154 && px(33, 2, 3)[0] === 211 },
+            wolf:     { tiles: [32, 33],           geos: ['headWolf', 'bodyWolf', 'legWolf'], check: (px) => px(32, 4, 4)[0] === 18 && px(33, 2, 3)[0] === 211 },
             slime:    { tiles: [34],               geos: ['bodySlime'], check: (px) => px(34, 4, 4)[1] > 130 },
             villager:         { tiles: [35], geos: ['geoVillager'],         check: (px) => px(35, 4, 4)[0] === 190 },
             wandering_trader: { tiles: [36], geos: ['geoWanderingTrader'],  check: (px) => px(36, 4, 4)[0] === 129 },
-            horse:            { tiles: [37], geos: ['geoHorse'],            check: (px) => px(37, 4, 4)[0] === 34 },
-            bee:              { tiles: [38], geos: ['geoBee'],              check: (px) => px(38, 4, 4)[0] === 48 },
+            horse:            { tiles: [37], geos: ['geoHorse'],            check: (px) => px(37, 4, 4)[0] === 58 },
+            bee:              { tiles: [38], geos: ['geoBee'],              check: (px) => px(38, 4, 4)[0] === 237 },
             fox:              { tiles: [39], geos: ['geoFox'],              check: (px) => px(39, 4, 4)[0] === 226 },
-            polarbear:        { tiles: [40], geos: ['geoPolarbear'],        check: (px) => px(40, 4, 4)[0] === 213 },
+            polarbear:        { tiles: [40], geos: ['geoPolarbear'],        check: (px) => px(40, 4, 4)[0] === 24 },
             rabbit:           { tiles: [41], geos: ['geoRabbit'],           check: (px) => px(41, 4, 4)[0] === 160 },
             snow_golem:       { tiles: [42], geos: ['geoSnowGolem'],        check: (px) => px(42, 4, 4)[0] === 238 },
             panda:            { tiles: [43], geos: ['geoPanda'],            check: (px) => px(43, 4, 4)[0] === 231 },
             parrot:           { tiles: [44], geos: ['geoParrot'],           check: (px) => px(44, 4, 4)[0] === 230 },
             ocelot:           { tiles: [45], geos: ['geoOcelot'],           check: (px) => px(45, 4, 4)[0] === 255 },
-            frog:             { tiles: [46], geos: ['geoFrog'],             check: (px) => px(46, 4, 4)[0] === 211 },
-            axolotl:          { tiles: [47], geos: ['geoAxolotl'],          check: (px) => px(47, 4, 4)[0] === 251 },
+            frog:             { tiles: [46], geos: ['geoFrog'],             check: (px) => px(46, 4, 4)[0] === 227 },
+            axolotl:          { tiles: [47], geos: ['geoAxolotl'],          check: (px) => px(47, 4, 4)[0] === 227 },
             squid:            { tiles: [48], geos: ['geoSquid'],            check: (px) => px(48, 4, 4)[0] === 84 },
-            cod:              { tiles: [49], geos: ['geoCod'],              check: (px) => px(49, 4, 4)[0] === 146 },
+            cod:              { tiles: [49], geos: ['geoCod'],              check: (px) => px(49, 4, 4)[0] === 182 },
             salmon:           { tiles: [50], geos: ['geoSalmon'],           check: (px) => px(50, 4, 4)[0] === 143 },
-            dolphin:          { tiles: [51], geos: ['geoDolphin'],          check: (px) => px(51, 4, 4)[0] === 166 },
+            dolphin:          { tiles: [51], geos: ['geoDolphin'],          check: (px) => px(51, 4, 4)[0] === 157 },
             turtle:           { tiles: [52], geos: ['geoTurtle'],           check: (px) => px(52, 4, 4)[0] === 148 },
             camel:            { tiles: [53], geos: ['geoCamel'],            check: (px) => px(53, 4, 4)[0] === 95 },
             witch:            { tiles: [54], geos: ['geoWitch'],            check: (px) => px(54, 4, 4)[0] === 163 },
@@ -3391,6 +3391,16 @@
               const u0 = uvArr[4 * 8]; // Cara frontal (+Z, índice 4)
               const mappedTile = Math.floor(u0 * vc.MOB_ATLAS_TILES);
               assert(spec.tiles.includes(mappedTile) || (mobType === 'cow' && mappedTile === 8), `La cara frontal de '${gName}' debe mapear su UV a un tile válido de '${mobType}' (tile=${mappedTile})`);
+            }
+          }
+          for (let t = 0; t < vc.MOB_ATLAS_TILES; t++) {
+            const d = mCtx.getImageData(t * 8, 0, 8, 8).data;
+            for (let p = 0; p < 64; p++) assert(d[p * 4 + 3] >= (t === 34 ? 180 : 255), `El tile ${t} de mobAtlasCanvas tiene píxel transparente (alpha=${d[p * 4 + 3]}) que se renderiza negro en las cajas 3D`);
+          }
+          for (const legTile of [16, 18, 22, 25]) {
+            const c0 = mPx(legTile, 0, 0);
+            assert(c0[0] + c0[1] + c0[2] > 60, `El tile ${legTile} no debe tener una esquina negra (RGB=${c0[0]},${c0[1]},${c0[2]})`);
+          } if (false) { {
             }
           }
         });

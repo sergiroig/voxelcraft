@@ -539,15 +539,15 @@ const MC_MOB_TILE_CROPS = [
   ['entity/creeper/creeper.png', 8, 8, 8, 8, 0, 0], ['entity/creeper/creeper.png', 20, 20, 8, 8, 0, 0],
   ['entity/creeper/creeper.png', 4, 20, 8, 6, 0, 1], ['entity/iron_golem/iron_golem.png', 8, 8, 8, 8, 0, 0],
   ['entity/iron_golem/iron_golem.png', 20, 42, 8, 8, 0, 0], ['entity/iron_golem/iron_golem.png', 8, 0, 8, 8, 0, 0],
-  ['entity/sheep/sheep.png', 6, 6, 8, 8, 0, 0], ['entity/sheep/sheep_wool.png', 28, 14, 8, 8, 0, 0],
-  ['entity/sheep/sheep.png', 0, 16, 8, 8, 0, 0], ['entity/pig/pig_temperate.png', 8, 8, 8, 8, 0, 0],
-  ['entity/pig/pig_temperate.png', 16, 16, 4, 3, 2, 2], ['entity/pig/pig_temperate.png', 28, 16, 8, 8, 0, 0],
-  ['entity/pig/pig_temperate.png', 0, 16, 8, 8, 0, 0], ['entity/cow/cow_temperate.png', 6, 6, 8, 8, 0, 0],
-  ['entity/cow/cow_temperate.png', 20, 20, 8, 8, 0, 0], ['entity/cow/cow_temperate.png', 0, 16, 8, 8, 0, 0],
-  ['entity/chicken/chicken_temperate.png', 2, 2, 8, 6, 0, 1], ['entity/chicken/chicken_temperate.png', 6, 12, 8, 8, 0, 0],
+  ['entity/sheep/sheep.png', 8, 6, 6, 8, 1, 0], ['entity/sheep/sheep_wool.png', 28, 14, 8, 8, 0, 0],
+  ['entity/sheep/sheep.png', 0, 20, 8, 8, 0, 0], ['entity/pig/pig_temperate.png', 8, 8, 8, 8, 0, 0],
+  ['entity/pig/pig_temperate.png', 16, 17, 6, 3, 1, 2], ['entity/pig/pig_temperate.png', 28, 16, 8, 8, 0, 0],
+  ['entity/pig/pig_temperate.png', 4, 18, 8, 8, 0, 0], ['entity/cow/cow_temperate.png', 6, 6, 8, 8, 0, 0],
+  ['entity/cow/cow_temperate.png', 20, 20, 8, 8, 0, 0], ['entity/cow/cow_temperate.png', 0, 24, 8, 8, 0, 0],
+  ['entity/chicken/chicken_temperate.png', 3, 1, 8, 8, 0, 0], ['entity/chicken/chicken_temperate.png', 6, 12, 8, 8, 0, 0],
   ['entity/spider/spider.png', 40, 12, 8, 8, 0, 0], ['entity/spider/spider.png', 12, 12, 8, 8, 0, 0],
-  ['entity/enderman/enderman.png', 8, 8, 8, 8, 0, 0], ['entity/enderman/enderman.png', 32, 16, 8, 8, 0, 0],
-  ['entity/wolf/wolf.png', 4, 4, 8, 8, 0, 0], ['entity/wolf/wolf.png', 24, 20, 8, 8, 0, 0],
+  ['entity/enderman/enderman.png', 8, 6, 8, 8, 0, 0], ['entity/enderman/enderman.png', 32, 20, 8, 8, 0, 0],
+  ['entity/wolf/wolf.png', 4, 2, 8, 8, 0, 0], ['entity/wolf/wolf.png', 24, 20, 8, 8, 0, 0],
   ['entity/slime/slime.png', 8, 8, 8, 8, 0, 0]
 ];
 
@@ -633,7 +633,7 @@ async function loadMcReferenceTextures() {
     const [rel, sx, sy, sw, sh, dx, dy] = MC_MOB_TILE_CROPS[t], img = imgMap.get(rel);
     if (!img) continue;
     const x0 = t * 8;
-    if (dx === 0 && dy === 0) mCtx.clearRect(x0, 0, 8, 8);
+    if (t === 34) mCtx.clearRect(x0, 0, 8, 8);
     mCtx.drawImage(img, sx, sy, sw, sh, x0 + dx, dy, sw, sh);
     if (t === 28 && imgMap.get('entity/spider/spider_eyes.png')) mCtx.drawImage(imgMap.get('entity/spider/spider_eyes.png'), 40, 12, 8, 8, x0, 0, 8, 8);
     if (t === 30 && imgMap.get('entity/enderman/enderman_eyes.png')) mCtx.drawImage(imgMap.get('entity/enderman/enderman_eyes.png'), 8, 8, 8, 8, x0, 0, 8, 8);

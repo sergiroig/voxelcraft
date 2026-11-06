@@ -45,12 +45,12 @@ paintMobTile(13, '#cbd5e1', '#94a3b8', (r) => { r(1,2,6,1,'#334155'); r(1,3,2,1,
 paintMobTile(14, '#e2e8f0', '#cbd5e1', (r) => { r(0,0,8,1,'#94a3b8'); r(1,1,2,6,'#65a30d'); r(2,2,2,5,'#4d7c0f'); r(5,3,2,5,'#65a30d'); });
 paintMobTile(15, '#cbd5e1', '#94a3b8', (r) => { r(0,0,8,1,'#e2e8f0'); });
 // 16..18: Sheep (Face, Fluffy Wool, Hoofed Leg)
-paintMobTile(16, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,2,'#f8fafc'); r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); r(3,5,2,2,'#f472b6'); });
+paintMobTile(16, '#e3e4e5', '#d5d6d8', (r) => { r(0,0,8,2,'#f8fafc'); r(1,3,1,1,'#111827'); r(2,3,1,1,'#ffffff'); r(5,3,1,1,'#ffffff'); r(6,3,1,1,'#111827'); r(3,5,2,2,'#f472b6'); });
 paintMobTile(17, '#f8fafc', '#e2e8f0', (r) => { r(1,1,2,2,'#cbd5e1'); r(5,4,2,2,'#cbd5e1'); });
 paintMobTile(18, '#d6bfa3', '#c4a98b', (r) => { r(0,0,8,3,'#f8fafc'); r(0,6,8,2,'#475569'); });
 // 19..22: Pig (Face with Eyes Only, 3D Snout Front with Nostrils Only, Clean Pink Skin, Hoofed Leg)
 paintMobTile(19, '#f49cbb', '#ec83a8', (r) => { r(0,3,1,1,'#111827'); r(1,3,1,1,'#ffffff'); r(6,3,1,1,'#ffffff'); r(7,3,1,1,'#111827'); });
-paintMobTile(20, '#f472b6', '#ec83a8', (r) => { r(1,3,2,2,'#831843'); r(5,3,2,2,'#831843'); });
+paintMobTile(20, '#f0a5a0', '#e0928d', (r) => { r(1,3,2,2,'#831843'); r(5,3,2,2,'#831843'); });
 paintMobTile(21, '#f49cbb', '#ec83a8');
 paintMobTile(22, '#f49cbb', '#ec83a8', (r) => { r(0,6,8,2,'#9d174d'); });
 // 23..25: Cow (Face with White Blaze & Pink Muzzle, Spotted Brown/White Hide, Hoofed Leg)
@@ -133,13 +133,13 @@ const mobGeos = {
   bodyGolem:   makeMobBox(0.82, 0.94, 0.46, 14, 15, 15, 15),
   armGolem:    makeMobBox(0.24, 1.12, 0.24, 14, 15, 15, 15),
   legGolem:    makeMobBox(0.24, 0.68, 0.24, 15, 15, 15, 15),
-  headSheep:   makeMobBox(0.44, 0.44, 0.46, 16, 17, 17, 16, [0.48, 0.18, 0.40, 0, 0.15, -0.02, 17, 17]),
+  headSheep:   makeMobBox(0.44, 0.44, 0.46, 16, 17, 17, 17),
   bodySheep:   makeMobBox(0.64, 0.54, 0.92, 17, 17, 17, 17),
   legSheep:    makeMobBox(0.20, 0.42, 0.20, 18, 18, 17, 18),
   headPig:      makeMobBox(0.46, 0.46, 0.46, 19, 21, 21, 21, [0.22, 0.15, 0.09, 0, -0.07, 0.25, 20, 21]),
   bodyPig:      makeMobBox(0.62, 0.52, 0.92, 21, 21, 21, 21),
   legPig:       makeMobBox(0.20, 0.42, 0.20, 22, 22, 21, 22),
-  headCow:      makeMobBox(0.46, 0.46, 0.46, 23, 24, 24, 24, [0.58, 0.12, 0.08, 0, 0.20, 0.04, 8, 8]),
+  headCow:      makeMobBox(0.46, 0.46, 0.46, 23, 24, 24, 24, [0.58, 0.14, 0.08, 0, 0.14, -0.06, 8, 8]),
   bodyCow:      makeMobBox(0.68, 0.58, 0.98, 24, 24, 24, 24),
   legCow:       makeMobBox(0.20, 0.48, 0.20, 25, 25, 24, 25),
   headChicken:  makeMobBox(0.28, 0.34, 0.28, 26, 27, 27, 27, [0.16, 0.10, 0.12, 0, -0.02, 0.18, 26, 26]),
