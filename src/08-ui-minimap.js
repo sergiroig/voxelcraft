@@ -227,7 +227,7 @@ function buildInventoryModal() {
   invGridEl.innerHTML = '';
   ALL_INVENTORY_ITEMS.forEach((bId) => {
     const def = BLOCK_DEFS[bId], hasItem = gameMode === 'creative' || (inventoryCounts[bId] || 0) > 0;
-    const card = document.createElement('div'); card.className = 'inv-item';
+    const card = document.createElement('div'); card.className = 'inv-item'; card.title = def.name;
     if (!hasItem) card.style.opacity = '0.42';
     const badge = document.createElement('div'); badge.className = 'count'; badge.textContent = formatItemCountBadge(bId);
     const icon = document.createElement('canvas'); icon.width = 16; icon.height = 16; drawItemIcon(icon, bId);
@@ -521,9 +521,65 @@ const overlayEl = document.getElementById('overlay'), btnPlay = document.getElem
 const btnReset = document.getElementById('btn-reset-world'), btnExport = document.getElementById('btn-export');
 const rngDist = document.getElementById('rng-dist'), lblDist = document.getElementById('lbl-dist');
 const rngFov = document.getElementById('rng-fov'), lblFov = document.getElementById('lbl-fov');
-if (isTouchMode) btnPlay.textContent = 'Jugar (Controles Táctiles)';
+const lightingSelectEl = document.getElementById('lighting-select'), mainMenuViewEl = document.getElementById('main-menu-view'), settingsMenuViewEl = document.getElementById('settings-menu-view');
+const btnOpenSettingsEl = document.getElementById('btn-open-settings'), btnCloseSettingsEl = document.getElementById('btn-close-settings');
+const btnCfgHudEl = document.getElementById('btn-cfg-hud'), btnCfgMapEl = document.getElementById('btn-cfg-map');
+const SETTINGS_STORAGE_KEY = 'voxelcraft_settings_v1';
+const userSettings = { renderDistance: 5, fov: 75, lightingMode, showHud: true, showMinimap: true };
+
+function openSettingsMenu(show = true) {
+  if (mainMenuViewEl) mainMenuViewEl.classList.toggle('hidden', !!show);
+  if (settingsMenuViewEl) settingsMenuViewEl.classList.toggle('hidden', !show);
+  return !!show;
+}
+
+function applyUserSettingsToUI() {
+  renderDistance = userSettings.renderDistance;
+  if (rngDist) rngDist.value = `${renderDistance}`;
+  if (lblDist) lblDist.textContent = `${renderDistance} chunks (+6 horiz.)`;
+  scene.fog.density = 0.042 / (renderDistance + 2.6);
+  camera.far = Math.max(320, (renderDistance + 7) * CHUNK_SIZE * 1.35);
+  baseFov = userSettings.fov;
+  if (rngFov) rngFov.value = `${baseFov}`;
+  if (lblFov) lblFov.textContent = `${baseFov}°`;
+  if (!isZoomed) camera.fov = baseFov;
+  camera.updateProjectionMatrix();
+  setLightingMode(userSettings.lightingMode);
+  if (lightingSelectEl) lightingSelectEl.value = lightingMode;
+  const hudEl = document.getElementById('hud-stats'), mapEl = document.getElementById('minimap-wrap');
+  if (hudEl) hudEl.classList.toggle('hidden', !userSettings.showHud);
+  if (mapEl) mapEl.classList.toggle('hidden', !userSettings.showMinimap);
+  if (btnCfgHudEl) { btnCfgHudEl.textContent = `📊 Panel FPS/Datos: ${userSettings.showHud ? 'ON' : 'OFF'}`; btnCfgHudEl.classList.toggle('toggled', userSettings.showHud); }
+  if (btnCfgMapEl) { btnCfgMapEl.textContent = `🗺 Minimapa Radar: ${userSettings.showMinimap ? 'ON' : 'OFF'}`; btnCfgMapEl.classList.toggle('toggled', userSettings.showMinimap); }
+}
+
+function saveUserSettings() {
+  try { localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(userSettings)); } catch (_) {}
+}
+
+function loadUserSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (typeof p.renderDistance === 'number' && p.renderDistance >= 2 && p.renderDistance <= 12) userSettings.renderDistance = p.renderDistance;
+      if (typeof p.fov === 'number' && p.fov >= 60 && p.fov <= 105) userSettings.fov = p.fov;
+      if (p.lightingMode === 'shader' || p.lightingMode === 'shadowmap') userSettings.lightingMode = p.lightingMode;
+      if (typeof p.showHud === 'boolean') userSettings.showHud = p.showHud;
+      if (typeof p.showMinimap === 'boolean') userSettings.showMinimap = p.showMinimap;
+    }
+  } catch (_) {}
+  applyUserSettingsToUI();
+  return userSettings;
+}
+
+if (isTouchMode) btnPlay.textContent = '▶ Jugar (Controles Táctiles)';
 btnPlay.addEventListener('click', startGameplay);
 overlayEl.addEventListener('click', (e) => { if (e.target === overlayEl) startGameplay(); });
+if (btnOpenSettingsEl) btnOpenSettingsEl.addEventListener('click', (e) => { e.preventDefault(); openSettingsMenu(true); });
+if (btnCloseSettingsEl) btnCloseSettingsEl.addEventListener('click', (e) => { e.preventDefault(); openSettingsMenu(false); });
+if (btnCfgHudEl) btnCfgHudEl.addEventListener('click', (e) => { e.preventDefault(); userSettings.showHud = !userSettings.showHud; applyUserSettingsToUI(); saveUserSettings(); });
+if (btnCfgMapEl) btnCfgMapEl.addEventListener('click', (e) => { e.preventDefault(); userSettings.showMinimap = !userSettings.showMinimap; applyUserSettingsToUI(); saveUserSettings(); });
 
 document.addEventListener('pointerlockchange', () => {
   isLocked = document.pointerLockElement === canvasEl;
@@ -534,21 +590,19 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 rngDist.addEventListener('input', (e) => {
-  renderDistance = parseInt(e.target.value, 10); lblDist.textContent = `${renderDistance} chunks (+6 horiz.)`;
-  lastPlayerChunkX = null; scene.fog.density = 0.042 / (renderDistance + 2.6);
-  camera.far = Math.max(320, (renderDistance + 7) * CHUNK_SIZE * 1.35); camera.updateProjectionMatrix();
+  userSettings.renderDistance = parseInt(e.target.value, 10); lastPlayerChunkX = null;
+  applyUserSettingsToUI(); saveUserSettings();
   if (typeof updateFarHorizon === 'function') updateFarHorizon(true);
 });
 
 rngFov.addEventListener('input', (e) => {
-  baseFov = parseInt(e.target.value, 10); lblFov.textContent = `${baseFov}°`;
-  if (!isZoomed) { camera.fov = baseFov; camera.updateProjectionMatrix(); }
+  userSettings.fov = parseInt(e.target.value, 10);
+  applyUserSettingsToUI(); saveUserSettings();
 });
-const lightingSelectEl = document.getElementById('lighting-select');
 if (lightingSelectEl) {
-  setLightingMode(lightingMode);
-  lightingSelectEl.addEventListener('change', (e) => setLightingMode(e.target.value));
+  lightingSelectEl.addEventListener('change', (e) => { userSettings.lightingMode = e.target.value; applyUserSettingsToUI(); saveUserSettings(); });
 }
+loadUserSettings();
 
 function markAllChunksDirtyForRelight() {
   for (const ch of chunks.values()) { ch.dirty = true; ch.queued = false; ch.meshVersion = (ch.meshVersion || 0) + 1; }

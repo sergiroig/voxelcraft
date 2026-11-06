@@ -2556,6 +2556,19 @@
           assert(doc.querySelectorAll('#air-row .bubble').length === 10 && doc.querySelectorAll('#air-row .bubble.empty').length === 3, 'Con air=7 deben mostrarse 10 burbujas en #air-row (3 vacías)');
           vc.player.air = 10;
           vc.renderHeartsUI();
+
+          // Verifica slots unificados estilo Hotbar, Libro de Recetas en ventana aparte, Menú de Configuración persistente y ausencia de barras de scroll
+          const mainInvCard = doc.getElementById('mc-main-inv-card'), recipeDrawer = doc.getElementById('mc-recipe-drawer');
+          assert(mainInvCard && recipeDrawer && !mainInvCard.contains(recipeDrawer), 'El Libro de Recetas (#mc-recipe-drawer) debe ser una ventana independiente fuera de #mc-main-inv-card');
+          const slotStyle = win.getComputedStyle(doc.querySelector('#mc-inv-slots .mc-slot'));
+          assert(slotStyle.width === '50px' && slotStyle.height === '50px' && slotStyle.borderRadius === '6px', `Todos los slots (.mc-slot) deben tener el mismo tamaño y bordes que el hotbar (50x50px, 6px, actual=${slotStyle.width}x${slotStyle.height}, radius=${slotStyle.borderRadius})`);
+          assert(win.getComputedStyle(doc.getElementById('craft-grid')).scrollbarWidth === 'none', 'No debe mostrarse barra de scroll nativa de página web (scrollbar-width: none)');
+          vc.openSettingsMenu(true);
+          assert(!doc.getElementById('settings-menu-view').classList.contains('hidden') && doc.getElementById('main-menu-view').classList.contains('hidden'), 'openSettingsMenu(true) debe abrir el menú independiente de configuración');
+          vc.userSettings.fov = 85; vc.saveUserSettings();
+          const savedCfg = JSON.parse(win.localStorage.getItem('voxelcraft_settings_v1') || '{}');
+          assert(savedCfg.fov === 85, 'saveUserSettings() debe persistir la configuración en localStorage');
+          vc.userSettings.fov = 75; vc.saveUserSettings(); vc.openSettingsMenu(false);
         });
 
         it('Aplica las reglas de Supervivencia: impide esprintar con hunger<=3, bloquea regeneración si hunger<8, daña por inanición y permite comer con vida llena', () => {

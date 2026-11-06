@@ -33,7 +33,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'KeyT') toggleDayNight();
   else if (e.code === 'KeyV') toggleWeather();
   else if (e.code === 'KeyM') toggleMusic();
-  else if (e.code === 'KeyH') { hudVisible = !hudVisible; document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; }
+  else if (e.code === 'KeyH') { hudVisible = !hudVisible; userSettings.showHud = hudVisible; applyUserSettingsToUI(); document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; saveUserSettings(); }
 });
 
 window.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -197,7 +197,7 @@ bindTap('tbtn-photo',   () => takeGameScreenshot());
 bindTap('tbtn-time',    () => toggleDayNight());
 bindTap('tbtn-weather', () => toggleWeather());
 bindTap('tbtn-music',   () => toggleMusic());
-bindTap('tbtn-hud',     () => { hudVisible = !hudVisible; document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; });
+bindTap('tbtn-hud',     () => { hudVisible = !hudVisible; userSettings.showHud = hudVisible; applyUserSettingsToUI(); document.getElementById('hud-stats').style.display = hudVisible ? 'block' : 'none'; saveUserSettings(); });
 bindTap('tbtn-menu',    () => togglePauseMenu(true));
 
 window.addEventListener('resize', () => {
@@ -707,13 +707,14 @@ function closeChestModal() {
   startGameplay();
 }
 
-const btnInvCloseEl = document.getElementById('btn-inv-close'), btnRecipeBookEl = document.getElementById('btn-recipe-book');
+const btnInvCloseEl = document.getElementById('btn-inv-close'), btnRecipeBookEl = document.getElementById('btn-recipe-book'), btnRecipeCloseEl = document.getElementById('btn-recipe-close');
 const btnInvQuickEl = document.getElementById('btn-inv-quick-move'), recipeDrawerEl = document.getElementById('mc-recipe-drawer');
 const recipeTabsEl = document.getElementById('mc-recipe-tabs'), recipeSearchEl = document.getElementById('mc-recipe-search');
 const recipeCraftOnlyEl = document.getElementById('mc-recipe-craftable-only');
 
 if (btnInvCloseEl) btnInvCloseEl.addEventListener('click', (e) => { e.preventDefault(); toggleInventory(false); });
 if (btnRecipeBookEl && recipeDrawerEl) btnRecipeBookEl.addEventListener('click', (e) => { e.preventDefault(); recipeDrawerEl.classList.toggle('hidden'); btnRecipeBookEl.classList.toggle('toggled', !recipeDrawerEl.classList.contains('hidden')); });
+if (btnRecipeCloseEl && recipeDrawerEl) btnRecipeCloseEl.addEventListener('click', (e) => { e.preventDefault(); recipeDrawerEl.classList.add('hidden'); if (btnRecipeBookEl) btnRecipeBookEl.classList.remove('toggled'); });
 if (recipeTabsEl) recipeTabsEl.querySelectorAll('.mc-recipe-tab').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ category: btn.dataset.cat }); }));
 if (recipeSearchEl) { recipeSearchEl.addEventListener('input', () => setRecipeBookFilter({ search: recipeSearchEl.value })); recipeSearchEl.addEventListener('keydown', (e) => e.stopPropagation()); }
 if (recipeCraftOnlyEl) recipeCraftOnlyEl.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ craftableOnly: !recipeBookState.craftableOnly }); });
@@ -780,7 +781,7 @@ window.__VOXELCRAFT__ = {
   toggleVoxelLever, propagateRedstoneSignal, minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
   applyWorldSeed, teleportToBiome, skyGroup, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay,
   getCelestialAngle: () => celestialAngle, getMoonAngle: () => moonAngle, solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
-  detectDefaultLightingMode, setLightingMode, getLightingMode: () => lightingMode, updateShadowMapPass, shadowMapTarget, shadowCamera, shadowMatrix, getShadowPassCount: () => shadowPassCount,
+  detectDefaultLightingMode, setLightingMode, getLightingMode: () => lightingMode, userSettings, saveUserSettings, loadUserSettings, openSettingsMenu, updateShadowMapPass, shadowMapTarget, shadowCamera, shadowMatrix, getShadowPassCount: () => shadowPassCount,
   getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }), getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,
   computeChunkLighting, buildChunkMeshArrays, applyArraysToMesh, rebuildChunkImmediate, packChunkPaddedBuffers, requestChunkMeshWorker, updateDynamicResolution,
   getWorkerState: () => ({ hasWorker: meshWorker !== null, workerJobsInFlight, workerJobsCompleted, lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio }),
