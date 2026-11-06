@@ -26,6 +26,7 @@ Este documento contiene las reglas de arquitectura, restricciones de rendimiento
   - [`src/09-controls-loop.js`](src/09-controls-loop.js) (`792` líneas): Eventos de teclado/ratón en PC (con `handleHotbarWheel` de paso único por giro de rueda), controlador multitáctil móvil (`joy-zone`, botones táctiles), motor de ranuras estilo Minecraft incluyendo las 4 ranuras de armadura (`clickSlot`, `evaluateCraftingGrid`, `craftFromOutputSlot`, `renderMinecraftInventoryDOM`, `buildChestModalUI`), bucle principal (`animate`), telemetría FPS y API de introspección `window.__VOXELCRAFT__`.
   - [`mc-reference/`](mc-reference/): Pack completo de **Minecraft Default Assets** (`4,225` archivos `.png` oficiales en `assets/minecraft/textures/block/`, `item/`, `entity/`, `environment/`, `gui/`, `map/`, `particle/`, etc. + `models/`, `blockstates/` e `items/`, `~2.2 MB` en total) versionado en el repositorio, cargado directamente en los canvas del juego por `loadMcReferenceTextures()` (`0` VRAM/CPU extra en runtime) y auditado píxel a píxel (`error = 0`) por `Suite 52` de [`test.html`](test.html).
   - [`test.html`](test.html): Runner de **108 tests E2E/unitarios (52 suites)** y profiler de coste en FPS en tiempo real sobre el motor.
+  - [`PLAN.md`](PLAN.md): Hoja de ruta en 10 fases para incorporar la totalidad de bloques, criaturas, ítems, GUI, partículas, cuadros, pociones y dimensiones de `mc-reference/`.
   - [`README.md`](README.md): Descripción general del repositorio.
   - [`AGENTS.md`](AGENTS.md): Este archivo de referencia.
 
