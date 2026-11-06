@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=46"></iframe>
+    <iframe id="game-frame" src="./index.html?v=47"></iframe>
   </div>
 
   <script>
@@ -481,6 +481,15 @@
           assert(sunsetSun.r > 0.90 && sunsetSun.b < 0.35 && sunsetSun.g < noonSun.g, 'En el horizonte/atardecer el Sol debe tornarse cálido anaranjado');
           assert(sunsetSky.r > sunsetSky.b && Math.abs(sunsetSky.r - noonSky.r) > 0.15, 'En el atardecer el cielo debe cambiar a tonos cálidos crepusculares');
           assert(vc.moonMesh.position.y < -20, 'Al ponerse el Sol la Luna debe seguir su órbita independiente y no salir como contrapeso del Sol');
+
+          // Regresión Bug Atardecer: skyGroup debe anclarse a player.y y cuando el Sol baja hacia el horizonte (sunElev=0.20) el cielo ya no debe ser azul
+          assert(Math.abs(vc.skyGroup.position.y - vc.player.y) < 0.1, `skyGroup.position.y debe seguir a player.y para que el Sol no se esconda antes de tiempo (skyY=${vc.skyGroup.position.y}, playerY=${vc.player.y})`);
+          vc.setTimeOfDay(Math.acos(0.20));
+          const lowSunSky = vc.scene.background.clone();
+          assert(lowSunSky.r > lowSunSky.b, `Cuando el Sol toca el horizonte visual (sunElev=0.20) el cielo ya debe ser cálido/atardecer y NO seguir azul (r=${lowSunSky.r.toFixed(2)}, b=${lowSunSky.b.toFixed(2)})`);
+          vc.setTimeOfDay(Math.acos(-0.12));
+          const earlyNightSky = vc.scene.background.clone();
+          assert(earlyNightSky.b < 0.12 && earlyNightSky.r < 0.06, `Al ocultarse el Sol bajo el horizonte (sunElev=-0.12) el cielo ya debe ser de noche cerrada (r=${earlyNightSky.r.toFixed(2)}, b=${earlyNightSky.b.toFixed(2)})`);
           vc.setTimeOfDay(0.25);
           const wasNight = vc.getState().isNight;
           vc.toggleDayNight();

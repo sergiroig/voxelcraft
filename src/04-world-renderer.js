@@ -190,7 +190,7 @@ function updateDynamicResolution(fpsSample) {
 const scene = new THREE.Scene();
 const skyColorDay      = new THREE.Color(0x6ec6ff);
 const skyColorGolden   = new THREE.Color(0xf4845f);
-const skyColorTwilight = new THREE.Color(0x4a3560);
+const skyColorTwilight = new THREE.Color(0xb84a39);
 const skyColorNight    = new THREE.Color(0x070b16);
 const currentSkyColor  = skyColorDay.clone();
 const sunColHorizon    = new THREE.Color(0xff5e2b);
@@ -720,7 +720,7 @@ function setTimeOfDay(angle, customMoonAngle) {
 }
 
 function updateDynamicSky(dt) {
-  skyGroup.position.set(player.x, 0, player.z);
+  skyGroup.position.set(player.x, player.y, player.z);
   celestialAngle = (celestialAngle + dt * DAY_CYCLE_SPEED) % (Math.PI * 2);
   moonAngle = (moonAngle + dt * MOON_CYCLE_SPEED) % (Math.PI * 2);
   celestialOrbit.rotation.z = celestialAngle * 0.5;
@@ -733,15 +733,15 @@ function updateDynamicSky(dt) {
 
   const sunElev = Math.cos(celestialAngle); // +1 at zenith, 0 at horizon, -1 at midnight
   const moonElev = Math.cos(moonAngle);
-  isNight = sunElev < -0.05;
-  sunFactor = THREE.MathUtils.clamp(0.16 + (sunElev + 0.15) * 0.88, 0.16, 1.0);
+  isNight = sunElev < -0.02;
+  sunFactor = THREE.MathUtils.clamp(0.16 + THREE.MathUtils.smoothstep(sunElev, -0.10, 0.42) * 0.84, 0.16, 1.0);
 
-  // Realistic pure white daytime Sun, shifting to warm gold/coral only near the horizon
-  if (sunElev <= 0.10) {
-    const t = THREE.MathUtils.clamp(sunElev / 0.10, 0, 1);
+  // Realistic pure white daytime Sun, shifting to warm gold/coral as it approaches the terrain horizon
+  if (sunElev <= 0.24) {
+    const t = THREE.MathUtils.clamp(sunElev / 0.24, 0, 1);
     sunMesh.material.color.copy(sunColHorizon).lerp(sunColGolden, t);
   } else {
-    const t = THREE.MathUtils.clamp((sunElev - 0.10) / 0.14, 0, 1);
+    const t = THREE.MathUtils.clamp((sunElev - 0.24) / 0.18, 0, 1);
     sunMesh.material.color.copy(sunColGolden).lerp(sunColNoon, t);
   }
   const horizonScale = 1.0 + Math.max(0, 1.0 - Math.abs(sunElev) / 0.35) * 0.22;
@@ -751,28 +751,28 @@ function updateDynamicSky(dt) {
   moonMesh.quaternion.copy(camera.quaternion);
   moonMesh.scale.set(1, 1, 0.04);
   sunGlow.material.color.copy(sunMesh.material.color);
-  sunGlow.material.opacity = THREE.MathUtils.clamp((sunElev + 0.18) * 3.2, 0.0, 0.95);
-  sunMesh.material.opacity = THREE.MathUtils.clamp((sunElev + 0.15) * 4.0, 0.0, 1.0);
+  sunGlow.material.opacity = THREE.MathUtils.clamp((sunElev + 0.06) * 4.5, 0.0, 0.95);
+  sunMesh.material.opacity = THREE.MathUtils.clamp((sunElev + 0.04) * 5.5, 0.0, 1.0);
   const moonVis = THREE.MathUtils.clamp((moonElev + 0.12) * 3.0, 0.0, 1.0) * (1.0 - Math.max(0, sunElev) * 0.62);
   moonMesh.material.opacity = moonVis;
   moonGlow.material.opacity = moonVis * (isNight ? 0.68 : 0.22);
 
-  // Realistic Sky, Fog, Cloud & GPU Terrain Sunlight color across Noon -> Golden Sunset/Sunrise -> Twilight -> Night
-  if (sunElev >= 0.0) {
-    const t = Math.min(1, sunElev / 0.45);
+  // Synchronized Sky, Fog, Cloud & GPU Sunlight color: warms BEFORE Sun hits terrain horizon (sunElev=0.22) and reaches night at sunElev=-0.12
+  if (sunElev >= 0.22) {
+    const t = THREE.MathUtils.smoothstep(sunElev, 0.22, 0.58);
     currentSkyColor.copy(skyColorGolden).lerp(skyColorDay, t);
     cloudMesh.material.color.copy(cloudColSunset).lerp(cloudColDay, t);
     gpuShaderUniforms.uSunLightColor.value.set(1.0, 0.78 + 0.22 * t, 0.58 + 0.42 * t);
-  } else if (sunElev >= -0.18) {
-    const t = (sunElev + 0.18) / 0.18;
+  } else if (sunElev >= 0.0) {
+    const t = sunElev / 0.22;
     currentSkyColor.copy(skyColorTwilight).lerp(skyColorGolden, t);
     cloudMesh.material.color.copy(cloudColNight).lerp(cloudColSunset, t);
-    gpuShaderUniforms.uSunLightColor.value.set(0.32 + 0.68 * t, 0.28 + 0.50 * t, 0.38 + 0.20 * t);
-  } else if (sunElev >= -0.36) {
-    const t = (sunElev + 0.36) / 0.18;
+    gpuShaderUniforms.uSunLightColor.value.set(0.52 + 0.48 * t, 0.36 + 0.42 * t, 0.34 + 0.24 * t);
+  } else if (sunElev >= -0.12) {
+    const t = (sunElev + 0.12) / 0.12;
     currentSkyColor.copy(skyColorNight).lerp(skyColorTwilight, t);
     cloudMesh.material.color.copy(cloudColNight);
-    gpuShaderUniforms.uSunLightColor.value.set(0.18 + 0.14 * t, 0.22 + 0.06 * t, 0.34 + 0.04 * t);
+    gpuShaderUniforms.uSunLightColor.value.set(0.18 + 0.34 * t, 0.22 + 0.14 * t, 0.34);
   } else {
     currentSkyColor.copy(skyColorNight);
     cloudMesh.material.color.copy(cloudColNight);
@@ -781,7 +781,7 @@ function updateDynamicSky(dt) {
   gpuShaderUniforms.uSunFactor.value = sunFactor;
   if (!isCameraUnderwater) { scene.background.copy(currentSkyColor); scene.fog.color.copy(currentSkyColor); }
 
-  starMat.opacity = THREE.MathUtils.clamp((-sunElev + 0.05) * 2.6, 0, 0.88);
+  starMat.opacity = THREE.MathUtils.clamp((0.14 - sunElev) * 3.8, 0, 0.88);
   cloudDrift = (cloudDrift + dt * 1.6) % 220;
   const snapX = Math.floor(player.x / 220) * 220, snapZ = Math.floor(player.z / 220) * 220;
   cloudMesh.position.set(snapX + cloudDrift - 110, 0, snapZ);
