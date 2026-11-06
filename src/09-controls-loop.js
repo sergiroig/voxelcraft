@@ -57,7 +57,10 @@ function triggerPrimaryAttackOrMine() {
   if (heldId === BLOCK.TOOL_BOW) { shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
   if (heldId === BLOCK.TOOL_GRAPPLING_HOOK) { shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); isMiningHeld = false; return; }
   const hitMob = raycastMob(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z, 4.3);
-  if (hitMob) { damageMob(hitMob, heldId === BLOCK.TOOL_SWORD ? 5 : (heldId === BLOCK.TOOL_PICKAXE ? 3 : 1), dir.x, dir.z); isMiningHeld = false; return; }
+  if (hitMob) {
+    const dmg = heldId === BLOCK.TOOL_SWORD ? 5 : (isSwordItem(heldId) || heldId === BLOCK.TOOL_AXE ? 4 : (isPickaxeItem(heldId) ? 3 : 1));
+    damageMob(hitMob, dmg, dir.x, dir.z); isMiningHeld = false; return;
+  }
   isMiningHeld = true;
 }
 
@@ -69,7 +72,7 @@ window.addEventListener('mousedown', (e) => {
     return;
   }
   if (e.button === 0) triggerPrimaryAttackOrMine();
-  else if (e.button === 2) { if (getActiveHeldItem() === BLOCK.TOOL_SWORD && !currentHit) toggleShieldBlock(true); else placeBlockAtCurrentTarget(); }
+  else if (e.button === 2) { if (isSwordItem(getActiveHeldItem()) && !currentHit) toggleShieldBlock(true); else placeBlockAtCurrentTarget(); }
   else if (e.button === 1 && currentHit) {
     const idx = hotbarSlots.indexOf(currentHit.block);
     if (idx !== -1) updateHotbarSelection(idx);
@@ -504,8 +507,7 @@ function fillOrCraftRecipeInGrid(recipeIdx) {
 }
 
 function giveCreativeStackToSlot(bId) {
-  const isTool = (bId >= 100 && bId <= 102) || bId === BLOCK.TOOL_GRAPPLING_HOOK;
-  putStackIntoPlayerSlots(bId, isTool ? 1 : 16, true);
+  putStackIntoPlayerSlots(bId, isNonStackTool(bId) ? 1 : 16, true);
   recomputeInventoryCountsFromSlots(); sfx.play('pickup'); saveWorldData(); refreshInventoryCountsUI();
 }
 
@@ -759,7 +761,7 @@ requestAnimationFrame(animate);
 
 window.__VOXELCRAFT__ = {
   BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem,
-  isCraftingTableMode: () => craftingTableMode, openCraftingTable, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
+  isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isNonStackTool, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
   handGroup, handMesh, handMat, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,

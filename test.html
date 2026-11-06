@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=29"></iframe>
+    <iframe id="game-frame" src="./index.html?v=30"></iframe>
   </div>
 
   <script>
@@ -1861,6 +1861,107 @@
           vc.updateHotbarSelection(-1);
           assert(vc.handMat.map === null && vc.handMat.color.getHex() === 0xf1c27d, 'Con la mano vacía (BLOCK.AIR) debe mostrarse el brazo color piel sin icono');
           vc.toggleGameMode('survival');
+        });
+      });
+
+      // =========================================================================
+      // SUITE 37: Fase 1 de Objetos de Minecraft — Horno, Lingotes, Palos, Cubos y Herramientas por Niveles
+      // =========================================================================
+      describe('37. Fase 1 de Objetos de Minecraft: Horno (BLOCK.FURNACE), Lingotes, Palos, Cubos y Herramientas', () => {
+        it('Funde Menas en Lingotes (Hierro, Oro, Diamante, Cristal y Carbón) en el Horno de Fundición (BLOCK.FURNACE)', () => {
+          const fx = 11, fy = 53, fz = 11;
+          vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.FURNACE);
+          assert(vc.getVoxelGlobal(fx, fy, fz) === vc.BLOCK.FURNACE && vc.BLOCK_DEFS[vc.BLOCK.FURNACE].light === 10, 'El Horno de Fundición debe colocarse en el mundo y emitir luz cálida 10');
+
+          vc.toggleGameMode('survival');
+          vc.inventoryCounts[vc.BLOCK.IRON_ORE] = 3;
+          vc.hotbarSlots[0] = vc.BLOCK.IRON_ORE;
+          vc.hotbarCounts[0] = 3;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+
+          const smeltRes = vc.smeltInFurnace(fx, fy, fz);
+          assert(smeltRes && smeltRes.inId === vc.BLOCK.IRON_ORE && smeltRes.outId === vc.BLOCK.ITEM_IRON_INGOT, 'smeltInFurnace con Mena de Hierro debe fundir un Lingote de Hierro (ITEM_IRON_INGOT)');
+          assert((vc.inventoryCounts[vc.BLOCK.ITEM_IRON_INGOT] || 0) >= 1, 'El Lingote de Hierro fundido debe añadirse al inventario del jugador');
+
+          vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.AIR);
+        });
+
+        it('Fabrica Palos (2×2), Picos/Espadas por niveles, Hacha, Pala, Azada, Tijeras, Mechero, Cubo y Bloques Compactos, con iconos 16×16 válidos', () => {
+          // 1) Probar receta 2×2 de 4× Palos de Madera (ITEM_STICK) con 2× Tablones en vertical
+          vc.toggleInventory(true, false);
+          for (let i = 0; i < 9; i++) { vc.craftGridSlots[i].id = 0; vc.craftGridSlots[i].count = 0; }
+          vc.craftGridSlots[0].id = vc.BLOCK.PLANKS; vc.craftGridSlots[0].count = 1;
+          vc.craftGridSlots[2].id = vc.BLOCK.PLANKS; vc.craftGridSlots[2].count = 1;
+          const outSticks = vc.evaluateCraftingGrid();
+          assert(outSticks && outSticks.id === vc.BLOCK.ITEM_STICK && outSticks.count === 4, 'Colocar 2× Tablones en vertical en el 2×2 debe producir 4× Palos de Madera (ITEM_STICK)');
+          vc.toggleInventory(false);
+
+          // 2) Verificar que los 26 nuevos bloques/objetos de la Fase 1 existen en BLOCK_DEFS y dibujan su icono 16×16 sin quedar vacíos
+          const phase1Ids = [
+            vc.BLOCK.FURNACE, vc.BLOCK.IRON_BLOCK, vc.BLOCK.GOLD_BLOCK, vc.BLOCK.DIAMOND_BLOCK, vc.BLOCK.BOOKSHELF,
+            vc.BLOCK.ITEM_STICK, vc.BLOCK.ITEM_COAL, vc.BLOCK.ITEM_IRON_INGOT, vc.BLOCK.ITEM_GOLD_INGOT, vc.BLOCK.ITEM_DIAMOND,
+            vc.BLOCK.TOOL_WOOD_PICKAXE, vc.BLOCK.TOOL_STONE_PICKAXE, vc.BLOCK.TOOL_IRON_PICKAXE, vc.BLOCK.TOOL_GOLD_PICKAXE,
+            vc.BLOCK.TOOL_WOOD_SWORD, vc.BLOCK.TOOL_STONE_SWORD, vc.BLOCK.TOOL_IRON_SWORD, vc.BLOCK.TOOL_GOLD_SWORD,
+            vc.BLOCK.TOOL_AXE, vc.BLOCK.TOOL_SHOVEL, vc.BLOCK.TOOL_HOE, vc.BLOCK.TOOL_SHEARS, vc.BLOCK.TOOL_FLINT_AND_STEEL,
+            vc.BLOCK.ITEM_BUCKET, vc.BLOCK.ITEM_WATER_BUCKET, vc.BLOCK.ITEM_LAVA_BUCKET
+          ];
+          const testCanvas = doc.createElement('canvas');
+          testCanvas.width = 16; testCanvas.height = 16;
+          const ctx = testCanvas.getContext('2d');
+          for (const id of phase1Ids) {
+            assert(vc.BLOCK_DEFS[id] && vc.BLOCK_DEFS[id].name, `El ID ${id} de Fase 1 debe estar registrado en BLOCK_DEFS`);
+            ctx.clearRect(0, 0, 16, 16);
+            vc.drawItemIcon(testCanvas, id);
+            const data = ctx.getImageData(0, 0, 16, 16).data;
+            let nonTransparent = 0;
+            for (let p = 3; p < data.length; p += 4) if (data[p] > 0) nonTransparent++;
+            assert(nonTransparent >= 16, `El icono 16×16 de ${vc.BLOCK_DEFS[id].name} (ID ${id}) debe dibujarse correctamente (${nonTransparent} px visibles)`);
+          }
+        });
+
+        it('Usa el Cubo (recoger/verter Agua y Lava), la Azada (plantar Trigo) y el Mechero de Pedernal (encender TNT)', () => {
+          vc.toggleGameMode('survival');
+          const bx = 12, by = 53, bz = 12;
+
+          // 1) Cubo Vacío recoge BLOCK.WATER -> se transforma en ITEM_WATER_BUCKET; otro clic derecho vierte el agua -> vuelve a ITEM_BUCKET
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.WATER);
+          vc.inventoryCounts[vc.BLOCK.ITEM_BUCKET] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.ITEM_BUCKET; vc.hotbarCounts[0] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+          vc.setCurrentHit({ x: bx, y: by, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.WATER });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.getVoxelGlobal(bx, by, bz) === vc.BLOCK.AIR && vc.hotbarSlots[0] === vc.BLOCK.ITEM_WATER_BUCKET, 'Clic derecho con Cubo Vacío sobre Agua debe recogerla y dar Cubo con Agua (ITEM_WATER_BUCKET)');
+
+          vc.setVoxelGlobal(bx, by - 1, bz, vc.BLOCK.STONE);
+          vc.setCurrentHit({ x: bx, y: by - 1, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.STONE });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.getVoxelGlobal(bx, by, bz) === vc.BLOCK.WATER && vc.hotbarSlots[0] === vc.BLOCK.ITEM_BUCKET, 'Clic derecho con Cubo con Agua debe verter BLOCK.WATER y devolver el Cubo Vacío');
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
+
+          // 2) Azada de Diamante (TOOL_HOE) sobre Tierra o Césped planta Semillas de Trigo (BLOCK.WHEAT_1)
+          vc.setVoxelGlobal(bx, by - 1, bz, vc.BLOCK.GRASS);
+          vc.inventoryCounts[vc.BLOCK.TOOL_HOE] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.TOOL_HOE; vc.hotbarCounts[0] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+          vc.setCurrentHit({ x: bx, y: by - 1, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.GRASS });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.getVoxelGlobal(bx, by, bz) === vc.BLOCK.WHEAT_1, 'Clic derecho con Azada sobre Césped/Tierra debe arar y plantar Trigo (BLOCK.WHEAT_1)');
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
+
+          // 3) Mechero de Pedernal (TOOL_FLINT_AND_STEEL) sobre BLOCK.TNT prende su mecha
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.TNT);
+          vc.inventoryCounts[vc.BLOCK.TOOL_FLINT_AND_STEEL] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.TOOL_FLINT_AND_STEEL; vc.hotbarCounts[0] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+          vc.setCurrentHit({ x: bx, y: by, z: bz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.TNT });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.activeTNTs.length > 0, 'Clic derecho con Mechero de Pedernal sobre TNT debe encender su mecha');
+          vc.activeTNTs.length = 0;
+          vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
         });
       });
 

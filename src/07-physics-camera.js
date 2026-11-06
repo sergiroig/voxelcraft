@@ -588,9 +588,17 @@ function updateMining(dt, currentHit) {
   const key = `${currentHit.x},${currentHit.y},${currentHit.z}`;
   if (key !== mineTargetKey) { mineTargetKey = key; mineProgress = 0; }
 
-  const def = BLOCK_DEFS[currentHit.block];
-  const holdingPickaxe = getActiveHeldItem() === BLOCK.TOOL_PICKAXE;
-  const speedMult = holdingPickaxe ? (def.stoneLike ? 3.5 : 1.5) : (def.stoneLike ? 0.35 : 0.55);
+  const def = BLOCK_DEFS[currentHit.block], b = currentHit.block, heldId = getActiveHeldItem();
+  const isWoodLike = b === BLOCK.WOOD || b === BLOCK.PLANKS || b === BLOCK.CRAFTING_TABLE || b === BLOCK.CHEST || b === BLOCK.BOOKSHELF || b === BLOCK.DOOR_CLOSED || b === BLOCK.TRAPDOOR_CLOSED || b === BLOCK.LADDER;
+  const isEarthLike = b === BLOCK.GRASS || b === BLOCK.DIRT || b === BLOCK.SAND || b === BLOCK.SNOW;
+  const isFoliage = b === BLOCK.LEAVES || b === BLOCK.TALL_GRASS || b === BLOCK.FLOWER_RED || b === BLOCK.FLOWER_YELLOW || b === BLOCK.LILY_PAD;
+  let speedMult = def.stoneLike ? 0.35 : 0.55;
+  if (isPickaxeItem(heldId)) {
+    const pMult = heldId === BLOCK.TOOL_GOLD_PICKAXE ? 4.2 : (heldId === BLOCK.TOOL_PICKAXE ? 3.5 : (heldId === BLOCK.TOOL_IRON_PICKAXE ? 2.9 : (heldId === BLOCK.TOOL_STONE_PICKAXE ? 2.3 : 1.7)));
+    speedMult = def.stoneLike ? pMult : 1.5;
+  } else if (heldId === BLOCK.TOOL_AXE && isWoodLike) speedMult = 3.8;
+  else if (heldId === BLOCK.TOOL_SHOVEL && isEarthLike) speedMult = 3.8;
+  else if (heldId === BLOCK.TOOL_SHEARS && isFoliage) speedMult = 8.0;
   const duration = Math.max(0.05, def.hardness / speedMult);
 
   mineProgress += dt / duration;

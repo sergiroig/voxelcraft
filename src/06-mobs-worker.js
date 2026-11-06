@@ -188,8 +188,8 @@ function spawnMob(type, x, y, z) {
 
 function trySummonIronGolem(wx, wy, wz) {
   if (getVoxelGlobal(wx, wy, wz) !== BLOCK.GLOWSTONE) return null;
-  if (getVoxelGlobal(wx, wy - 1, wz) !== BLOCK.IRON_ORE) return null;
-  if (getVoxelGlobal(wx, wy - 2, wz) !== BLOCK.IRON_ORE) return null;
+  const b1 = getVoxelGlobal(wx, wy - 1, wz), b2 = getVoxelGlobal(wx, wy - 2, wz);
+  if ((b1 !== BLOCK.IRON_ORE && b1 !== BLOCK.IRON_BLOCK) || (b2 !== BLOCK.IRON_ORE && b2 !== BLOCK.IRON_BLOCK)) return null;
 
   setVoxelGlobal(wx, wy, wz, BLOCK.AIR);
   setVoxelGlobal(wx, wy - 1, wz, BLOCK.AIR);

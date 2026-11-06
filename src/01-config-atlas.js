@@ -60,7 +60,12 @@ const BLOCK = {
   PORTAL: 47,
   ICE: 48,
   CRAFTING_TABLE: 49,
-  // Special Tool & Consumable IDs (not placed as blocks)
+  FURNACE: 50,
+  IRON_BLOCK: 51,
+  GOLD_BLOCK: 52,
+  DIAMOND_BLOCK: 53,
+  BOOKSHELF: 54,
+  // Special Tool, Material & Consumable IDs (not placed as blocks)
   TOOL_PICKAXE: 100,
   TOOL_SWORD: 101,
   TOOL_BOW: 102,
@@ -68,11 +73,32 @@ const BLOCK = {
   ITEM_BREAD: 104,
   ITEM_MINECART: 105,
   ITEM_BOAT: 106,
-  TOOL_GRAPPLING_HOOK: 107
+  TOOL_GRAPPLING_HOOK: 107,
+  ITEM_STICK: 108,
+  ITEM_COAL: 109,
+  ITEM_IRON_INGOT: 110,
+  ITEM_GOLD_INGOT: 111,
+  ITEM_DIAMOND: 112,
+  TOOL_WOOD_PICKAXE: 113,
+  TOOL_STONE_PICKAXE: 114,
+  TOOL_IRON_PICKAXE: 115,
+  TOOL_GOLD_PICKAXE: 116,
+  TOOL_WOOD_SWORD: 117,
+  TOOL_STONE_SWORD: 118,
+  TOOL_IRON_SWORD: 119,
+  TOOL_GOLD_SWORD: 120,
+  TOOL_AXE: 121,
+  TOOL_SHOVEL: 122,
+  TOOL_HOE: 123,
+  TOOL_SHEARS: 124,
+  TOOL_FLINT_AND_STEEL: 125,
+  ITEM_BUCKET: 126,
+  ITEM_WATER_BUCKET: 127,
+  ITEM_LAVA_BUCKET: 128
 };
 
-// Atlas has 53 tiles (columns) of 16x16 pixels
-const ATLAS_COLS = 53;
+// Atlas has 59 tiles (columns) of 16x16 pixels
+const ATLAS_COLS = 59;
 const TILE_PX = 16;
 
 // Block Definitions:
@@ -130,6 +156,11 @@ const BLOCK_DEFS = {
   [BLOCK.PORTAL]:              { name: 'Portal de Obsidiana',      solid: false, opaque: false, shape: 'cube',  light: 12, hardness: 0.50, stoneLike: false, color: 0xc084fc, tiles: [49,49,49,49,49,49] },
   [BLOCK.ICE]:                 { name: 'Hielo Resbaladizo',        solid: true,  opaque: false, shape: 'cube',  light: 0,  hardness: 0.35, stoneLike: true,  color: 0x7dd3fc, tiles: [50,50,50,50,50,50] },
   [BLOCK.CRAFTING_TABLE]:      { name: 'Mesa de Crafteo',          solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xa16207, tiles: [51, 8,52,52,52,52] },
+  [BLOCK.FURNACE]:             { name: 'Horno de Fundición',       solid: true,  opaque: true,  shape: 'cube',  light: 10, hardness: 1.20, stoneLike: true,  color: 0x64748b, tiles: [53,53,54,53,53,53] },
+  [BLOCK.IRON_BLOCK]:          { name: 'Bloque de Hierro',         solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.50, stoneLike: true,  color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.GOLD_BLOCK]:          { name: 'Bloque de Oro',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfacc15, tiles: [56,56,56,56,56,56] },
+  [BLOCK.DIAMOND_BLOCK]:       { name: 'Bloque de Diamante',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.75, stoneLike: true,  color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
+  [BLOCK.BOOKSHELF]:           { name: 'Estantería de Libros',     solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xb45309, tiles: [ 8, 8,58,58,58,58] },
   [BLOCK.TOOL_PICKAXE]:        { name: 'Pico de Diamante',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_SWORD]:          { name: 'Espada de Diamante',       solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_BOW]:            { name: 'Arco y Flechas',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
@@ -137,61 +168,60 @@ const BLOCK_DEFS = {
   [BLOCK.ITEM_BREAD]:          { name: 'Pan Crujiente (+5❤)',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] },
   [BLOCK.ITEM_MINECART]:       { name: 'Vagoneta de Tren (R)',     solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x94a3b8, tiles: [44,44,44,44,44,44] },
   [BLOCK.ITEM_BOAT]:           { name: 'Barca Navegable (R)',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xb45309, tiles: [8,8,8,8,8,8] },
-  [BLOCK.TOOL_GRAPPLING_HOOK]: { name: 'Gancho de Agarre',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xa855f7, tiles: [38,38,38,38,38,38] }
+  [BLOCK.TOOL_GRAPPLING_HOOK]: { name: 'Gancho de Agarre',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xa855f7, tiles: [38,38,38,38,38,38] },
+  [BLOCK.ITEM_STICK]:          { name: 'Palo de Madera',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xa16207, tiles: [8,8,8,8,8,8] },
+  [BLOCK.ITEM_COAL]:           { name: 'Carbón Mineral',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x334155, tiles: [17,17,17,17,17,17] },
+  [BLOCK.ITEM_IRON_INGOT]:     { name: 'Lingote de Hierro',        solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ITEM_GOLD_INGOT]:     { name: 'Lingote de Oro',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] },
+  [BLOCK.ITEM_DIAMOND]:        { name: 'Gema de Diamante',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
+  [BLOCK.TOOL_WOOD_PICKAXE]:   { name: 'Pico de Madera',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xa16207, tiles: [8,8,8,8,8,8] },
+  [BLOCK.TOOL_STONE_PICKAXE]:  { name: 'Pico de Piedra',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x94a3b8, tiles: [9,9,9,9,9,9] },
+  [BLOCK.TOOL_IRON_PICKAXE]:   { name: 'Pico de Hierro',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.TOOL_GOLD_PICKAXE]:   { name: 'Pico de Oro',              solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] },
+  [BLOCK.TOOL_WOOD_SWORD]:     { name: 'Espada de Madera',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xa16207, tiles: [8,8,8,8,8,8] },
+  [BLOCK.TOOL_STONE_SWORD]:    { name: 'Espada de Piedra',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x94a3b8, tiles: [9,9,9,9,9,9] },
+  [BLOCK.TOOL_IRON_SWORD]:     { name: 'Espada de Hierro',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.TOOL_GOLD_SWORD]:     { name: 'Espada de Oro',            solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] },
+  [BLOCK.TOOL_AXE]:            { name: 'Hacha de Diamante',        solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+  [BLOCK.TOOL_SHOVEL]:         { name: 'Pala de Diamante',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+  [BLOCK.TOOL_HOE]:            { name: 'Azada de Diamante',        solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
+  [BLOCK.TOOL_SHEARS]:         { name: 'Tijeras de Esquila',       solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.TOOL_FLINT_AND_STEEL]:{ name: 'Mechero de Pedernal',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf97316, tiles: [28,28,28,28,28,28] },
+  [BLOCK.ITEM_BUCKET]:         { name: 'Cubo Vacío',               solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xcbd5e1, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ITEM_WATER_BUCKET]:   { name: 'Cubo con Agua',            solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x3b82f6, tiles: [12,12,12,12,12,12] },
+  [BLOCK.ITEM_LAVA_BUCKET]:    { name: 'Cubo con Lava',            solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf97316, tiles: [28,28,28,28,28,28] }
 };
 
 const ALL_INVENTORY_ITEMS = [
-  BLOCK.TOOL_PICKAXE,
-  BLOCK.TOOL_SWORD,
-  BLOCK.TOOL_BOW,
-  BLOCK.TOOL_GRAPPLING_HOOK,
-  BLOCK.ITEM_APPLE,
-  BLOCK.ITEM_BREAD,
-  BLOCK.ITEM_MINECART,
-  BLOCK.ITEM_BOAT,
-  BLOCK.RAIL,
-  BLOCK.LILY_PAD,
-  BLOCK.PISTON,
-  BLOCK.PORTAL,
-  BLOCK.ICE,
-  BLOCK.LADDER,
-  BLOCK.TRAPDOOR_CLOSED,
-  BLOCK.CRAFTING_TABLE,
-  BLOCK.CHEST,
-  BLOCK.TORCH,
-  BLOCK.TNT,
-  BLOCK.SLIME,
-  BLOCK.DOOR_CLOSED,
-  BLOCK.LEVER_OFF,
-  BLOCK.REDSTONE_LAMP_OFF,
-  BLOCK.SAPLING,
-  BLOCK.WHEAT_1,
-  BLOCK.WHEAT_3,
-  BLOCK.AMETHYST,
-  BLOCK.GLOW_MUSHROOM,
-  BLOCK.LAVA,
-  BLOCK.OBSIDIAN,
-  BLOCK.GRASS,
-  BLOCK.DIRT,
-  BLOCK.STONE,
-  BLOCK.COBBLE,
-  BLOCK.WOOD,
-  BLOCK.PLANKS,
-  BLOCK.BRICK,
-  BLOCK.SAND,
-  BLOCK.GLASS,
-  BLOCK.GLOWSTONE,
-  BLOCK.SNOW,
-  BLOCK.LEAVES,
-  BLOCK.COAL_ORE,
-  BLOCK.IRON_ORE,
-  BLOCK.GOLD_ORE,
-  BLOCK.DIAMOND_ORE,
-  BLOCK.FLOWER_RED,
-  BLOCK.FLOWER_YELLOW,
-  BLOCK.TALL_GRASS,
-  BLOCK.CACTUS
+  BLOCK.TOOL_PICKAXE, BLOCK.TOOL_IRON_PICKAXE, BLOCK.TOOL_STONE_PICKAXE, BLOCK.TOOL_WOOD_PICKAXE, BLOCK.TOOL_GOLD_PICKAXE,
+  BLOCK.TOOL_SWORD, BLOCK.TOOL_IRON_SWORD, BLOCK.TOOL_STONE_SWORD, BLOCK.TOOL_WOOD_SWORD, BLOCK.TOOL_GOLD_SWORD,
+  BLOCK.TOOL_AXE, BLOCK.TOOL_SHOVEL, BLOCK.TOOL_HOE, BLOCK.TOOL_SHEARS, BLOCK.TOOL_FLINT_AND_STEEL,
+  BLOCK.TOOL_BOW, BLOCK.TOOL_GRAPPLING_HOOK,
+  BLOCK.ITEM_BUCKET, BLOCK.ITEM_WATER_BUCKET, BLOCK.ITEM_LAVA_BUCKET,
+  BLOCK.ITEM_STICK, BLOCK.ITEM_COAL, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_DIAMOND,
+  BLOCK.ITEM_APPLE, BLOCK.ITEM_BREAD, BLOCK.ITEM_MINECART, BLOCK.ITEM_BOAT,
+  BLOCK.CRAFTING_TABLE, BLOCK.FURNACE, BLOCK.CHEST, BLOCK.BOOKSHELF,
+  BLOCK.IRON_BLOCK, BLOCK.GOLD_BLOCK, BLOCK.DIAMOND_BLOCK,
+  BLOCK.RAIL, BLOCK.LILY_PAD, BLOCK.PISTON, BLOCK.PORTAL, BLOCK.ICE, BLOCK.LADDER, BLOCK.TRAPDOOR_CLOSED,
+  BLOCK.TORCH, BLOCK.TNT, BLOCK.SLIME, BLOCK.DOOR_CLOSED, BLOCK.LEVER_OFF, BLOCK.REDSTONE_LAMP_OFF,
+  BLOCK.SAPLING, BLOCK.WHEAT_1, BLOCK.WHEAT_3, BLOCK.AMETHYST, BLOCK.GLOW_MUSHROOM,
+  BLOCK.LAVA, BLOCK.OBSIDIAN, BLOCK.GRASS, BLOCK.DIRT, BLOCK.STONE, BLOCK.COBBLE, BLOCK.WOOD, BLOCK.PLANKS,
+  BLOCK.BRICK, BLOCK.SAND, BLOCK.GLASS, BLOCK.GLOWSTONE, BLOCK.SNOW, BLOCK.LEAVES,
+  BLOCK.COAL_ORE, BLOCK.IRON_ORE, BLOCK.GOLD_ORE, BLOCK.DIAMOND_ORE,
+  BLOCK.FLOWER_RED, BLOCK.FLOWER_YELLOW, BLOCK.TALL_GRASS, BLOCK.CACTUS
 ];
+
+function isPickaxeItem(id) {
+  return id === BLOCK.TOOL_PICKAXE || id === BLOCK.TOOL_WOOD_PICKAXE || id === BLOCK.TOOL_STONE_PICKAXE || id === BLOCK.TOOL_IRON_PICKAXE || id === BLOCK.TOOL_GOLD_PICKAXE;
+}
+
+function isSwordItem(id) {
+  return id === BLOCK.TOOL_SWORD || id === BLOCK.TOOL_WOOD_SWORD || id === BLOCK.TOOL_STONE_SWORD || id === BLOCK.TOOL_IRON_SWORD || id === BLOCK.TOOL_GOLD_SWORD;
+}
+
+function isNonStackTool(id) {
+  return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125);
+}
 
 const hotbarSlots = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -214,7 +244,8 @@ const CRAFTING_RECIPES = [
   { name: '1× Pan Crujiente (+5❤)',     outId: BLOCK.ITEM_BREAD,          outCount: 1, gridSize: 3, pattern: [BLOCK.WHEAT_3, BLOCK.WHEAT_3, 0, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.WHEAT_3, count: 2 }] },
   { name: '2× Bloque de Slime (Rebote)',outId: BLOCK.SLIME,               outCount: 2, gridSize: 3, pattern: [BLOCK.TALL_GRASS, BLOCK.TALL_GRASS, 0, BLOCK.GLOW_MUSHROOM, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.TALL_GRASS, count: 2 }, { id: BLOCK.GLOW_MUSHROOM, count: 1 }] },
   { name: '2× Compuerta Mecánica',      outId: BLOCK.DOOR_CLOSED,         outCount: 2, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.COBBLE, 0, BLOCK.PLANKS, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.COBBLE, count: 1 }] },
-  { name: '4× Escalera de Mano',        outId: BLOCK.LADDER,              outCount: 4, gridSize: 2, pattern: [BLOCK.PLANKS, 0, BLOCK.PLANKS, 0], ingredients: [{ id: BLOCK.PLANKS, count: 2 }] },
+  { name: '4× Palos de Madera',         outId: BLOCK.ITEM_STICK,          outCount: 4, gridSize: 2, pattern: [BLOCK.PLANKS, 0, BLOCK.PLANKS, 0], ingredients: [{ id: BLOCK.PLANKS, count: 2 }] },
+  { name: '4× Escalera de Mano',        outId: BLOCK.LADDER,              outCount: 4, gridSize: 3, pattern: [BLOCK.PLANKS, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, 0, 0, 0], ingredients: [{ id: BLOCK.PLANKS, count: 5 }] },
   { name: '2× Trampilla Mecánica',      outId: BLOCK.TRAPDOOR_CLOSED,     outCount: 2, gridSize: 2, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, 0, 0], ingredients: [{ id: BLOCK.PLANKS, count: 2 }] },
   { name: '6× Vía de Ferrocarril',      outId: BLOCK.RAIL,                outCount: 6, gridSize: 3, pattern: [BLOCK.IRON_ORE, BLOCK.PLANKS, 0, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.IRON_ORE, count: 1 }, { id: BLOCK.PLANKS, count: 1 }] },
   { name: '1× Vagoneta de Tren (R)',    outId: BLOCK.ITEM_MINECART,       outCount: 1, gridSize: 3, pattern: [BLOCK.IRON_ORE, 0, BLOCK.IRON_ORE, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.IRON_ORE, count: 2 }] },
@@ -224,7 +255,26 @@ const CRAFTING_RECIPES = [
   { name: '2× Pistón Mecánico Redstone',outId: BLOCK.PISTON,              outCount: 2, gridSize: 3, pattern: [BLOCK.PLANKS, 0, 0, BLOCK.COBBLE, BLOCK.IRON_ORE, BLOCK.COBBLE, 0, 0, 0], ingredients: [{ id: BLOCK.COBBLE, count: 2 }, { id: BLOCK.PLANKS, count: 1 }, { id: BLOCK.IRON_ORE, count: 1 }] },
   { name: '1× Gancho de Agarre',        outId: BLOCK.TOOL_GRAPPLING_HOOK, outCount: 1, gridSize: 3, pattern: [0, BLOCK.IRON_ORE, 0, 0, BLOCK.AMETHYST, 0, 0, 0, 0], ingredients: [{ id: BLOCK.IRON_ORE, count: 1 }, { id: BLOCK.AMETHYST, count: 1 }] },
   { name: '2× Portal de Obsidiana',     outId: BLOCK.PORTAL,              outCount: 2, gridSize: 3, pattern: [BLOCK.OBSIDIAN, BLOCK.AMETHYST, BLOCK.OBSIDIAN, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.OBSIDIAN, count: 2 }, { id: BLOCK.AMETHYST, count: 1 }] },
-  { name: '2× Hielo Resbaladizo',       outId: BLOCK.ICE,                 outCount: 2, gridSize: 2, pattern: [BLOCK.SNOW, BLOCK.SNOW, 0, 0], ingredients: [{ id: BLOCK.SNOW, count: 2 }] }
+  { name: '2× Hielo Resbaladizo',       outId: BLOCK.ICE,                 outCount: 2, gridSize: 2, pattern: [BLOCK.SNOW, BLOCK.SNOW, 0, 0], ingredients: [{ id: BLOCK.SNOW, count: 2 }] },
+  { name: '1× Horno de Fundición',      outId: BLOCK.FURNACE,             outCount: 1, gridSize: 3, pattern: [BLOCK.COBBLE, BLOCK.COBBLE, BLOCK.COBBLE, BLOCK.COBBLE, 0, BLOCK.COBBLE, BLOCK.COBBLE, BLOCK.COBBLE, BLOCK.COBBLE], ingredients: [{ id: BLOCK.COBBLE, count: 8 }] },
+  { name: '1× Pico de Madera',          outId: BLOCK.TOOL_WOOD_PICKAXE,   outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, 0, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.PLANKS, count: 3 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Pico de Piedra',          outId: BLOCK.TOOL_STONE_PICKAXE,  outCount: 1, gridSize: 3, pattern: [BLOCK.COBBLE, BLOCK.COBBLE, BLOCK.COBBLE, 0, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.COBBLE, count: 3 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Pico de Hierro',          outId: BLOCK.TOOL_IRON_PICKAXE,   outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 3 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Pico de Oro',             outId: BLOCK.TOOL_GOLD_PICKAXE,   outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 3 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Espada de Madera',        outId: BLOCK.TOOL_WOOD_SWORD,     outCount: 1, gridSize: 3, pattern: [0, BLOCK.PLANKS, 0, 0, BLOCK.PLANKS, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.PLANKS, count: 2 }, { id: BLOCK.ITEM_STICK, count: 1 }] },
+  { name: '1× Espada de Piedra',        outId: BLOCK.TOOL_STONE_SWORD,    outCount: 1, gridSize: 3, pattern: [0, BLOCK.COBBLE, 0, 0, BLOCK.COBBLE, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.COBBLE, count: 2 }, { id: BLOCK.ITEM_STICK, count: 1 }] },
+  { name: '1× Espada de Hierro',        outId: BLOCK.TOOL_IRON_SWORD,     outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_IRON_INGOT, 0, 0, BLOCK.ITEM_IRON_INGOT, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 2 }, { id: BLOCK.ITEM_STICK, count: 1 }] },
+  { name: '1× Espada de Oro',           outId: BLOCK.TOOL_GOLD_SWORD,     outCount: 1, gridSize: 3, pattern: [0, BLOCK.ITEM_GOLD_INGOT, 0, 0, BLOCK.ITEM_GOLD_INGOT, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 2 }, { id: BLOCK.ITEM_STICK, count: 1 }] },
+  { name: '1× Hacha de Diamante',       outId: BLOCK.TOOL_AXE,            outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 3 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Pala de Diamante',        outId: BLOCK.TOOL_SHOVEL,         outCount: 1, gridSize: 3, pattern: [0, BLOCK.DIAMOND_ORE, 0, 0, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 1 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Azada de Diamante',       outId: BLOCK.TOOL_HOE,            outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, 0, BLOCK.ITEM_STICK, 0, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 2 }, { id: BLOCK.ITEM_STICK, count: 2 }] },
+  { name: '1× Tijeras de Esquila',      outId: BLOCK.TOOL_SHEARS,         outCount: 1, gridSize: 2, pattern: [0, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 2 }] },
+  { name: '1× Mechero de Pedernal',     outId: BLOCK.TOOL_FLINT_AND_STEEL,outCount: 1, gridSize: 2, pattern: [BLOCK.ITEM_IRON_INGOT, 0, 0, BLOCK.COBBLE], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 1 }, { id: BLOCK.COBBLE, count: 1 }] },
+  { name: '1× Cubo Vacío',              outId: BLOCK.ITEM_BUCKET,         outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 3 }] },
+  { name: '1× Bloque de Hierro',        outId: BLOCK.IRON_BLOCK,          outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 4 }] },
+  { name: '1× Bloque de Oro',           outId: BLOCK.GOLD_BLOCK,          outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 4 }] },
+  { name: '1× Bloque de Diamante',      outId: BLOCK.DIAMOND_BLOCK,       outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, 0, 0, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 4 }] },
+  { name: '1× Estantería de Libros',    outId: BLOCK.BOOKSHELF,           outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.WHEAT_3, BLOCK.WHEAT_3, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS], ingredients: [{ id: BLOCK.PLANKS, count: 6 }, { id: BLOCK.WHEAT_3, count: 2 }] }
 ];
 
 function createInitialInventoryCounts() {
@@ -647,6 +697,57 @@ function createProceduralAtlas() {
     }
     if (x === 0 || x === 15 || y === 15) return shade(92, 58, 30, 0.92);
     return shade(168, 118, 66, 0.88 + r * 0.15);
+  });
+
+  // 53: Furnace Top/Side (Beveled stone masonry)
+  drawTile(53, (x, y, r) => {
+    const border = x === 0 || x === 15 || y === 0 || y === 15 || y === 7;
+    if (border) return shade(71, 85, 105, 0.92);
+    return shade(115, 125, 138, 0.86 + r * 0.18);
+  });
+
+  // 54: Furnace Front (Dark grate + glowing ember fire core)
+  drawTile(54, (x, y, r) => {
+    if (x >= 4 && x <= 11 && y >= 3 && y <= 7) return shade(30, 41, 59, 0.96);
+    if (x >= 4 && x <= 11 && y >= 10 && y <= 14) {
+      return (y >= 12 && x >= 6 && x <= 9) ? shade(250, 204, 21, 0.98) : shade(249, 115, 22, 0.95);
+    }
+    if (x === 0 || x === 15 || y === 0 || y === 15) return shade(71, 85, 105, 0.94);
+    return shade(115, 125, 138, 0.86 + r * 0.16);
+  });
+
+  // 55: Block of Iron (Brushed metallic silver plates)
+  drawTile(55, (x, y, r) => {
+    const rim = x === 0 || x === 15 || y === 0 || y === 15;
+    if (rim) return shade(148, 163, 184, 0.95);
+    const streak = (y % 4 === 1) ? 1.04 : 0.96;
+    return shade(226, 232, 240, streak * (0.94 + r * 0.08));
+  });
+
+  // 56: Block of Gold (Gleaming royal gold bullion)
+  drawTile(56, (x, y, r) => {
+    const rim = x === 0 || x === 15 || y === 0 || y === 15;
+    if (rim) return shade(180, 83, 9, 0.95);
+    if ((x + y) === 6 || (x + y) === 7) return shade(254, 249, 195, 0.98);
+    return shade(250, 204, 21, 0.90 + r * 0.14);
+  });
+
+  // 57: Block of Diamond (Crystalline cyan-aqua facets)
+  drawTile(57, (x, y, r) => {
+    const rim = x === 0 || x === 15 || y === 0 || y === 15;
+    if (rim) return shade(14, 116, 144, 0.96);
+    if ((x >= 3 && x <= 5 && y >= 3 && y <= 5) || (x + y === 14)) return shade(224, 242, 254, 0.99);
+    return shade(56, 189, 248, 0.90 + r * 0.14);
+  });
+
+  // 58: Bookshelf Side (Oak shelves with colorful book spines)
+  drawTile(58, (x, y, r) => {
+    if (y <= 1 || y === 7 || y === 8 || y >= 14 || x === 0 || x === 15) return shade(161, 98, 7, 0.92 + r * 0.12);
+    const spine = Math.floor((x - 1) / 3) + (y > 8 ? 3 : 0);
+    const bookColors = [[220, 38, 38], [37, 99, 235], [22, 163, 74], [147, 51, 234], [217, 119, 6], [13, 148, 136]];
+    const bc = bookColors[spine % bookColors.length];
+    if ((x - 1) % 3 === 2) return shade(30, 20, 10, 0.94);
+    return shade(bc[0], bc[1], bc[2], 0.88 + r * 0.14);
   });
 
   const texture = new THREE.CanvasTexture(canvas);
