@@ -319,16 +319,27 @@ class SoundFX {
   constructor() {
     this.ctx = null;
     this.masterGain = null;
+    this.sfxGain = null;
     this.musicGain = null;
     this.reverbNode = null;
     this.windFilter = null;
     this.windGain = null;
     this.musicEnabled = true;
+    this.sfxEnabled = true;
+    this.musicVolume = 0.80;
+    this.sfxVolume = 0.80;
     this.envMode = 'surface'; // 'surface', 'cave', 'underwater'
     this.notesPlayedCount = 0;
     this.chordsPlayedCount = 0;
     this.caveEchoCount = 0;
     this.chordCursor = 0;
+  }
+  applyVolumes() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    if (this.musicGain) this.musicGain.gain.setTargetAtTime(this.musicEnabled ? 0.35 * this.musicVolume : 0.0, now, 0.08);
+    if (this.windGain) this.windGain.gain.setTargetAtTime(this.musicEnabled ? 0.06 * this.musicVolume : 0.0, now, 0.08);
+    if (this.sfxGain) this.sfxGain.gain.setTargetAtTime(this.sfxEnabled ? this.sfxVolume : 0.0, now, 0.05);
   }
   init() {
     if (!this.ctx) {
@@ -339,8 +350,12 @@ class SoundFX {
         this.masterGain.gain.value = 0.85;
         this.masterGain.connect(this.ctx.destination);
 
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.value = this.sfxEnabled ? this.sfxVolume : 0.0;
+        this.sfxGain.connect(this.masterGain);
+
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = this.musicEnabled ? 0.28 : 0.0;
+        this.musicGain.gain.value = this.musicEnabled ? 0.35 * this.musicVolume : 0.0;
         this.musicGain.connect(this.masterGain);
 
         const sr = this.ctx.sampleRate;
@@ -476,12 +491,12 @@ class SoundFX {
     return true;
   }
   play(type) {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.sfxEnabled || this.sfxVolume <= 0) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.connect(gain);
-    gain.connect(this.masterGain || this.ctx.destination);
+    gain.connect(this.sfxGain || this.masterGain || this.ctx.destination);
 
     if (type === 'break') {
       osc.type = 'sawtooth';
@@ -706,15 +721,18 @@ let musicChordAccum = 6.5;
 
 function toggleMusic(forceVal) {
   sfx.musicEnabled = typeof forceVal === 'boolean' ? forceVal : !sfx.musicEnabled;
-  if (sfx.musicGain && sfx.ctx) {
-    sfx.musicGain.gain.setTargetAtTime(sfx.musicEnabled ? 0.28 : 0.0, sfx.ctx.currentTime, 0.12);
-  }
-  if (sfx.windGain && sfx.ctx) {
-    sfx.windGain.gain.setTargetAtTime(sfx.musicEnabled ? 0.05 : 0.0, sfx.ctx.currentTime, 0.12);
-  }
+  sfx.applyVolumes();
   const btn = document.getElementById('tbtn-music');
   if (btn) btn.classList.toggle('toggled', sfx.musicEnabled);
+  if (typeof userSettings !== 'undefined') { userSettings.musicEnabled = sfx.musicEnabled; if (typeof applyUserSettingsToUI === 'function') applyUserSettingsToUI(); if (typeof saveUserSettings === 'function') saveUserSettings(); }
   return sfx.musicEnabled;
+}
+
+function toggleSfx(forceVal) {
+  sfx.sfxEnabled = typeof forceVal === 'boolean' ? forceVal : !sfx.sfxEnabled;
+  sfx.applyVolumes();
+  if (typeof userSettings !== 'undefined') { userSettings.sfxEnabled = sfx.sfxEnabled; if (typeof applyUserSettingsToUI === 'function') applyUserSettingsToUI(); if (typeof saveUserSettings === 'function') saveUserSettings(); }
+  return sfx.sfxEnabled;
 }
 
 function updateAmbientAudio(dt) {
@@ -723,44 +741,23 @@ function updateAmbientAudio(dt) {
   const elapsed = ambientStepAccum;
   ambientStepAccum = 0;
 
-  const px = Math.floor(player.x);
-  const py = Math.floor(player.y + 1);
-  const pz = Math.floor(player.z);
-  const packedL = getLightGlobal(px, py, pz);
-  const sunL = packedL >> 4;
-
-  if (isCameraUnderwater) {
-    sfx.envMode = 'underwater';
-  } else if (py < 28 && sunL <= 2) {
-    sfx.envMode = 'cave';
-  } else {
-    sfx.envMode = 'surface';
-  }
+  const px = Math.floor(player.x), py = Math.floor(player.y + 1), pz = Math.floor(player.z);
+  const sunL = getLightGlobal(px, py, pz) >> 4;
+  sfx.envMode = isCameraUnderwater ? 'underwater' : ((py < 28 && sunL <= 2) ? 'cave' : 'surface');
 
   if (sfx.ctx && sfx.musicEnabled && sfx.windFilter && sfx.windGain) {
-    const now = sfx.ctx.currentTime;
+    const now = sfx.ctx.currentTime, mv = sfx.musicVolume;
     if (sfx.envMode === 'underwater') {
-      sfx.windFilter.type = 'lowpass';
-      sfx.windFilter.frequency.setTargetAtTime(135, now, 0.25);
-      sfx.windGain.gain.setTargetAtTime(0.08, now, 0.25);
+      sfx.windFilter.type = 'lowpass'; sfx.windFilter.frequency.setTargetAtTime(135, now, 0.25); sfx.windGain.gain.setTargetAtTime(0.08 * mv, now, 0.25);
     } else if (sfx.envMode === 'cave') {
-      sfx.windFilter.type = 'lowpass';
-      sfx.windFilter.frequency.setTargetAtTime(110, now, 0.25);
-      sfx.windGain.gain.setTargetAtTime(0.065, now, 0.25);
+      sfx.windFilter.type = 'lowpass'; sfx.windFilter.frequency.setTargetAtTime(110, now, 0.25); sfx.windGain.gain.setTargetAtTime(0.065 * mv, now, 0.25);
       if (Math.random() < 0.18) sfx.playCaveEcho();
     } else {
-      sfx.windFilter.type = 'bandpass';
-      const breezeFreq = 240 + Math.min(260, Math.max(0, (player.y - 20) * 6));
-      sfx.windFilter.frequency.setTargetAtTime(breezeFreq, now, 0.3);
-      sfx.windGain.gain.setTargetAtTime(0.045, now, 0.3);
+      sfx.windFilter.type = 'bandpass'; sfx.windFilter.frequency.setTargetAtTime(240 + Math.min(260, Math.max(0, (player.y - 20) * 6)), now, 0.3); sfx.windGain.gain.setTargetAtTime(0.045 * mv, now, 0.3);
     }
   }
-
-  if (sfx.ctx && sfx.musicEnabled) {
+  if (sfx.ctx && sfx.musicEnabled && sfx.musicVolume > 0) {
     musicChordAccum += elapsed;
-    if (musicChordAccum >= 9.0) {
-      musicChordAccum = 0;
-      sfx.triggerMusicChord();
-    }
+    if (musicChordAccum >= 9.0) { musicChordAccum = 0; sfx.triggerMusicChord(); }
   }
 }

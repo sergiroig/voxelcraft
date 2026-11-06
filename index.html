@@ -8,17 +8,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b0f19" />
   <title>VoxelCraft HTML5 — Edición Completa (PC + Móvil)</title>
-  <link rel="stylesheet" href="src/styles.css?v=66" />
-  <link rel="preload" as="script" href="src/01-config-atlas.js?v=66" />
-  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=66" />
-  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=66" />
-  <link rel="preload" as="script" href="src/04-world-renderer.js?v=66" />
-  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=66" />
-  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=66" />
-  <link rel="preload" as="script" href="src/07-physics-camera.js?v=66" />
-  <link rel="preload" as="script" href="src/07b-items-mechanics.js?v=66" />
-  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=66" />
-  <link rel="preload" as="script" href="src/09-controls-loop.js?v=66" />
+  <link rel="stylesheet" href="src/styles.css?v=67" />
+  <link rel="preload" as="script" href="src/01-config-atlas.js?v=67" />
+  <link rel="preload" as="script" href="src/02-worldgen-lighting.js?v=67" />
+  <link rel="preload" as="script" href="src/03-mesher-audio.js?v=67" />
+  <link rel="preload" as="script" href="src/04-world-renderer.js?v=67" />
+  <link rel="preload" as="script" href="src/05-simulation-entities.js?v=67" />
+  <link rel="preload" as="script" href="src/06-mobs-worker.js?v=67" />
+  <link rel="preload" as="script" href="src/07-physics-camera.js?v=67" />
+  <link rel="preload" as="script" href="src/07b-items-mechanics.js?v=67" />
+  <link rel="preload" as="script" href="src/08-ui-minimap.js?v=67" />
+  <link rel="preload" as="script" href="src/09-controls-loop.js?v=67" />
 </head>
 <body>
 
@@ -243,6 +243,14 @@
             <label><span>Campo de Visión (FOV)</span><strong id="lbl-fov">75°</strong></label>
             <input id="rng-fov" type="range" min="60" max="105" value="75" />
           </div>
+          <div class="setting-box">
+            <label><span>🎵 Volumen Música</span><strong id="lbl-music-vol">80%</strong></label>
+            <input id="rng-music-vol" type="range" min="0" max="100" value="80" />
+          </div>
+          <div class="setting-box">
+            <label><span>🔊 Volumen Efectos</span><strong id="lbl-sfx-vol">80%</strong></label>
+            <input id="rng-sfx-vol" type="range" min="0" max="100" value="80" />
+          </div>
           <div class="setting-box" style="grid-column: 1 / -1;">
             <label><span>Sistema de Iluminación</span><strong id="lbl-lighting">Ultra PC (Shadow Map 3D)</strong></label>
             <select id="lighting-select" style="width:100%;padding:7px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(15,23,42,0.88);color:#fff;font-size:12px;">
@@ -250,6 +258,8 @@
               <option value="shader">📱 Ligero Móvil — Shader Dinámico 0 Draw Calls</option>
             </select>
           </div>
+          <button class="btn btn-secondary" id="btn-cfg-music">🎵 Música: ON</button>
+          <button class="btn btn-secondary" id="btn-cfg-sfx">🔊 Efectos (SFX): ON</button>
           <button class="btn btn-secondary" id="btn-cfg-hud">📊 Panel FPS/Datos: ON</button>
           <button class="btn btn-secondary" id="btn-cfg-map">🗺 Minimapa Radar: ON</button>
         </div>
@@ -272,19 +282,19 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <script src="src/01-config-atlas.js?v=66"></script>
-  <script src="src/01b-blocks-extra.js?v=66"></script>
-  <script src="src/01c-items-recipes.js?v=66"></script>
-  <script src="src/02-worldgen-lighting.js?v=66"></script>
-  <script src="src/03-mesher-audio.js?v=66"></script>
-  <script src="src/04-world-renderer.js?v=66"></script>
-  <script src="src/05-simulation-entities.js?v=66"></script>
-  <script src="src/06-mobs-worker.js?v=66"></script>
-  <script src="src/06b-mobs-villagers.js?v=66"></script>
-  <script src="src/07-physics-camera.js?v=66"></script>
-  <script src="src/07b-items-mechanics.js?v=66"></script>
-  <script src="src/07c-potions-paintings.js?v=66"></script>
-  <script src="src/08-ui-minimap.js?v=66"></script>
-  <script src="src/09-controls-loop.js?v=66"></script>
+  <script src="src/01-config-atlas.js?v=67"></script>
+  <script src="src/01b-blocks-extra.js?v=67"></script>
+  <script src="src/01c-items-recipes.js?v=67"></script>
+  <script src="src/02-worldgen-lighting.js?v=67"></script>
+  <script src="src/03-mesher-audio.js?v=67"></script>
+  <script src="src/04-world-renderer.js?v=67"></script>
+  <script src="src/05-simulation-entities.js?v=67"></script>
+  <script src="src/06-mobs-worker.js?v=67"></script>
+  <script src="src/06b-mobs-villagers.js?v=67"></script>
+  <script src="src/07-physics-camera.js?v=67"></script>
+  <script src="src/07b-items-mechanics.js?v=67"></script>
+  <script src="src/07c-potions-paintings.js?v=67"></script>
+  <script src="src/08-ui-minimap.js?v=67"></script>
+  <script src="src/09-controls-loop.js?v=67"></script>
 </body>
 </html>

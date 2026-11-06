@@ -521,11 +521,14 @@ const overlayEl = document.getElementById('overlay'), btnPlay = document.getElem
 const btnReset = document.getElementById('btn-reset-world'), btnExport = document.getElementById('btn-export');
 const rngDist = document.getElementById('rng-dist'), lblDist = document.getElementById('lbl-dist');
 const rngFov = document.getElementById('rng-fov'), lblFov = document.getElementById('lbl-fov');
+const rngMusicVol = document.getElementById('rng-music-vol'), lblMusicVol = document.getElementById('lbl-music-vol');
+const rngSfxVol = document.getElementById('rng-sfx-vol'), lblSfxVol = document.getElementById('lbl-sfx-vol');
 const lightingSelectEl = document.getElementById('lighting-select'), mainMenuViewEl = document.getElementById('main-menu-view'), settingsMenuViewEl = document.getElementById('settings-menu-view');
 const btnOpenSettingsEl = document.getElementById('btn-open-settings'), btnCloseSettingsEl = document.getElementById('btn-close-settings');
+const btnCfgMusicEl = document.getElementById('btn-cfg-music'), btnCfgSfxEl = document.getElementById('btn-cfg-sfx');
 const btnCfgHudEl = document.getElementById('btn-cfg-hud'), btnCfgMapEl = document.getElementById('btn-cfg-map');
 const SETTINGS_STORAGE_KEY = 'voxelcraft_settings_v1';
-const userSettings = { renderDistance: 5, fov: 75, lightingMode, showHud: true, showMinimap: true };
+const userSettings = { renderDistance: 5, fov: 75, lightingMode, showHud: true, showMinimap: true, musicEnabled: true, sfxEnabled: true, musicVolume: 80, sfxVolume: 80 };
 
 function openSettingsMenu(show = true) {
   if (mainMenuViewEl) mainMenuViewEl.classList.toggle('hidden', !!show);
@@ -546,9 +549,21 @@ function applyUserSettingsToUI() {
   camera.updateProjectionMatrix();
   setLightingMode(userSettings.lightingMode);
   if (lightingSelectEl) lightingSelectEl.value = lightingMode;
-  const hudEl = document.getElementById('hud-stats'), mapEl = document.getElementById('minimap-wrap');
+  sfx.musicEnabled = !!userSettings.musicEnabled;
+  sfx.sfxEnabled = !!userSettings.sfxEnabled;
+  sfx.musicVolume = Math.max(0, Math.min(100, userSettings.musicVolume)) / 100;
+  sfx.sfxVolume = Math.max(0, Math.min(100, userSettings.sfxVolume)) / 100;
+  sfx.applyVolumes();
+  if (rngMusicVol) rngMusicVol.value = `${userSettings.musicVolume}`;
+  if (lblMusicVol) lblMusicVol.textContent = `${userSettings.musicVolume}%`;
+  if (rngSfxVol) rngSfxVol.value = `${userSettings.sfxVolume}`;
+  if (lblSfxVol) lblSfxVol.textContent = `${userSettings.sfxVolume}%`;
+  const hudEl = document.getElementById('hud-stats'), mapEl = document.getElementById('minimap-wrap'), tbtnMus = document.getElementById('tbtn-music');
   if (hudEl) hudEl.classList.toggle('hidden', !userSettings.showHud);
   if (mapEl) mapEl.classList.toggle('hidden', !userSettings.showMinimap);
+  if (tbtnMus) tbtnMus.classList.toggle('toggled', userSettings.musicEnabled);
+  if (btnCfgMusicEl) { btnCfgMusicEl.textContent = `🎵 Música: ${userSettings.musicEnabled ? 'ON' : 'OFF'}`; btnCfgMusicEl.classList.toggle('toggled', userSettings.musicEnabled); }
+  if (btnCfgSfxEl) { btnCfgSfxEl.textContent = `🔊 Efectos (SFX): ${userSettings.sfxEnabled ? 'ON' : 'OFF'}`; btnCfgSfxEl.classList.toggle('toggled', userSettings.sfxEnabled); }
   if (btnCfgHudEl) { btnCfgHudEl.textContent = `📊 Panel FPS/Datos: ${userSettings.showHud ? 'ON' : 'OFF'}`; btnCfgHudEl.classList.toggle('toggled', userSettings.showHud); }
   if (btnCfgMapEl) { btnCfgMapEl.textContent = `🗺 Minimapa Radar: ${userSettings.showMinimap ? 'ON' : 'OFF'}`; btnCfgMapEl.classList.toggle('toggled', userSettings.showMinimap); }
 }
@@ -567,6 +582,10 @@ function loadUserSettings() {
       if (p.lightingMode === 'shader' || p.lightingMode === 'shadowmap') userSettings.lightingMode = p.lightingMode;
       if (typeof p.showHud === 'boolean') userSettings.showHud = p.showHud;
       if (typeof p.showMinimap === 'boolean') userSettings.showMinimap = p.showMinimap;
+      if (typeof p.musicEnabled === 'boolean') userSettings.musicEnabled = p.musicEnabled;
+      if (typeof p.sfxEnabled === 'boolean') userSettings.sfxEnabled = p.sfxEnabled;
+      if (typeof p.musicVolume === 'number' && p.musicVolume >= 0 && p.musicVolume <= 100) userSettings.musicVolume = p.musicVolume;
+      if (typeof p.sfxVolume === 'number' && p.sfxVolume >= 0 && p.sfxVolume <= 100) userSettings.sfxVolume = p.sfxVolume;
     }
   } catch (_) {}
   applyUserSettingsToUI();
@@ -578,8 +597,12 @@ btnPlay.addEventListener('click', startGameplay);
 overlayEl.addEventListener('click', (e) => { if (e.target === overlayEl) startGameplay(); });
 if (btnOpenSettingsEl) btnOpenSettingsEl.addEventListener('click', (e) => { e.preventDefault(); openSettingsMenu(true); });
 if (btnCloseSettingsEl) btnCloseSettingsEl.addEventListener('click', (e) => { e.preventDefault(); openSettingsMenu(false); });
+if (btnCfgMusicEl) btnCfgMusicEl.addEventListener('click', (e) => { e.preventDefault(); toggleMusic(!userSettings.musicEnabled); });
+if (btnCfgSfxEl) btnCfgSfxEl.addEventListener('click', (e) => { e.preventDefault(); toggleSfx(!userSettings.sfxEnabled); if (userSettings.sfxEnabled) { sfx.init(); sfx.play('step'); } });
 if (btnCfgHudEl) btnCfgHudEl.addEventListener('click', (e) => { e.preventDefault(); userSettings.showHud = !userSettings.showHud; applyUserSettingsToUI(); saveUserSettings(); });
 if (btnCfgMapEl) btnCfgMapEl.addEventListener('click', (e) => { e.preventDefault(); userSettings.showMinimap = !userSettings.showMinimap; applyUserSettingsToUI(); saveUserSettings(); });
+if (rngMusicVol) rngMusicVol.addEventListener('input', (e) => { userSettings.musicVolume = parseInt(e.target.value, 10); userSettings.musicEnabled = userSettings.musicVolume > 0; applyUserSettingsToUI(); saveUserSettings(); });
+if (rngSfxVol) rngSfxVol.addEventListener('input', (e) => { userSettings.sfxVolume = parseInt(e.target.value, 10); userSettings.sfxEnabled = userSettings.sfxVolume > 0; applyUserSettingsToUI(); saveUserSettings(); });
 
 document.addEventListener('pointerlockchange', () => {
   isLocked = document.pointerLockElement === canvasEl;

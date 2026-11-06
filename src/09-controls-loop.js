@@ -787,7 +787,7 @@ window.__VOXELCRAFT__ = {
   getWorkerState: () => ({ hasWorker: meshWorker !== null, workerJobsInFlight, workerJobsCompleted, lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio }),
   raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation, spawnMob, damageMob, removeMobAt, updateMobs, tameWolf, teleportEnderman, isHostileMob, MOB_HP_MAP, MOB_LOOT_MAP,
   updatePlayerPhysics, checkAABBCollision, damagePlayer, renderHeartsUI, addHungerExhaustion, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
-  canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, updateAmbientAudio, updateDynamicSky,
+  canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, toggleSfx, updateAmbientAudio, updateDynamicSky,
   getGenerator: () => generator, farHorizonMesh, updateFarHorizon, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
   updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine, startGameplay, isGameActive, keys,
   getState: () => ({ worldSeed, worldDeltas, selectedSlot, renderDistance, isNight, sunFactor, invOpen, menuOpen, isLocked, touchPlaying, isMiningHeld, mineProgress, currentHit, joyX, joyY, joySprint, gameMode }),

@@ -2573,10 +2573,10 @@
           assert(win.getComputedStyle(doc.getElementById('craft-grid')).scrollbarWidth === 'none', 'No debe mostrarse barra de scroll nativa de página web (scrollbar-width: none)');
           vc.openSettingsMenu(true);
           assert(!doc.getElementById('settings-menu-view').classList.contains('hidden') && doc.getElementById('main-menu-view').classList.contains('hidden'), 'openSettingsMenu(true) debe abrir el menú independiente de configuración');
-          vc.userSettings.fov = 85; vc.saveUserSettings();
+          vc.userSettings.fov = 85; vc.userSettings.musicVolume = 45; vc.userSettings.sfxVolume = 60; vc.toggleSfx(false); vc.saveUserSettings();
           const savedCfg = JSON.parse(win.localStorage.getItem('voxelcraft_settings_v1') || '{}');
-          assert(savedCfg.fov === 85, 'saveUserSettings() debe persistir la configuración en localStorage');
-          vc.userSettings.fov = 75; vc.saveUserSettings(); vc.openSettingsMenu(false);
+          assert(savedCfg.fov === 85 && savedCfg.musicVolume === 45 && savedCfg.sfxVolume === 60 && savedCfg.sfxEnabled === false, 'saveUserSettings() debe persistir FOV, volumen de música/SFX y estado de sonido en localStorage');
+          vc.userSettings.fov = 75; vc.userSettings.musicVolume = 80; vc.userSettings.sfxVolume = 80; vc.toggleSfx(true); vc.saveUserSettings(); vc.openSettingsMenu(false);
         });
 
         it('Aplica las reglas de Supervivencia: impide esprintar con hunger<=3, bloquea regeneración si hunger<8, daña por inanición y permite comer con vida llena', () => {
