@@ -2721,6 +2721,43 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 48: Iluminación y Sombras Dinámicas en GPU estilo Shader-Pack (Dirección Sol/Luna, Sombras de Nubes y Reflejo en Agua)
+      // =========================================================================
+      describe('48. Iluminación y Sombras Dinámicas en GPU: Dirección Continua Sol/Luna (uLightDir), Sombras Estiradas, Nubes y Reflejo Especular en Agua', () => {
+        it('Actualiza continuamente el vector 3D de luz (uLightDir) de Este a Cenit a Oeste y hacia la Luna de noche sin reconstruir chunks', () => {
+          const u = vc.gpuShaderUniforms;
+          assert(u.uLightDir && u.uCloudDrift, 'gpuShaderUniforms debe exponer uLightDir (Vector3) y uCloudDrift');
+
+          // 1) Amanecer / Mañana (Sol en el Este -> uLightDir.x > 0.65)
+          vc.setTimeOfDay(5.1);
+          assert(u.uLightDir.value.x > 0.65 && u.uLightDir.value.y > 0.25, `Por la mañana uLightDir debe apuntar hacia el Este (+X > 0.65, obtuvo x=${u.uLightDir.value.x.toFixed(2)}, y=${u.uLightDir.value.y.toFixed(2)})`);
+
+          // 2) Mediodía (Sol en el Cenit con inclinación orbital -> uLightDir.y > 0.85)
+          vc.setTimeOfDay(0.0);
+          assert(u.uLightDir.value.y > 0.85 && Math.abs(u.uLightDir.value.x) < 0.05, `Al mediodía uLightDir debe caer desde el cenit (y > 0.85, obtuvo y=${u.uLightDir.value.y.toFixed(2)})`);
+
+          // 3) Atardecer (Sol en el Oeste -> uLightDir.x < -0.65)
+          vc.setTimeOfDay(1.32);
+          assert(u.uLightDir.value.x < -0.65 && u.uLightDir.value.y > 0.15, `Al atardecer uLightDir debe apuntar hacia el Oeste (-X < -0.65, obtuvo x=${u.uLightDir.value.x.toFixed(2)}, y=${u.uLightDir.value.y.toFixed(2)})`);
+
+          // 4) Noche cerrada (Sigue la posición de la Luna)
+          vc.setTimeOfDay(Math.PI, 0.75);
+          const moonSignX = Math.sign(vc.moonMesh.position.x);
+          assert(Math.sign(u.uLightDir.value.x) === moonSignX && Math.abs(u.uLightDir.value.length() - 1.0) < 0.001, 'De noche uLightDir debe estar normalizado y seguir la dirección orbital de la Luna');
+          vc.setTimeOfDay(5.82);
+        });
+
+        it('Integra en los Fragment Shaders de Bloques y Agua las normales dFdx/dFdy, sombras estiradas (selfShadow), sombras de nubes (cloudShadow) y reflejo especular (spec)', () => {
+          const shaders = vc.getShaders();
+          assert(shaders.solidShaderRef && shaders.waterShaderRef, 'solidShaderRef y waterShaderRef deben estar compilados');
+          const sFrag = shaders.solidShaderRef.fragmentShader;
+          const wFrag = shaders.waterShaderRef.fragmentShader;
+          assert(sFrag.includes('dFdx(vWorldPos)') && sFrag.includes('uLightDir') && sFrag.includes('selfShadow') && sFrag.includes('cloudShadow'), 'El fragment shader sólido debe calcular normales geométricas (dFdx/dFdy), sombreado direccional (uLightDir), sombras estiradas (selfShadow) y sombras de nubes (cloudShadow)');
+          assert(wFrag.includes('uLightDir') && wFrag.includes('halfVec') && wFrag.includes('spec') && wFrag.includes('fresnel'), 'El fragment shader del agua debe calcular reflejo especular Blinn-Phong (spec) y Fresnel hacia el Sol/Luna');
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;

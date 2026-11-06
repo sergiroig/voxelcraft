@@ -214,13 +214,12 @@ const gpuShaderUniforms = {
   uWindStrength:  { value: 1.0 },
   uSunFactor:     { value: 1.0 },
   uUnderwater:    { value: 0.0 },
-  uSunLightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) }
+  uSunLightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
+  uLightDir:      { value: new THREE.Vector3(0.45, 0.85, -0.25).normalize() },
+  uCloudDrift:    { value: 0.0 }
 };
-let solidShaderRef = null;
-let waterShaderRef = null;
-let isCameraUnderwater = false;
-const waterFogColorDay = new THREE.Color(0x0b4f7c);
-const waterFogColorNight = new THREE.Color(0x052036);
+let solidShaderRef = null, waterShaderRef = null, isCameraUnderwater = false;
+const waterFogColorDay = new THREE.Color(0x0b4f7c), waterFogColorNight = new THREE.Color(0x052036);
 
 const solidMaterial = new THREE.MeshBasicMaterial({ map: atlasTexture, vertexColors: true, alphaTest: 0.15 });
 
@@ -229,6 +228,8 @@ solidMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
   shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
   shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor;
+  shader.uniforms.uLightDir = gpuShaderUniforms.uLightDir;
+  shader.uniforms.uCloudDrift = gpuShaderUniforms.uCloudDrift;
   solidShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
@@ -260,12 +261,26 @@ solidMaterial.onBeforeCompile = (shader) => {
     );
 
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
+    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
       `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
       float torchMask = clamp((vColor.r - vColor.b) * 3.8, 0.0, 1.0);
-      gl_FragColor.rgb *= mix(uSunLightColor, vec3(1.0), max(isEmissiveTile, torchMask));
+      vec3 faceN = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
+      float ndotl = dot(faceN, uLightDir);
+      float sunLow = 1.0 - clamp(uLightDir.y, 0.0, 1.0);
+      float bakedLuma = max(vColor.r, max(vColor.g, vColor.b));
+      float horizonCut = 0.54 + sunLow * 0.28;
+      float selfShadow = smoothstep(horizonCut - 0.18, horizonCut + 0.08, bakedLuma + ndotl * 0.22);
+      vec2 cloudRayXZ = vWorldPos.xz + uLightDir.xz * ((60.0 - vWorldPos.y) / max(0.22, uLightDir.y));
+      vec2 cUV = (cloudRayXZ - vec2(uCloudDrift, uTime * 0.35)) * 0.042;
+      float cWave = sin(cUV.x) * cos(cUV.y) + 0.5 * sin(cUV.x * 1.9 - cUV.y * 1.6);
+      float cloudShadow = 1.0 - smoothstep(0.22, 0.85, cWave) * 0.22 * uSunFactor;
+      float directLit = clamp((ndotl * 0.5 + 0.5) * selfShadow, 0.0, 1.0) * cloudShadow;
+      vec3 shadowAmbient = uSunLightColor * vec3(0.68, 0.76, 0.92);
+      vec3 directSunCol = uSunLightColor * (1.16 + 0.16 * sunLow);
+      vec3 dynamicShaderLight = mix(shadowAmbient, directSunCol, directLit);
+      gl_FragColor.rgb *= mix(dynamicShaderLight, vec3(1.0), max(isEmissiveTile, torchMask));
       if ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5)) {
         float flicker = 1.0 + 0.09 * sin(uTime * 9.5 + vWorldPos.x * 2.3 + vWorldPos.z * 2.3);
         gl_FragColor.rgb *= vec3(flicker * 1.04, flicker, flicker * 0.92);
@@ -299,6 +314,7 @@ waterMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uWindStrength = gpuShaderUniforms.uWindStrength;
   shader.uniforms.uSunFactor = gpuShaderUniforms.uSunFactor;
   shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor;
+  shader.uniforms.uLightDir = gpuShaderUniforms.uLightDir;
   waterShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
@@ -316,7 +332,7 @@ waterMaterial.onBeforeCompile = (shader) => {
     );
 
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nvarying float vWaveH;\nvarying vec3 vWorldPos;`)
+    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nvarying float vWaveH;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
       `gl_FragColor.rgb *= uSunLightColor;
@@ -325,6 +341,12 @@ waterMaterial.onBeforeCompile = (shader) => {
       vec3 crestCol = vec3(0.76, 0.93, 1.0) * (0.35 + 0.65 * uSunFactor);
       gl_FragColor.rgb = mix(gl_FragColor.rgb, crestCol, crestFoam * 0.38);
       gl_FragColor.rgb += vec3(0.03, 0.07, 0.11) * caustic * (0.4 + 0.6 * uSunFactor);
+      vec3 waveN = normalize(vec3(-cos(uTime * 2.3 + vWorldPos.x * 0.85 + vWorldPos.z * 0.65) * 0.15, 1.0, sin(uTime * 1.7 - vWorldPos.x * 0.55 + vWorldPos.z * 0.90) * 0.12));
+      vec3 viewDir = normalize(cameraPosition - vWorldPos);
+      vec3 halfVec = normalize(uLightDir + viewDir);
+      float spec = pow(max(dot(waveN, halfVec), 0.0), 42.0);
+      float fresnel = pow(1.0 - max(dot(waveN, viewDir), 0.0), 3.0) * 0.32;
+      gl_FragColor.rgb += uSunLightColor * (spec * 0.85 + fresnel * 0.24);
       #include <fog_fragment>`
     );
 };
@@ -533,66 +555,33 @@ function updateItemDrops(dt) {
   for (let i = 0; i < MAX_DROPS; i++) {
     const d = itemDrops[i];
     if (!d.active) continue;
-    anyUpdated = true;
-
-    d.age += dt;
+    anyUpdated = true; d.age += dt;
     if (d.pickupDelay > 0) d.pickupDelay = Math.max(0, d.pickupDelay - dt);
+    if (d.age > 90) { d.active = false; dummyMatrix.makeTranslation(0, -999, 0); dropInstanced.setMatrixAt(i, dummyMatrix); continue; }
 
-    if (d.age > 90) {
-      d.active = false;
-      dummyMatrix.makeTranslation(0, -999, 0);
-      dropInstanced.setMatrixAt(i, dummyMatrix);
-      continue;
-    }
-
-    const dx = px - d.x;
-    const dy = py - d.y;
-    const dz = pz - d.z;
-    const dist = Math.hypot(dx, dy, dz);
-
+    const dx = px - d.x, dy = py - d.y, dz = pz - d.z, dist = Math.hypot(dx, dy, dz);
     if (d.pickupDelay <= 0 && dist < 2.8) {
       if (dist < 0.88) {
-        d.active = false;
-        dummyMatrix.makeTranslation(0, -999, 0);
-        dropInstanced.setMatrixAt(i, dummyMatrix);
-        addInventoryItem(d.itemId, d.count);
-        sfx.play('pickup');
-        continue;
+        d.active = false; dummyMatrix.makeTranslation(0, -999, 0); dropInstanced.setMatrixAt(i, dummyMatrix);
+        addInventoryItem(d.itemId, d.count); sfx.play('pickup'); continue;
       }
       const pull = Math.min(1.0, (1.0 - dist / 2.8) * 14.0 * dt + 0.12);
-      d.x += dx * pull;
-      d.y += dy * pull;
-      d.z += dz * pull;
-      d.vy = 0;
+      d.x += dx * pull; d.y += dy * pull; d.z += dz * pull; d.vy = 0;
     } else {
-      d.vy -= 16.0 * dt;
-      if (d.vy < -20) d.vy = -20;
-
-      const nx = d.x + d.vx * dt;
-      const nz = d.z + d.vz * dt;
+      d.vy = Math.max(-20, d.vy - 16.0 * dt);
+      const nx = d.x + d.vx * dt, nz = d.z + d.vz * dt;
       if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(nx), Math.floor(d.y), Math.floor(d.z))].solid) d.x = nx;
       if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(d.x), Math.floor(d.y), Math.floor(nz))].solid) d.z = nz;
-      d.vx *= 0.86;
-      d.vz *= 0.86;
-
+      d.vx *= 0.86; d.vz *= 0.86;
       const ny = d.y + d.vy * dt;
-      const groundSolid = BLOCK_DEFS[getVoxelGlobal(Math.floor(d.x), Math.floor(ny - 0.16), Math.floor(d.z))].solid;
-      if (!groundSolid) {
-        d.y = ny;
-      } else {
-        if (d.vy < 0) d.y = Math.floor(ny - 0.16) + 1.18;
-        d.vy = 0;
-      }
+      if (!BLOCK_DEFS[getVoxelGlobal(Math.floor(d.x), Math.floor(ny - 0.16), Math.floor(d.z))].solid) d.y = ny;
+      else { if (d.vy < 0) d.y = Math.floor(ny - 0.16) + 1.18; d.vy = 0; }
     }
-
-    const bob = Math.sin(d.age * 3.8) * 0.065;
-    dropPosVec.set(d.x, d.y + bob, d.z);
-    dropEuler.set(0.22, d.age * 2.5, 0.18);
-    dropQuat.setFromEuler(dropEuler);
+    dropPosVec.set(d.x, d.y + Math.sin(d.age * 3.8) * 0.065, d.z);
+    dropEuler.set(0.22, d.age * 2.5, 0.18); dropQuat.setFromEuler(dropEuler);
     dummyMatrix.compose(dropPosVec, dropQuat, dropScaleVec);
     dropInstanced.setMatrixAt(i, dummyMatrix);
   }
-
   if (anyUpdated) dropInstanced.instanceMatrix.needsUpdate = true;
 }
 
@@ -779,6 +768,11 @@ function updateDynamicSky(dt) {
     gpuShaderUniforms.uSunLightColor.value.set(0.18, 0.22, 0.34);
   }
   gpuShaderUniforms.uSunFactor.value = sunFactor;
+  const nightBlend = THREE.MathUtils.smoothstep(-sunElev, -0.02, 0.14);
+  const lx = THREE.MathUtils.lerp(sunMesh.position.x, moonMesh.position.x, nightBlend);
+  const ly = Math.max(12, THREE.MathUtils.lerp(Math.max(8, sunMesh.position.y), Math.max(18, moonMesh.position.y), nightBlend));
+  const lz = THREE.MathUtils.lerp(sunMesh.position.z, moonMesh.position.z, nightBlend);
+  gpuShaderUniforms.uLightDir.value.set(lx, ly, lz).normalize();
   if (typeof farHorizonMesh !== 'undefined') {
     const sc = gpuShaderUniforms.uSunLightColor.value;
     farHorizonMesh.material.color.setRGB(sc.x * sunFactor, sc.y * sunFactor, sc.z * sunFactor);
@@ -787,6 +781,7 @@ function updateDynamicSky(dt) {
 
   starMat.opacity = THREE.MathUtils.clamp((0.14 - sunElev) * 3.8, 0, 0.88);
   cloudDrift = (cloudDrift + dt * 1.6) % 220;
+  gpuShaderUniforms.uCloudDrift.value = cloudDrift;
   const snapX = Math.floor(player.x / 220) * 220, snapZ = Math.floor(player.z / 220) * 220;
   cloudMesh.position.set(snapX + cloudDrift - 110, 0, snapZ);
 }
