@@ -444,6 +444,15 @@ function createWorldGenerator(seed) {
       }
     }
 
+    // Step 4C: Cascade any floating water/sand into caves/mines below
+    for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+      for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+        const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
+        for (let y = SEA_LEVEL; y >= 3; y--) {
+          if (data[colOffset + y] === BLOCK.WATER && data[colOffset + y - 1] === BLOCK.AIR) data[colOffset + y - 1] = BLOCK.WATER;
+        }
+      }
+    }
     // Step 5: Apply user delta modifications
     if (deltaList && deltaList.length > 0) {
       for (let i = 0; i < deltaList.length; i += 2) data[deltaList[i]] = deltaList[i + 1];

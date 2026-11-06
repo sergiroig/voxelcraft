@@ -103,12 +103,12 @@ function scanNearbyFloatingLeaves() {
     for (let dx = -24; dx <= 24; dx++) {
       const lx = px + dx, cx = Math.floor(lx / CHUNK_SIZE);
       const dArr = worldDeltas[`${cx},${cz}`];
-      if (!dArr || dArr.length === 0) continue;
+      const hasDelta = dArr && dArr.length > 0;
       for (let dy = -3; dy <= 8; dy++) {
         const ly = py + dy;
         if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
         const b = getVoxelGlobal(lx, ly, lz);
-        if (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES) {
+        if (b === BLOCK.WATER && (getVoxelGlobal(lx, ly - 1, lz) === BLOCK.AIR || (BLOCK_DEFS[getVoxelGlobal(lx, ly - 1, lz)].solid && ((getVoxelGlobal(lx + 1, ly, lz) === BLOCK.AIR && getVoxelGlobal(lx + 1, ly - 1, lz) === BLOCK.AIR) || (getVoxelGlobal(lx - 1, ly, lz) === BLOCK.AIR && getVoxelGlobal(lx - 1, ly - 1, lz) === BLOCK.AIR) || (getVoxelGlobal(lx, ly, lz + 1) === BLOCK.AIR && getVoxelGlobal(lx, ly - 1, lz + 1) === BLOCK.AIR) || (getVoxelGlobal(lx, ly, lz - 1) === BLOCK.AIR && getVoxelGlobal(lx, ly - 1, lz - 1) === BLOCK.AIR))))) simQueue.add(`${lx},${ly},${lz}`); else if (hasDelta && (b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES)) {
           if (!hasNearbyWood(lx, ly, lz)) {
             enqueueLeafDecayAround(lx, ly, lz);
             if (leafDecayQueue.length >= 24) return;
@@ -194,7 +194,7 @@ function updateVoxelSimulation(dt) {
             setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
           } else if (isSource && sideB === BLOCK.AIR) {
             const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
-            if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER) {
+            if (BLOCK_DEFS[underSide].solid || underSide === BLOCK.WATER || (underSide === BLOCK.AIR && BLOCK_DEFS[below].solid)) { if (underSide === BLOCK.AIR) { setVoxelRawNoRebuild(wx + dx, wy - 1, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy - 1},${wz + dz}`); }
               setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
             }
           }

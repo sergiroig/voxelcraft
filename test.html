@@ -2457,17 +2457,29 @@
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.player.health = 10; vc.player.air = 10; vc.player.wasInFluid = false;
           assert(vc.handGroup.children[0].material.transparent === true, 'handArmMat debe tener transparent=true para renderizarse DESPUÉS de waterMesh (renderOrder 997 > 0)');
-          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER); vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.LILY_PAD); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.SAND);
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { vc.setVoxelGlobal(wx + dx, wy - 1, wz + dz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx + dx, wy, wz + dz, vc.BLOCK.WATER); vc.setVoxelGlobal(wx + dx, wy + 1, wz + dz, vc.BLOCK.AIR); }
           vc.player.x = wx + 0.5; vc.player.y = wy + 0.05; vc.player.z = wz + 0.5; vc.player.yaw = 0; vc.player.vy = 0;
           vc.keys['Space'] = true; vc.keys['KeyW'] = false;
+          let maxCenterY = vc.player.y;
+          for (let s = 0; s < 120; s++) { vc.updatePlayerPhysics(1 / 240); if (vc.player.y > maxCenterY) maxCenterY = vc.player.y; }
+          assert(maxCenterY >= wy + 0.40 && maxCenterY < wy + 0.85, `En el centro del agua (sin borde) NO debe poder saltar fuera del agua (maxCenterY=${maxCenterY.toFixed(2)} vs wy+1=${wy + 1})`);
+          vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.LILY_PAD); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.SAND);
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.05; vc.player.z = wz + 0.45; vc.player.vy = 0;
           let maxWaterJumpY = vc.player.y;
           for (let s = 0; s < 120; s++) { vc.updatePlayerPhysics(1 / 240); if (vc.player.y > maxWaterJumpY) maxWaterJumpY = vc.player.y; }
-          assert(maxWaterJumpY >= wy + 1.08 && maxWaterJumpY < wy + 1.40, `El salto desde el agua debe subir solo lo justo para un bloque a la altura del agua (wy+1=${wy + 1}), no >2 bloques (maxY=${maxWaterJumpY.toFixed(2)})`);
-          vc.player.x = wx + 0.5; vc.player.y = wy + 0.05; vc.player.z = wz + 0.5; vc.player.vy = 0; vc.keys['KeyW'] = true;
+          assert(maxWaterJumpY >= wy + 1.08 && maxWaterJumpY < wy + 1.40, `En el borde del agua debe saltar solo lo justo para subir a wy+1=${wy + 1}, no >2 bloques (maxY=${maxWaterJumpY.toFixed(2)})`);
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.05; vc.player.z = wz + 0.45; vc.player.vy = 0; vc.keys['KeyW'] = true;
           for (let s = 0; s < 140; s++) vc.updatePlayerPhysics(1 / 240);
           vc.keys['Space'] = false; vc.keys['KeyW'] = false;
           assert(vc.player.y >= wy + 1.0 && vc.player.z < wz, `El jugador debe poder saltar fuera del agua y subir a la orilla en wy+1 (y=${vc.player.y.toFixed(2)}, z=${vc.player.z.toFixed(2)} vs wy+1=${wy + 1})`);
-          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy + 1, wz - 2, vc.BLOCK.AIR);
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { vc.setVoxelGlobal(wx + dx, wy - 1, wz + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + dx, wy, wz + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + dx, wy + 1, wz + dz, vc.BLOCK.AIR); }
+          vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.AIR);
+          // Test de cascada de agua en borde de mina/cueva (no debe quedar agua flotante)
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER);
+          vc.setVoxelGlobal(wx + 1, wy - 3, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx + 1, wy - 2, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy, wz, vc.BLOCK.AIR);
+          for (let t = 0; t < 6; t++) vc.updateVoxelSimulation(0.2);
+          assert(vc.getVoxelGlobal(wx + 1, wy - 2, wz) === vc.BLOCK.WATER, 'El agua en un borde de mina/cueva debe caer hasta el fondo y no quedar flotando');
+          for (let dy = -3; dy <= 0; dy++) { vc.setVoxelGlobal(wx, wy + dy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx + 1, wy + dy, wz, vc.BLOCK.AIR); }
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ; vc.player.vy = 0; vc.player.wasInFluid = false;
           vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.AIR);
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
