@@ -464,7 +464,7 @@
       // =========================================================================
       describe('9. Cielo Dinámico, Día/Noche e Interfaz Híbrida (PC + Móvil)', () => {
         it('Actualiza Sol, Luna, Estrellas, Nubes 3D y alterna Día/Noche (T)', () => {
-          assert(vc.sunMesh && vc.moonMesh && vc.sunGlow && vc.moonGlow && vc.cloudMesh, 'Faltan mallas o halos celestes');
+          assert(vc.sunMesh && vc.moonMesh && vc.sunGlow && vc.moonGlow && vc.cloudMesh && vc.skyDomeMesh && vc.skyDomeMesh.material.fragmentShader.includes('zenithCol') && vc.skyDomeMesh.material.fragmentShader.includes('sunAz'), 'Faltan mallas celestes o la cúpula atmosférica con gradiente cenit-horizonte y resplandor solar direccional');
           assert(vc.sunMesh.geometry.type === 'SphereGeometry' && vc.moonMesh.geometry.type === 'SphereGeometry', 'El Sol y la Luna deben ser redondos (SphereGeometry)');
           assert(vc.sunGlow.isSprite && vc.moonGlow.isSprite && vc.sunMesh.geometry.attributes.color && vc.moonMesh.geometry.attributes.color, 'El Sol y la Luna deben tener corona/halo brillante y sombreado esférico 3D');
           assert(vc.sunMesh.material.depthWrite === false && vc.sunGlow.renderOrder > vc.sunMesh.renderOrder, 'El halo del Sol debe renderizarse sobre el Sol sin quedar ocluido detrás en el depth buffer');

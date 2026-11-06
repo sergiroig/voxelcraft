@@ -781,7 +781,7 @@ window.__VOXELCRAFT__ = {
   trySummonIronGolem, waypoints, addWaypoint, removeWaypoint, teleportToWaypoint, buildWaypointsUI,
   weatherInstanced, toggleWeather, triggerLightningFlash, updateWeather, getWeatherState: () => ({ weatherMode, isSnowing, isSandstorm, lightningFlash, lightningCount }),
   toggleVoxelLever, propagateRedstoneSignal, minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
-  applyWorldSeed, teleportToBiome, skyGroup, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay,
+  applyWorldSeed, teleportToBiome, skyGroup, skyDomeMesh, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay,
   getCelestialAngle: () => celestialAngle, getMoonAngle: () => moonAngle, solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
   detectDefaultLightingMode, setLightingMode, getLightingMode: () => lightingMode, userSettings, saveUserSettings, loadUserSettings, openSettingsMenu, updateShadowMapPass, shadowMapTarget, shadowCamera, shadowMatrix, getShadowPassCount: () => shadowPassCount,
   getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }), getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,

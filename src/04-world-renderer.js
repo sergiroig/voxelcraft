@@ -165,6 +165,7 @@ function updateDynamicResolution(fpsSample) {
 const scene = new THREE.Scene(), chunkSolidGroup = new THREE.Scene();
 scene.add(chunkSolidGroup);
 const skyColorDay = new THREE.Color(0x6ec6ff), skyColorGolden = new THREE.Color(0xf4845f), skyColorTwilight = new THREE.Color(0xb84a39), skyColorNight = new THREE.Color(0x070b16);
+const fogColorDay = new THREE.Color(0x9ecff8), fogColorTwilight = new THREE.Color(0x52567a), fogColorNight = new THREE.Color(0x070b16), currentFogColor = fogColorDay.clone();
 const currentSkyColor = skyColorDay.clone(), sunColHorizon = new THREE.Color(0xff5e2b), sunColGolden = new THREE.Color(0xffe8cc), sunColNoon = new THREE.Color(0xffffff);
 const cloudColDay = new THREE.Color(0xf8fafc), cloudColSunset = new THREE.Color(0xfdba8c), cloudColNight = new THREE.Color(0x263147);
 scene.background = currentSkyColor.clone(); scene.fog = new THREE.FogExp2(0x6ec6ff, 0.0055);
@@ -413,6 +414,7 @@ function updateGPUShaders(dt) {
     wOv.style.display = 'none'; wOv.style.background = '';
   }
 
+  if (typeof skyDomeMesh !== 'undefined') skyDomeMesh.visible = !(submerged || inLavaCam);
   if (submerged) {
     const targetWaterCol = isNight ? waterFogColorNight : waterFogColorDay;
     scene.fog.color.copy(targetWaterCol); scene.background.copy(targetWaterCol);
@@ -421,87 +423,53 @@ function updateGPUShaders(dt) {
     scene.fog.color.setHex(0xd97706); scene.background.setHex(0xd97706);
     scene.fog.density = 0.14;
   } else {
-    scene.fog.color.copy(currentSkyColor); scene.background.copy(currentSkyColor);
-    if (typeof weatherMode !== 'undefined' && weatherMode !== 'clear') {
-      const dayK = THREE.MathUtils.smoothstep(sunFactor, 0.30, 0.88);
-      const strength = (weatherMode === 'storm' ? 0.24 : 0.14) * dayK;
-      scene.fog.color.lerp(dummyColor.setHex(0x334155), strength);
-      scene.background.lerp(dummyColor.setHex(0x334155), strength);
+    scene.fog.color.copy(currentFogColor); scene.background.copy(currentSkyColor);
+    const overK = (typeof weatherMode !== 'undefined' && weatherMode !== 'clear') ? (weatherMode === 'storm' ? 0.45 : 0.25) : 0.0;
+    if (typeof skyDomeUniforms !== 'undefined') skyDomeUniforms.uOvercast.value = overK;
+    if (overK > 0) {
+      const dayK = THREE.MathUtils.smoothstep(sunFactor, 0.30, 0.88), strength = overK * 0.55 * dayK;
+      scene.fog.color.lerp(dummyColor.setHex(0x334155), strength); scene.background.lerp(dummyColor.setHex(0x334155), strength);
     }
     scene.fog.density = 0.055 / renderDistance;
   }
 }
 
 // Wireframe target box + Crack overlay mesh
-const highlightGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.006, 1.006, 1.006));
-const highlightMat = new THREE.LineBasicMaterial({ color: 0x000000 });
-const highlightBox = new THREE.LineSegments(highlightGeo, highlightMat);
-highlightBox.visible = false;
-scene.add(highlightBox);
-
-const crackMat = new THREE.MeshBasicMaterial({
-  map: crackTextures[0],
-  transparent: true,
-  depthWrite: false,
-  polygonOffset: true,
-  polygonOffsetFactor: -2
-});
-const crackBox = new THREE.Mesh(new THREE.BoxGeometry(1.004, 1.004, 1.004), crackMat);
-crackBox.visible = false;
-scene.add(crackBox);
+const highlightGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.006, 1.006, 1.006)), highlightMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+const highlightBox = new THREE.LineSegments(highlightGeo, highlightMat); highlightBox.visible = false; scene.add(highlightBox);
+const crackMat = new THREE.MeshBasicMaterial({ map: crackTextures[0], transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+const crackBox = new THREE.Mesh(new THREE.BoxGeometry(1.004, 1.004, 1.004), crackMat); crackBox.visible = false; scene.add(crackBox);
 
 // 1st-Person Held Item + Gripping 3D Voxel Arm/Hand attached to Camera
-const handGroup = new THREE.Group();
-camera.add(handGroup);
-handGroup.position.set(0.42, -0.34, -0.58);
-
-const handIconCanvas = document.createElement('canvas');
-handIconCanvas.width = 16; handIconCanvas.height = 16;
+const handGroup = new THREE.Group(); camera.add(handGroup); handGroup.position.set(0.42, -0.34, -0.58);
+const handIconCanvas = document.createElement('canvas'); handIconCanvas.width = 16; handIconCanvas.height = 16;
 const handIconTex = new THREE.CanvasTexture(handIconCanvas);
-handIconTex.magFilter = THREE.NearestFilter;
-handIconTex.minFilter = THREE.NearestFilter;
-handIconTex.generateMipmaps = false;
+handIconTex.magFilter = THREE.NearestFilter; handIconTex.minFilter = THREE.NearestFilter; handIconTex.generateMipmaps = false;
 
 function shadeBoxGeo(geo, hex) {
   const c = new THREE.Color(hex), shades = [0.82, 0.88, 1.0, 0.64, 0.78, 0.94], cols = new Float32Array(72);
   for (let f = 0; f < 6; f++) for (let v = 0; v < 4; v++) { const i = (f * 4 + v) * 3, s = shades[f]; cols[i] = c.r * s; cols[i + 1] = c.g * s; cols[i + 2] = c.b * s; }
-  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
-  return geo;
+  geo.setAttribute('color', new THREE.BufferAttribute(cols, 3)); return geo;
 }
-const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
-const handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
-const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.64), 0xf1c27d);
-const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.44), 0xe8b474);
+const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26), handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
+const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.64), 0xf1c27d), handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.44), 0xe8b474);
 const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 1.0, fog: false, depthTest: false, depthWrite: false });
-const handArmMesh = new THREE.Mesh(handArmGeo, handArmMat);
-handArmMesh.renderOrder = 997;
-const handSleeveMesh = new THREE.Mesh(handSleeveGeo, handArmMat);
-handSleeveMesh.position.set(0, 0, 0.28);
-handSleeveMesh.renderOrder = 998;
-handArmMesh.add(handSleeveMesh);
-handGroup.add(handArmMesh);
-
+const handArmMesh = new THREE.Mesh(handArmGeo, handArmMat); handArmMesh.renderOrder = 997;
+const handSleeveMesh = new THREE.Mesh(handSleeveGeo, handArmMat); handSleeveMesh.position.set(0, 0, 0.28); handSleeveMesh.renderOrder = 998;
+handArmMesh.add(handSleeveMesh); handGroup.add(handArmMesh);
 const handMat = new THREE.MeshBasicMaterial({ vertexColors: false, color: 0xf1c27d, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
-const handMesh = new THREE.Mesh(handGeo, handMat);
-handMesh.renderOrder = 999;
-handGroup.add(handMesh);
+const handMesh = new THREE.Mesh(handGeo, handMat); handMesh.renderOrder = 999; handGroup.add(handMesh);
 
 function updateHeldItemVisual() {
-  const bId = getActiveHeldItem();
-  const avHeld = typeof playerAvatar !== 'undefined' && playerAvatar.userData ? playerAvatar.userData.heldIcon : null;
+  const bId = getActiveHeldItem(), avHeld = typeof playerAvatar !== 'undefined' && playerAvatar.userData ? playerAvatar.userData.heldIcon : null;
   const isSwinging = (typeof player !== 'undefined' && player && player.swingTime > 0) || (typeof isMiningHeld !== 'undefined' && isMiningHeld);
   if (bId === BLOCK.AIR || typeof drawItemIcon !== 'function') {
-    handArmMesh.visible = !!isSwinging;
-    handMesh.visible = false;
+    handArmMesh.visible = !!isSwinging; handMesh.visible = false;
     handMesh.geometry = handGeo; handMat.map = null; handMat.color.setHex(0xf1c27d); handMat.needsUpdate = true;
     handArmMesh.position.set(0.14, -0.14, 0.18); handArmMesh.rotation.set(0.38, 0.32, -0.14);
-    if (avHeld) avHeld.visible = false;
-    return;
+    if (avHeld) avHeld.visible = false; return;
   }
-  handArmMesh.visible = true;
-  handMesh.visible = true;
-  drawItemIcon(handIconCanvas, bId);
-  handIconTex.needsUpdate = true;
+  handArmMesh.visible = true; handMesh.visible = true; drawItemIcon(handIconCanvas, bId); handIconTex.needsUpdate = true;
   handMesh.geometry = handIconGeo; handMat.map = handIconTex; handMat.color.setHex(0xffffff); handMat.needsUpdate = true;
   handMesh.position.set(0, 0, 0); handMesh.scale.set(1, 1, 1); handMesh.rotation.set(0, 0, 0);
   handArmMesh.position.set(0.14, -0.14, 0.18); handArmMesh.rotation.set(0.38, 0.32, -0.14);
@@ -629,6 +597,26 @@ function updateItemDrops(dt) {
 // ============================================================================
 const skyGroup = new THREE.Group(); scene.add(skyGroup);
 const celestialOrbit = new THREE.Group(); skyGroup.add(celestialOrbit);
+const skyDomeUniforms = { uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunElev: { value: 1.0 }, uOvercast: { value: 0.0 } };
+const skyDomeMesh = new THREE.Mesh(new THREE.SphereGeometry(190, 32, 20), new THREE.ShaderMaterial({
+  uniforms: skyDomeUniforms, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
+  vertexShader: `varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `varying vec3 vDir; uniform vec3 uSunDir; uniform float uSunElev; uniform float uOvercast;
+  void main() {
+    vec3 d = normalize(vDir), sDir = normalize(uSunDir);
+    float h = clamp(d.y * 0.92 + 0.08, 0.0, 1.0), dayAmt = smoothstep(-0.08, 0.46, uSunElev);
+    float twiAmt = smoothstep(-0.22, 0.04, uSunElev) * (1.0 - smoothstep(0.06, 0.48, uSunElev));
+    vec3 zenithCol = mix(mix(vec3(0.02, 0.035, 0.075), vec3(0.24, 0.56, 0.95), dayAmt), vec3(0.11, 0.19, 0.42), twiAmt * 0.78);
+    vec3 horizCol = mix(mix(vec3(0.035, 0.05, 0.10), vec3(0.64, 0.85, 1.0), dayAmt), vec3(0.26, 0.29, 0.46), twiAmt * 0.85);
+    vec3 sky = mix(horizCol, zenithCol, pow(h, 0.58));
+    float cosT = max(0.0, dot(d, sDir)), sunAz = max(0.0, dot(normalize(vec2(d.x, d.z) + 1e-5), normalize(vec2(sDir.x, sDir.z) + 1e-5)));
+    float hBand = pow(1.0 - h, 2.7), glowMask = twiAmt * clamp(hBand * (0.10 + 0.90 * pow(sunAz, 1.6)) + 0.52 * pow(cosT, 3.2) * (1.0 - h * 0.55), 0.0, 1.0);
+    vec3 sunsetCol = mix(vec3(0.90, 0.36, 0.22), vec3(1.0, 0.76, 0.40), clamp(pow(cosT, 1.8) + (1.0 - hBand) * 0.25, 0.0, 1.0));
+    sky = mix(sky, sunsetCol, glowMask * 0.92) + vec3(1.0, 0.95, 0.85) * (pow(cosT, 8.0) * 0.12 * dayAmt);
+    gl_FragColor = vec4(mix(sky, vec3(0.22, 0.27, 0.34) * max(0.15, dayAmt), uOvercast), 1.0);
+  }`
+}));
+skyDomeMesh.renderOrder = -5; skyGroup.add(skyDomeMesh);
 
 const celestialGlowTex = (() => {
   const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
@@ -749,25 +737,24 @@ function updateDynamicSky(dt) {
   moonMesh.material.opacity = moonVis;
   moonGlow.material.opacity = moonVis * (isNight ? 0.68 : 0.22);
 
-  // Synchronized Sky, Fog, Cloud & GPU Sunlight color: warms BEFORE Sun hits terrain horizon (sunElev=0.22) and reaches night at sunElev=-0.12
+  skyDomeUniforms.uSunDir.value.copy(sunMesh.position).normalize();
+  skyDomeUniforms.uSunElev.value = sunElev;
+  const dayF = THREE.MathUtils.smoothstep(sunElev, -0.06, 0.44), twiF = THREE.MathUtils.smoothstep(sunElev, -0.20, 0.04) * (1.0 - THREE.MathUtils.smoothstep(sunElev, 0.06, 0.44));
+  currentFogColor.copy(fogColorNight).lerp(fogColorDay, dayF).lerp(fogColorTwilight, twiF * 0.75);
   if (sunElev >= 0.22) {
     const t = THREE.MathUtils.smoothstep(sunElev, 0.22, 0.58);
-    currentSkyColor.copy(skyColorGolden).lerp(skyColorDay, t);
-    cloudMesh.material.color.copy(cloudColSunset).lerp(cloudColDay, t);
+    currentSkyColor.copy(skyColorGolden).lerp(skyColorDay, t); cloudMesh.material.color.copy(cloudColSunset).lerp(cloudColDay, t);
     gpuShaderUniforms.uSunLightColor.value.set(1.0, 0.78 + 0.22 * t, 0.58 + 0.42 * t);
   } else if (sunElev >= 0.0) {
-    const t = sunElev / 0.22;
-    currentSkyColor.copy(skyColorTwilight).lerp(skyColorGolden, t);
-    cloudMesh.material.color.copy(cloudColNight).lerp(cloudColSunset, t);
+    const t = THREE.MathUtils.smoothstep(sunElev, 0.0, 0.22);
+    currentSkyColor.copy(skyColorTwilight).lerp(skyColorGolden, t); cloudMesh.material.color.copy(cloudColNight).lerp(cloudColSunset, t);
     gpuShaderUniforms.uSunLightColor.value.set(0.52 + 0.48 * t, 0.36 + 0.42 * t, 0.34 + 0.24 * t);
   } else if (sunElev >= -0.12) {
-    const t = (sunElev + 0.12) / 0.12;
-    currentSkyColor.copy(skyColorNight).lerp(skyColorTwilight, t);
-    cloudMesh.material.color.copy(cloudColNight);
+    const t = THREE.MathUtils.smoothstep(sunElev, -0.12, 0.0);
+    currentSkyColor.copy(skyColorNight).lerp(skyColorTwilight, t); cloudMesh.material.color.copy(cloudColNight);
     gpuShaderUniforms.uSunLightColor.value.set(0.18 + 0.34 * t, 0.22 + 0.14 * t, 0.34);
   } else {
-    currentSkyColor.copy(skyColorNight);
-    cloudMesh.material.color.copy(cloudColNight);
+    currentSkyColor.copy(skyColorNight); cloudMesh.material.color.copy(cloudColNight);
     gpuShaderUniforms.uSunLightColor.value.set(0.18, 0.22, 0.34);
   }
   gpuShaderUniforms.uSunFactor.value = sunFactor;
@@ -776,11 +763,8 @@ function updateDynamicSky(dt) {
   const ly = Math.max(12, THREE.MathUtils.lerp(Math.max(8, sunMesh.position.y), Math.max(18, moonMesh.position.y), nightBlend));
   const lz = THREE.MathUtils.lerp(sunMesh.position.z, moonMesh.position.z, nightBlend);
   gpuShaderUniforms.uLightDir.value.set(lx, ly, lz).normalize();
-  if (typeof farHorizonMesh !== 'undefined') {
-    const sc = gpuShaderUniforms.uSunLightColor.value;
-    farHorizonMesh.material.color.setRGB(sc.x * sunFactor, sc.y * sunFactor, sc.z * sunFactor);
-  }
-  if (!isCameraUnderwater) { scene.background.copy(currentSkyColor); scene.fog.color.copy(currentSkyColor); }
+  if (typeof farHorizonMesh !== 'undefined') { const sc = gpuShaderUniforms.uSunLightColor.value; farHorizonMesh.material.color.setRGB(sc.x * sunFactor, sc.y * sunFactor, sc.z * sunFactor); }
+  if (!isCameraUnderwater) { scene.background.copy(currentSkyColor); scene.fog.color.copy(currentFogColor); }
 
   starMat.opacity = THREE.MathUtils.clamp((0.14 - sunElev) * 3.8, 0, 0.88);
   cloudDrift = (cloudDrift + dt * 1.6) % 220;
