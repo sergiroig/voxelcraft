@@ -451,9 +451,8 @@ function drawPaperOrMapIcon(ctx, itemId) {
     return;
   }
   if (itemId === BLOCK.ITEM_EMPTY_MAP) {
-    ctx.fillStyle = '#451a03'; ctx.fillRect(1, 1, 14, 14);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(2, 2, 12, 12);
-    ctx.fillStyle = '#e6d2a8'; ctx.fillRect(3, 3, 10, 10);
+    ctx.fillStyle = '#8b693e'; ctx.fillRect(1, 1, 14, 14);
+    ctx.fillStyle = '#e6d2a8'; ctx.fillRect(2, 2, 12, 12);
     ctx.fillStyle = '#c4a472'; ctx.fillRect(4, 5, 8, 1); ctx.fillRect(4, 8, 8, 1); ctx.fillRect(4, 11, 6, 1);
     ctx.fillStyle = '#b45309'; ctx.fillRect(7, 6, 2, 4); ctx.fillRect(6, 7, 4, 2);
     return;
@@ -490,19 +489,19 @@ function drawPaperOrMapIcon(ctx, itemId) {
 const PICKAXE_COLORS = { [BLOCK.TOOL_PICKAXE]: '#5decf5', [BLOCK.TOOL_WOOD_PICKAXE]: '#a16207', [BLOCK.TOOL_STONE_PICKAXE]: '#94a3b8', [BLOCK.TOOL_IRON_PICKAXE]: '#e2e8f0', [BLOCK.TOOL_GOLD_PICKAXE]: '#facc15' };
 const SWORD_COLORS = { [BLOCK.TOOL_SWORD]: '#38bdf8', [BLOCK.TOOL_WOOD_SWORD]: '#a16207', [BLOCK.TOOL_STONE_SWORD]: '#94a3b8', [BLOCK.TOOL_IRON_SWORD]: '#e2e8f0', [BLOCK.TOOL_GOLD_SWORD]: '#facc15' };
 const TIER_PALETTE = {
-  '#5decf5': { dark: '#0369a1', base: '#5decf5', hi: '#e0f2fe' },
-  '#38bdf8': { dark: '#0369a1', base: '#38bdf8', hi: '#e0f2fe' },
-  '#a16207': { dark: '#5c3a18', base: '#a16207', hi: '#d97706' },
-  '#94a3b8': { dark: '#475569', base: '#94a3b8', hi: '#cbd5e1' },
-  '#e2e8f0': { dark: '#64748b', base: '#e2e8f0', hi: '#ffffff' },
-  '#facc15': { dark: '#b45309', base: '#facc15', hi: '#fef08a' }
+  '#5decf5': { dark: '#113832', base: '#2be4eb', hi: '#a5f3fc' },
+  '#38bdf8': { dark: '#113832', base: '#2be4eb', hi: '#a5f3fc' },
+  '#a16207': { dark: '#281e0b', base: '#9b6516', hi: '#b87a22' },
+  '#94a3b8': { dark: '#2d2d2d', base: '#8a8e94', hi: '#b8bcc2' },
+  '#e2e8f0': { dark: '#383838', base: '#dcdcdc', hi: '#ffffff' },
+  '#facc15': { dark: '#5e4208', base: '#f5cc27', hi: '#fef08a' }
 };
 
 function drawDiagonalHandle(ctx, iStart, iEnd) {
   for (let i = iStart; i <= iEnd; i++) {
-    ctx.fillStyle = '#7a542e'; ctx.fillRect(i, 15 - i, 2, 2);
-    ctx.fillStyle = '#9a6b3b'; ctx.fillRect(i, 15 - i, 1, 1);
-    ctx.fillStyle = '#45270d'; ctx.fillRect(i + 1, 16 - i, 1, 1);
+    ctx.fillStyle = '#563e16'; ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#896727'; ctx.fillRect(i, 15 - i, 1, 1);
+    ctx.fillStyle = '#281e0b'; ctx.fillRect(i + 1, 16 - i, 1, 1);
   }
 }
 
@@ -514,13 +513,13 @@ function drawItemIcon(canvas, itemId) {
     const pal = TIER_PALETTE[PICKAXE_COLORS[itemId]];
     drawDiagonalHandle(ctx, 2, 12);
     ctx.fillStyle = pal.dark; ctx.fillRect(7, 1, 7, 2); ctx.fillRect(13, 2, 2, 6); ctx.fillRect(6, 3, 2, 2);
-    ctx.fillStyle = pal.base; ctx.fillRect(8, 2, 6, 2); ctx.fillRect(12, 4, 2, 4); ctx.fillRect(7, 3, 2, 2);
+    ctx.fillStyle = pal.base; ctx.fillRect(8, 2, 5, 2); ctx.fillRect(12, 4, 2, 3); ctx.fillRect(7, 3, 2, 2);
     ctx.fillStyle = pal.hi; ctx.fillRect(8, 2, 3, 1); ctx.fillRect(7, 3, 1, 1);
   } else if (SWORD_COLORS[itemId]) {
     const pal = TIER_PALETTE[SWORD_COLORS[itemId]];
     ctx.fillStyle = pal.dark; ctx.fillRect(1, 13, 2, 2);
     ctx.fillStyle = '#7a542e'; ctx.fillRect(2, 12, 3, 3);
-    ctx.fillStyle = '#b45309'; ctx.fillRect(3, 8, 2, 2); ctx.fillRect(6, 11, 2, 2);
+    ctx.fillStyle = '#3d2810'; ctx.fillRect(3, 8, 2, 2); ctx.fillRect(6, 11, 2, 2);
     ctx.fillStyle = '#facc15'; ctx.fillRect(4, 9, 4, 2);
     for (let i = 5; i <= 13; i++) {
       ctx.fillStyle = pal.dark; ctx.fillRect(i + 1, 15 - i, 2, 2);
@@ -529,19 +528,19 @@ function drawItemIcon(canvas, itemId) {
     }
   } else if (itemId === BLOCK.TOOL_AXE) {
     drawDiagonalHandle(ctx, 2, 12);
-    ctx.fillStyle = '#0369a1'; ctx.fillRect(7, 1, 6, 6); ctx.fillRect(6, 3, 4, 6);
-    ctx.fillStyle = '#5decf5'; ctx.fillRect(8, 2, 5, 5); ctx.fillRect(7, 4, 3, 4);
-    ctx.fillStyle = '#e0f2fe'; ctx.fillRect(8, 2, 3, 2); ctx.fillRect(7, 4, 2, 2);
+    ctx.fillStyle = '#113832'; ctx.fillRect(7, 1, 6, 6); ctx.fillRect(6, 3, 4, 6);
+    ctx.fillStyle = '#2be4eb'; ctx.fillRect(8, 2, 4, 4); ctx.fillRect(7, 4, 3, 3);
+    ctx.fillStyle = '#a5f3fc'; ctx.fillRect(8, 2, 3, 2); ctx.fillRect(7, 4, 2, 2);
   } else if (itemId === BLOCK.TOOL_SHOVEL) {
     drawDiagonalHandle(ctx, 2, 10);
-    ctx.fillStyle = '#0369a1'; ctx.fillRect(9, 1, 6, 6);
-    ctx.fillStyle = '#5decf5'; ctx.fillRect(10, 2, 4, 4); ctx.fillRect(11, 1, 3, 2);
-    ctx.fillStyle = '#e0f2fe'; ctx.fillRect(11, 2, 2, 2);
+    ctx.fillStyle = '#113832'; ctx.fillRect(9, 1, 6, 6);
+    ctx.fillStyle = '#2be4eb'; ctx.fillRect(10, 2, 4, 4); ctx.fillRect(11, 1, 3, 2);
+    ctx.fillStyle = '#a5f3fc'; ctx.fillRect(11, 2, 2, 2);
   } else if (itemId === BLOCK.TOOL_HOE) {
     drawDiagonalHandle(ctx, 2, 12);
-    ctx.fillStyle = '#0369a1'; ctx.fillRect(7, 1, 7, 3); ctx.fillRect(6, 3, 3, 2);
-    ctx.fillStyle = '#5decf5'; ctx.fillRect(8, 2, 6, 2); ctx.fillRect(7, 3, 2, 2);
-    ctx.fillStyle = '#e0f2fe'; ctx.fillRect(8, 2, 3, 1);
+    ctx.fillStyle = '#113832'; ctx.fillRect(7, 1, 7, 3); ctx.fillRect(6, 3, 3, 2);
+    ctx.fillStyle = '#2be4eb'; ctx.fillRect(8, 2, 5, 2); ctx.fillRect(7, 3, 2, 2);
+    ctx.fillStyle = '#a5f3fc'; ctx.fillRect(8, 2, 3, 1);
   } else if (itemId === BLOCK.TOOL_SHEARS) {
     ctx.fillStyle = '#78350f'; ctx.fillRect(1, 11, 4, 4); ctx.fillRect(4, 12, 4, 4);
     ctx.fillStyle = '#b45309'; ctx.fillRect(2, 11, 3, 3); ctx.fillRect(5, 12, 3, 3);
@@ -549,10 +548,10 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#e2e8f0'; ctx.fillRect(5, 6, 7, 2); ctx.fillRect(8, 3, 2, 7);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(6, 6, 4, 1); ctx.fillRect(8, 3, 1, 4);
   } else if (itemId === BLOCK.TOOL_FLINT_AND_STEEL) {
-    ctx.fillStyle = '#64748b'; ctx.fillRect(2, 3, 7, 3); ctx.fillRect(2, 5, 3, 7); ctx.fillRect(2, 10, 6, 3);
+    ctx.fillStyle = '#334155'; ctx.fillRect(2, 3, 7, 3); ctx.fillRect(2, 5, 3, 7); ctx.fillRect(2, 10, 6, 3);
     ctx.fillStyle = '#cbd5e1'; ctx.fillRect(3, 4, 5, 2); ctx.fillRect(3, 6, 2, 5); ctx.fillRect(3, 10, 5, 2);
     ctx.fillStyle = '#0f172a'; ctx.fillRect(8, 6, 6, 7);
-    ctx.fillStyle = '#334155'; ctx.fillRect(9, 7, 4, 5); ctx.fillStyle = '#64748b'; ctx.fillRect(10, 8, 2, 2);
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(9, 7, 4, 5); ctx.fillStyle = '#475569'; ctx.fillRect(10, 8, 2, 2);
     ctx.fillStyle = '#f97316'; ctx.fillRect(7, 2, 3, 3); ctx.fillStyle = '#fef08a'; ctx.fillRect(8, 2, 1, 2);
   } else if (itemId === BLOCK.ITEM_STICK) {
     drawDiagonalHandle(ctx, 3, 12);
@@ -585,12 +584,12 @@ function drawItemIcon(canvas, itemId) {
     }
   } else if (itemId === BLOCK.TOOL_BOW) {
     ctx.fillStyle = '#cbd5e1'; for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
-    ctx.fillStyle = '#451a03'; ctx.fillRect(5, 1, 5, 2); ctx.fillRect(10, 4, 2, 8); ctx.fillRect(5, 13, 5, 2);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(5, 2, 4, 2); ctx.fillRect(9, 4, 2, 8); ctx.fillRect(5, 12, 4, 2);
-    ctx.fillStyle = '#fef08a'; ctx.fillRect(3, 7, 10, 2); ctx.fillStyle = '#e2e8f0'; ctx.fillRect(12, 7, 2, 2);
+    ctx.fillStyle = '#281e0b'; ctx.fillRect(5, 1, 5, 2); ctx.fillRect(10, 4, 2, 8); ctx.fillRect(5, 13, 5, 2);
+    ctx.fillStyle = '#896727'; ctx.fillRect(5, 2, 4, 2); ctx.fillRect(9, 4, 2, 8); ctx.fillRect(5, 12, 4, 2);
+    ctx.fillStyle = '#facc15'; ctx.fillRect(6, 7, 5, 1);
   } else if (isArmorItem(itemId)) {
     const isDia = itemId >= BLOCK.ARMOR_DIAMOND_HELMET, sIdx = getArmorSlotForItem(itemId);
-    const darkC = isDia ? '#0369a1' : '#334155', midC = isDia ? '#0284c7' : '#64748b', hiC = isDia ? '#5decf5' : '#e2e8f0', glintC = isDia ? '#e0f2fe' : '#ffffff';
+    const darkC = isDia ? '#113832' : '#333333', midC = isDia ? '#1b7a6e' : '#737373', hiC = isDia ? '#2be4eb' : '#dcdcdc', glintC = isDia ? '#a5f3fc' : '#ffffff';
     ctx.fillStyle = darkC;
     if (sIdx === 0) {
       ctx.fillRect(1, 2, 14, 11); ctx.fillStyle = midC; ctx.fillRect(2, 3, 12, 9);
@@ -620,20 +619,20 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#cbd5e1'; for (let i = 4; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(2, 11, 4, 3); ctx.fillRect(10, 2, 4, 3);
   } else if (itemId === BLOCK.ITEM_BONE_MEAL) {
-    ctx.fillStyle = '#94a3b8'; ctx.fillRect(2, 8, 12, 6);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(3, 7, 10, 6);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(5, 5, 6, 6); ctx.fillRect(4, 8, 8, 4);
+    ctx.fillStyle = '#64748b'; ctx.fillRect(2, 8, 12, 6);
+    ctx.fillStyle = '#b8bcc8'; ctx.fillRect(3, 7, 10, 6);
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(5, 5, 5, 5);
   } else if (itemId === BLOCK.ITEM_RAW_PORKCHOP || itemId === BLOCK.ITEM_COOKED_PORKCHOP) {
     const isCooked = itemId === BLOCK.ITEM_COOKED_PORKCHOP;
-    ctx.fillStyle = isCooked ? '#451a03' : '#881337'; ctx.fillRect(2, 3, 12, 10);
-    ctx.fillStyle = isCooked ? '#92400e' : '#be123c'; ctx.fillRect(3, 4, 10, 8);
-    ctx.fillStyle = isCooked ? '#f59e0b' : '#fda4af'; ctx.fillRect(4, 5, 8, 6);
+    ctx.fillStyle = isCooked ? '#6b4c28' : '#881337'; ctx.fillRect(2, 3, 12, 10);
+    ctx.fillStyle = isCooked ? '#a8844c' : '#be123c'; ctx.fillRect(3, 4, 10, 8);
+    ctx.fillStyle = isCooked ? '#e8bd68' : '#fda4af'; ctx.fillRect(4, 5, 8, 6);
     ctx.fillStyle = '#fef2f2'; ctx.fillRect(9, 6, 2, 2);
   } else if (itemId === BLOCK.ITEM_RAW_FISH || itemId === BLOCK.ITEM_COOKED_FISH) {
     const isCooked = itemId === BLOCK.ITEM_COOKED_FISH;
-    ctx.fillStyle = isCooked ? '#78350f' : '#0369a1'; ctx.fillRect(2, 4, 10, 8);
-    ctx.fillStyle = isCooked ? '#b45309' : '#0284c7'; ctx.fillRect(3, 5, 9, 6); ctx.fillRect(11, 4, 3, 8);
-    ctx.fillStyle = isCooked ? '#fbbf24' : '#7dd3fc'; ctx.fillRect(4, 6, 7, 4);
+    ctx.fillStyle = isCooked ? '#785634' : '#7c5838'; ctx.fillRect(2, 4, 10, 8);
+    ctx.fillStyle = isCooked ? '#b08858' : '#b88656'; ctx.fillRect(3, 5, 9, 6); ctx.fillRect(11, 4, 3, 8);
+    ctx.fillStyle = isCooked ? '#ebbc78' : '#deb284'; ctx.fillRect(4, 6, 7, 4);
     ctx.fillStyle = '#0f172a'; ctx.fillRect(4, 6, 2, 2);
   } else if (itemId === BLOCK.ITEM_APPLE || itemId === BLOCK.ITEM_GOLDEN_APPLE) {
     const isGold = itemId === BLOCK.ITEM_GOLDEN_APPLE;
@@ -649,9 +648,9 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#fbbf24'; ctx.fillRect(4, 6, 8, 3);
     ctx.fillStyle = '#fef08a'; ctx.fillRect(5, 6, 1, 2); ctx.fillRect(8, 6, 1, 2);
   } else if (itemId === BLOCK.ITEM_MINECART) {
-    ctx.fillStyle = '#64748b'; ctx.fillRect(1, 4, 14, 8);
-    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(2, 5, 12, 6);
-    ctx.fillStyle = '#475569'; ctx.fillRect(4, 6, 8, 3);
+    ctx.fillStyle = '#334155'; ctx.fillRect(1, 4, 14, 8);
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(2, 5, 12, 5);
+    ctx.fillStyle = '#334155'; ctx.fillRect(4, 6, 8, 4);
     ctx.fillStyle = '#1e293b'; ctx.fillRect(3, 11, 3, 3); ctx.fillRect(10, 11, 3, 3);
   } else if (itemId === BLOCK.ITEM_BOAT) {
     ctx.fillStyle = '#451a03'; ctx.fillRect(1, 7, 14, 7);

@@ -3243,7 +3243,7 @@
             [B.TOOL_IRON_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 215 && px(8, 2)[0] > 245,
             [B.TOOL_GOLD_PICKAXE]:         (px) => px(5, 10)[0] > 110 && px(11, 2)[0] > 235 && px(11, 2)[1] > 190 && px(11, 2)[2] < 50,
             [B.TOOL_SWORD]:                (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[2] > 230,
-            [B.TOOL_WOOD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 150 && px(10, 5)[2] < 30,
+            [B.TOOL_WOOD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 150 && px(10, 5)[2] < 45,
             [B.TOOL_STONE_SWORD]:          (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 130 && Math.abs(px(10, 5)[0] - px(10, 5)[1]) < 30,
             [B.TOOL_IRON_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(10, 5)[0] > 215,
             [B.TOOL_GOLD_SWORD]:           (px) => px(3, 13)[0] > 100 && px(5, 9)[0] > 230 && px(11, 5)[0] > 235 && px(11, 5)[2] < 50,
@@ -3279,9 +3279,9 @@
             [B.ITEM_GOLDEN_APPLE]:         (px) => px(9, 2)[1] > 180 && px(7, 8)[0] > 220 && px(7, 8)[1] > 165,
             [B.ITEM_BREAD]:                (px) => px(7, 7)[0] > 235 && px(7, 7)[1] > 175 && px(3, 9)[0] > 195,
             [B.ITEM_RAW_PORKCHOP]:         (px) => px(6, 7)[0] > 240 && px(6, 7)[1] > 150 && px(9, 6)[0] > 245,
-            [B.ITEM_COOKED_PORKCHOP]:      (px) => px(6, 7)[0] > 230 && px(6, 7)[2] < 40 && px(9, 6)[0] > 245,
-            [B.ITEM_RAW_FISH]:             (px) => px(7, 7)[2] > 235 && px(4, 6)[0] < 30 && px(12, 5)[2] > 180,
-            [B.ITEM_COOKED_FISH]:          (px) => px(7, 7)[0] > 235 && px(7, 7)[2] < 60 && px(4, 6)[0] < 30,
+            [B.ITEM_COOKED_PORKCHOP]:      (px) => px(6, 7)[0] > 220 && px(6, 7)[1] > 175 && px(9, 6)[0] > 245,
+            [B.ITEM_RAW_FISH]:             (px) => px(7, 7)[0] > 210 && px(4, 6)[0] < 30 && px(12, 5)[0] > 170,
+            [B.ITEM_COOKED_FISH]:          (px) => px(7, 7)[0] >= 230 && px(7, 7)[1] > 175 && px(4, 6)[0] < 30,
             [B.ITEM_MINECART]:             (px) => px(3, 7)[0] > 190 && px(7, 7)[0] < 90 && px(4, 12)[0] < 45,
             [B.ITEM_BOAT]:                 (px) => px(7, 9)[0] > 195 && px(6, 4)[0] > 240 && px(2, 10)[0] < 135,
             [B.ITEM_COMPASS]:              (px) => px(7, 7)[0] > 220 && px(7, 7)[1] < 80 && px(5, 5)[0] > 190,
@@ -3321,6 +3321,134 @@
             assert(checkFn(px) === true, `La firma pixel-art estilo Minecraft Default Pack de BLOCK.${key} (id=${id}) no cumple el contrato`);
           }
           vc.setTimeOfDay(5.82);
+        });
+
+        it('Compara las texturas procedurales contra los archivos PNG oficiales descargados en mc-reference/assets/minecraft/textures/', async () => {
+          const B = vc.BLOCK;
+          const loadRefStats = (relPath) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              const cv = doc.createElement('canvas');
+              cv.width = 16; cv.height = 16;
+              const ctx = cv.getContext('2d');
+              ctx.drawImage(img, 0, 0, 16, Math.min(16, img.height), 0, 0, 16, 16);
+              const d = ctx.getImageData(0, 0, 16, 16).data;
+              let rSum = 0, gSum = 0, bSum = 0, op = 0;
+              for (let i = 0; i < 256; i++) {
+                if (d[i * 4 + 3] > 20) {
+                  rSum += d[i * 4]; gSum += d[i * 4 + 1]; bSum += d[i * 4 + 2]; op++;
+                }
+              }
+              resolve({ width: img.width, height: img.height, opaque: op, r: op ? rSum / op : 0, g: op ? gSum / op : 0, b: op ? bSum / op : 0 });
+            };
+            img.onerror = () => reject(new Error(`No se pudo cargar mc-reference/assets/minecraft/textures/${relPath}`));
+            img.src = `./mc-reference/assets/minecraft/textures/${relPath}`;
+          });
+
+          const getOurTileStats = (tileIdx) => {
+            const d = vc.atlasCanvas.getContext('2d').getImageData(tileIdx * 16, 0, 16, 16).data;
+            let rSum = 0, gSum = 0, bSum = 0, op = 0;
+            for (let i = 0; i < 256; i++) {
+              if (d[i * 4 + 3] > 20) { rSum += d[i * 4]; gSum += d[i * 4 + 1]; bSum += d[i * 4 + 2]; op++; }
+            }
+            return { opaque: op, r: op ? rSum / op : 0, g: op ? gSum / op : 0, b: op ? bSum / op : 0 };
+          };
+
+          const getOurItemStats = (itemId) => {
+            const cv = doc.createElement('canvas'); cv.width = 16; cv.height = 16;
+            vc.drawItemIcon(cv, itemId);
+            const d = cv.getContext('2d').getImageData(0, 0, 16, 16).data;
+            let rSum = 0, gSum = 0, bSum = 0, op = 0;
+            for (let i = 0; i < 256; i++) {
+              if (d[i * 4 + 3] > 20) { rSum += d[i * 4]; gSum += d[i * 4 + 1]; bSum += d[i * 4 + 2]; op++; }
+            }
+            return { opaque: op, r: op ? rSum / op : 0, g: op ? gSum / op : 0, b: op ? bSum / op : 0 };
+          };
+
+          // 1) Verificar texturas de referencia de bloques (mc-reference/assets/minecraft/textures/block/*.png)
+          const BLOCK_REF_MAP = [
+            [1, 'block/grass_block_side.png', false], [2, 'block/dirt.png', true], [3, 'block/stone.png', true],
+            [4, 'block/sand.png', true], [5, 'block/oak_log.png', true], [6, 'block/oak_log_top.png', true],
+            [8, 'block/oak_planks.png', true], [9, 'block/cobblestone.png', true], [10, 'block/bricks.png', true],
+            [11, 'block/glass.png', false], [13, 'block/snow.png', true], [14, 'block/grass_block_snow.png', false],
+            [15, 'block/glowstone.png', true], [16, 'block/bedrock.png', true], [17, 'block/coal_ore.png', true],
+            [18, 'block/iron_ore.png', true], [19, 'block/gold_ore.png', true], [20, 'block/diamond_ore.png', true],
+            [21, 'block/torch.png', false], [23, 'block/poppy.png', false], [24, 'block/dandelion.png', false],
+            [25, 'block/cactus_side.png', false], [72, 'block/cactus_top.png', false], [73, 'block/cactus_bottom.png', false],
+            [26, 'block/tnt_side.png', true], [27, 'block/tnt_top.png', true], [74, 'block/tnt_bottom.png', true],
+            [28, 'block/lava_still.png', true], [29, 'block/obsidian.png', true], [32, 'block/redstone_lamp.png', true],
+            [33, 'block/redstone_lamp_on.png', true], [34, 'block/oak_sapling.png', false], [38, 'block/amethyst_block.png', true],
+            [40, 'block/slime_block.png', false], [42, 'block/ladder.png', false], [43, 'block/oak_trapdoor.png', false],
+            [44, 'block/rail.png', false], [48, 'block/piston_side.png', true], [78, 'block/piston_top.png', true],
+            [79, 'block/piston_bottom.png', true], [50, 'block/ice.png', true], [51, 'block/crafting_table_top.png', true],
+            [52, 'block/crafting_table_front.png', true], [76, 'block/crafting_table_side.png', true], [53, 'block/furnace_top.png', true],
+            [54, 'block/furnace_front_on.png', true], [77, 'block/furnace_side.png', true], [55, 'block/iron_block.png', true],
+            [56, 'block/gold_block.png', true], [57, 'block/diamond_block.png', true], [58, 'block/bookshelf.png', true],
+            [59, 'block/cake_top.png', false], [80, 'block/cake_bottom.png', false], [60, 'block/cake_side.png', false],
+            [61, 'block/red_bed_head_up.png', true], [62, 'block/red_bed_foot_east.png', false],
+            [63, 'block/anvil.png', true], [81, 'block/anvil_top.png', false], [64, 'block/enchanting_table_top.png', true],
+            [65, 'block/enchanting_table_side.png', false], [66, 'block/gravel.png', true], [67, 'block/clay.png', true],
+            [68, 'block/white_wool.png', true], [69, 'block/netherrack.png', true], [70, 'block/end_stone.png', true],
+            [71, 'block/emerald_block.png', true]
+          ];
+          for (const [tileIdx, refFile, checkColor] of BLOCK_REF_MAP) {
+            const ref = await loadRefStats(refFile);
+            const ours = getOurTileStats(tileIdx);
+            assert(ref.width >= 16 && ref.height >= 16 && ref.opaque > 0, `La textura oficial ${refFile} debe existir en mc-reference/`);
+            if (checkColor) {
+              const dist = Math.hypot(ours.r - ref.r, ours.g - ref.g, ours.b - ref.b);
+              assert(dist < 88, `El tile ${tileIdx} debe mantener fidelidad cromática respecto a ${refFile} en mc-reference (dist=${dist.toFixed(1)})`);
+            }
+          }
+
+          // 2) Verificar texturas de referencia de los 52 ítems (mc-reference/assets/minecraft/textures/item/*.png)
+          const ITEM_REF_MAP = [
+            [B.TOOL_PICKAXE, 'item/diamond_pickaxe.png'], [B.TOOL_WOOD_PICKAXE, 'item/wooden_pickaxe.png'],
+            [B.TOOL_STONE_PICKAXE, 'item/stone_pickaxe.png'], [B.TOOL_IRON_PICKAXE, 'item/iron_pickaxe.png'],
+            [B.TOOL_GOLD_PICKAXE, 'item/golden_pickaxe.png'], [B.TOOL_SWORD, 'item/diamond_sword.png'],
+            [B.TOOL_WOOD_SWORD, 'item/wooden_sword.png'], [B.TOOL_STONE_SWORD, 'item/stone_sword.png'],
+            [B.TOOL_IRON_SWORD, 'item/iron_sword.png'], [B.TOOL_GOLD_SWORD, 'item/golden_sword.png'],
+            [B.TOOL_AXE, 'item/diamond_axe.png'], [B.TOOL_SHOVEL, 'item/diamond_shovel.png'],
+            [B.TOOL_HOE, 'item/diamond_hoe.png'], [B.TOOL_SHEARS, 'item/shears.png'],
+            [B.TOOL_FLINT_AND_STEEL, 'item/flint_and_steel.png'], [B.TOOL_FISHING_ROD, 'item/fishing_rod.png'],
+            [B.TOOL_BOW, 'item/bow.png'], [B.ITEM_STICK, 'item/stick.png'], [B.ITEM_COAL, 'item/coal.png'],
+            [B.ITEM_IRON_INGOT, 'item/iron_ingot.png'], [B.ITEM_GOLD_INGOT, 'item/gold_ingot.png'],
+            [B.ITEM_DIAMOND, 'item/diamond.png'], [B.ITEM_EMERALD, 'item/emerald.png'],
+            [B.ITEM_ENDER_PEARL, 'item/ender_pearl.png'], [B.ITEM_BONE, 'item/bone.png'],
+            [B.ITEM_BONE_MEAL, 'item/bone_meal.png'], [B.ITEM_BUCKET, 'item/bucket.png'],
+            [B.ITEM_WATER_BUCKET, 'item/water_bucket.png'], [B.ITEM_LAVA_BUCKET, 'item/lava_bucket.png'],
+            [B.ARMOR_IRON_HELMET, 'item/iron_helmet.png'], [B.ARMOR_IRON_CHESTPLATE, 'item/iron_chestplate.png'],
+            [B.ARMOR_IRON_LEGGINGS, 'item/iron_leggings.png'], [B.ARMOR_IRON_BOOTS, 'item/iron_boots.png'],
+            [B.ARMOR_DIAMOND_HELMET, 'item/diamond_helmet.png'], [B.ARMOR_DIAMOND_CHESTPLATE, 'item/diamond_chestplate.png'],
+            [B.ARMOR_DIAMOND_LEGGINGS, 'item/diamond_leggings.png'], [B.ARMOR_DIAMOND_BOOTS, 'item/diamond_boots.png'],
+            [B.ITEM_APPLE, 'item/apple.png'], [B.ITEM_GOLDEN_APPLE, 'item/golden_apple.png'],
+            [B.ITEM_BREAD, 'item/bread.png'], [B.ITEM_RAW_PORKCHOP, 'item/porkchop.png'],
+            [B.ITEM_COOKED_PORKCHOP, 'item/cooked_porkchop.png'], [B.ITEM_RAW_FISH, 'item/cod.png'],
+            [B.ITEM_COOKED_FISH, 'item/cooked_cod.png'], [B.ITEM_MINECART, 'item/minecart.png'],
+            [B.ITEM_BOAT, 'item/oak_boat.png'], [B.ITEM_COMPASS, 'item/compass_16.png'],
+            [B.ITEM_CLOCK, 'item/clock_00.png'], [B.ITEM_PAPER, 'item/paper.png'],
+            [B.ITEM_EMPTY_MAP, 'item/map.png'], [B.ITEM_MAP, 'item/filled_map.png']
+          ];
+          for (const [itemId, refFile] of ITEM_REF_MAP) {
+            const ref = await loadRefStats(refFile);
+            const ours = getOurItemStats(itemId);
+            assert(ref.width === 16 && ref.opaque > 10 && ref.opaque < 240, `El sprite oficial ${refFile} en mc-reference/ debe ser un icono recortado 16×16 válido`);
+            const dist = Math.hypot(ours.r - ref.r, ours.g - ref.g, ours.b - ref.b);
+            assert(dist < 95, `El icono de ${vc.BLOCK_DEFS[itemId].name} debe mantener fidelidad cromática respecto a ${refFile} en mc-reference (dist=${dist.toFixed(1)})`);
+          }
+
+          // 3) Verificar texturas de referencia de las 12 criaturas + cofre y cama (mc-reference/assets/minecraft/textures/entity/**)
+          const ENTITY_REF_FILES = [
+            'entity/zombie/zombie.png', 'entity/skeleton/skeleton.png', 'entity/creeper/creeper.png',
+            'entity/iron_golem/iron_golem.png', 'entity/sheep/sheep.png', 'entity/sheep/sheep_wool.png',
+            'entity/pig/pig_temperate.png', 'entity/cow/cow_temperate.png', 'entity/chicken/chicken_temperate.png',
+            'entity/spider/spider.png', 'entity/enderman/enderman.png', 'entity/wolf/wolf.png',
+            'entity/slime/slime.png', 'entity/chest/normal.png'
+          ];
+          for (const entFile of ENTITY_REF_FILES) {
+            const ref = await loadRefStats(entFile);
+            assert(ref.width >= 32 && ref.height >= 16, `La textura de entidad oficial ${entFile} debe existir en mc-reference/`);
+          }
         });
       });
 
