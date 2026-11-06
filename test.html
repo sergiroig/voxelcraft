@@ -958,18 +958,18 @@
           assert(Math.abs(vc.gpuShaderUniforms.uWindStrength.value - 2.2) < 1e-3, 'La tormenta debe subir uWindStrength a 2.2');
         });
 
-        it('Cambia automáticamente a Nieve en altitudes altas/Taiga y dispara relámpagos con trueno', () => {
-          const prevY = vc.player.y;
-          vc.player.y = 48; // High altitude snow zone
+        it('Cambia automáticamente a Nieve en Taiga Nevada/Cumbres Heladas y dispara relámpagos con trueno', () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          vc.teleportToBiome('Taiga Nevada');
           vc.updateWeather(0.05);
-          assert(vc.getWeatherState().isSnowing === true, 'En cota alta o Taiga Nevada debe nevar (isSnowing=true)');
+          assert(vc.getWeatherState().isSnowing === true, 'En Taiga Nevada debe nevar (isSnowing=true)');
 
           const flashesBefore = vc.getWeatherState().lightningCount;
           vc.triggerLightningFlash();
           assert(vc.getWeatherState().lightningCount === flashesBefore + 1, 'triggerLightningFlash() debe registrar el relámpago');
           assert(vc.getWeatherState().lightningFlash > 0.5, 'El destello del relámpago debe estar activo');
 
-          vc.player.y = prevY;
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.toggleWeather('clear');
           assert(vc.weatherInstanced.visible === false, 'En modo despejado weatherInstanced debe ocultarse');
         });
@@ -2541,7 +2541,7 @@
         it('Adapta las precipitaciones al bioma: Tormenta de Arena en Desierto/Meseta, Nieve en biomas helados y Lluvia en templados', () => {
           const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
 
-          // 1) Desierto -> Tormenta de Arena (isSandstorm = true, color ocre 0xeab308 de día y cielo nocturno oscuro sin teñirse de amarillo de noche)
+          // 1) Desierto -> Sin cielo amarillo ni partículas amarillas en ningún horario o altura
           const origTimeSand = vc.getState().timeOfDay;
           vc.setTimeOfDay(0.0);
           vc.teleportToBiome('Desierto');
@@ -2549,12 +2549,13 @@
           vc.toggleWeather('rain');
           vc.updateWeather(0.016);
           let ws = vc.getWeatherState();
-          assert(ws.isSandstorm === true && ws.isSnowing === false, 'En el bioma Desierto el clima activo debe transformarse en Tormenta de Arena (isSandstorm=true)');
-          assert(vc.weatherInstanced.material.color.getHex() === 0xeab308, 'Las partículas de la Tormenta de Arena deben teñirse de color arena dorada (0xeab308) a pleno sol');
+          assert(ws.isSandstorm === false && ws.isSnowing === false, 'En el Desierto no deben caer partículas amarillas ni cambiar el clima con la altura');
+          const c = vc.weatherInstanced.material.color;
+          assert(Math.abs(c.r - c.b) < 1e-4, 'Las gotas de lluvia nunca deben teñirse de amarillo');
           vc.setTimeOfDay(Math.PI);
           vc.updateWeather(0.016);
           vc.updateGPUShaders(0.016);
-          assert(vc.scene.background.r < 0.08 && vc.scene.background.g < 0.08 && vc.weatherInstanced.material.opacity <= 0.05, 'De noche en el Desierto el cielo NO debe verse amarillo y el polvo en suspensión debe atenuarse');
+          assert(vc.scene.background.r < 0.08 && vc.scene.background.g < 0.08 && vc.weatherInstanced.material.opacity <= 0.05, 'De noche el cielo debe mantenerse oscuro y sin tinte amarillo');
           vc.setTimeOfDay(origTimeSand);
           vc.player.y = 5; vc.updateWeather(0.016);
           let visibleCaveDrops = 0;

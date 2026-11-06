@@ -428,10 +428,9 @@ function updateGPUShaders(dt) {
     scene.fog.color.copy(currentSkyColor); scene.background.copy(currentSkyColor);
     if (typeof weatherMode !== 'undefined' && weatherMode !== 'clear') {
       const dayK = THREE.MathUtils.smoothstep(sunFactor, 0.30, 0.88);
-      const tint = (typeof isSandstorm !== 'undefined' && isSandstorm) ? 0x9a7b56 : 0x334155;
       const strength = (weatherMode === 'storm' ? 0.24 : 0.14) * dayK;
-      scene.fog.color.lerp(dummyColor.setHex(tint), strength);
-      scene.background.lerp(dummyColor.setHex(tint), strength);
+      scene.fog.color.lerp(dummyColor.setHex(0x334155), strength);
+      scene.background.lerp(dummyColor.setHex(0x334155), strength);
     }
     scene.fog.density = 0.055 / renderDistance;
   }
