@@ -458,7 +458,7 @@ function placeBlockAtCurrentTarget() {
     player.swingTime = 1.0; return true;
   }
 
-  if (bId === BLOCK.AIR || isNonStackTool(bId) || bId >= 100) return false;
+  if (bId === BLOCK.AIR || isNonStackTool(bId) || bId >= 256) return false;
   if (gameMode === 'survival' && (inventoryCounts[bId] || 0) <= 0) return false;
 
   const isReplaceable = currentHit.block === BLOCK.TALL_GRASS;

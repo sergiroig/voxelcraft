@@ -16,6 +16,9 @@ function getArmorDefenseRatio() {
     const id = armorSlots[i];
     if (id >= BLOCK.ARMOR_DIAMOND_HELMET && id <= BLOCK.ARMOR_DIAMOND_BOOTS) def += 0.18 + getItemEnchantLevel(id) * 0.025;
     else if (id >= BLOCK.ARMOR_IRON_HELMET && id <= BLOCK.ARMOR_IRON_BOOTS) def += 0.12 + getItemEnchantLevel(id) * 0.025;
+    else if (id === BLOCK.ARMOR_TURTLE_HELMET) def += 0.12 + getItemEnchantLevel(id) * 0.025;
+    else if (id >= BLOCK.ARMOR_NETHERITE_HELMET && id <= BLOCK.ARMOR_NETHERITE_BOOTS) def += 0.21 + getItemEnchantLevel(id) * 0.025;
+    else if (id >= BLOCK.ARMOR_LEATHER_HELMET && id <= BLOCK.ARMOR_GOLD_BOOTS) def += 0.09 + getItemEnchantLevel(id) * 0.025;
   }
   return Math.min(0.85, def);
 }
@@ -327,6 +330,7 @@ function useFlintAndSteelAt(wx, wy, wz, nx = 0, ny = 1, nz = 0) {
 
 // 9. PICKAXE HARVEST TIERS: Wood/Gold (1) -> Stone (2) -> Iron (3) -> Diamond (4)
 function getPickaxeTier(itemId) {
+  if (itemId === BLOCK.TOOL_NETHERITE_PICKAXE) return 5;
   if (itemId === BLOCK.TOOL_PICKAXE) return 4;
   if (itemId === BLOCK.TOOL_IRON_PICKAXE) return 3;
   if (itemId === BLOCK.TOOL_STONE_PICKAXE) return 2;
@@ -335,7 +339,7 @@ function getPickaxeTier(itemId) {
 }
 
 function getRequiredPickaxeTier(blockId) {
-  if (blockId === BLOCK.OBSIDIAN) return 4;
+  if (blockId === BLOCK.OBSIDIAN || blockId === BLOCK.ANCIENT_DEBRIS || blockId === BLOCK.NETHERITE_BLOCK) return 4;
   if (blockId === BLOCK.DIAMOND_ORE || blockId === BLOCK.DIAMOND_BLOCK || blockId === BLOCK.GOLD_ORE || blockId === BLOCK.GOLD_BLOCK || blockId === BLOCK.EMERALD_BLOCK || blockId === BLOCK.AMETHYST) return 3;
   if (blockId === BLOCK.IRON_ORE || blockId === BLOCK.IRON_BLOCK || blockId === BLOCK.ANVIL) return 2;
   if (blockId === BLOCK.COAL_ORE || blockId === BLOCK.FURNACE || blockId === BLOCK.NETHERRACK || blockId === BLOCK.END_STONE) return 1;
@@ -549,6 +553,10 @@ const MC_MOB_TILE_CROPS = [
 
 const MC_CUTOUT_TILES = new Set([11, 21, 22, 23, 24, 30, 31, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 47, 49, 50]);
 const MC_BIOME_TINTS = { 0: [121, 192, 90], 7: [72, 181, 24], 12: [63, 118, 228], 22: [121, 192, 90], 47: [32, 128, 48] };
+if (typeof MC_EXTRA_BLOCK_TILE_FILES !== 'undefined') MC_BLOCK_TILE_FILES.push(...MC_EXTRA_BLOCK_TILE_FILES);
+if (typeof MC_EXTRA_ITEM_SPRITE_FILES !== 'undefined') MC_ITEM_SPRITE_FILES.push(...MC_EXTRA_ITEM_SPRITE_FILES);
+if (typeof MC_EXTRA_MOB_TILE_CROPS !== 'undefined') MC_MOB_TILE_CROPS.push(...MC_EXTRA_MOB_TILE_CROPS);
+for (let t = 82; t < ATLAS_COLS; t++) MC_CUTOUT_TILES.add(t);
 
 async function loadMcReferenceTextures() {
   const uniquePaths = new Set([...MC_BLOCK_TILE_FILES, 'block/grass_block_side_overlay.png', 'item/clock_32.png', 'entity/spider/spider_eyes.png', 'entity/enderman/enderman_eyes.png']);

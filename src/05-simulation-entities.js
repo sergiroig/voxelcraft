@@ -659,7 +659,7 @@ function openVoxelChest(wx, wy, wz) {
     return { action: 'withdrawn', itemId, count, record };
   } else {
     const heldId = getActiveHeldItem();
-    const isTool = (heldId >= 100 && heldId <= 102) || heldId === BLOCK.TOOL_GRAPPLING_HOOK;
+    const isTool = (heldId >= BLOCK.TOOL_PICKAXE && heldId <= BLOCK.TOOL_BOW) || heldId === BLOCK.TOOL_GRAPPLING_HOOK;
     const avail = isTool ? 0 : (gameMode === 'creative' ? 4 : Math.min(4, inventoryCounts[heldId] || 0));
     if (avail > 0) {
       if (gameMode === 'survival') inventoryCounts[heldId] -= avail;

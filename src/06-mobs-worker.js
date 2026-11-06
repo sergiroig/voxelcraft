@@ -9,7 +9,7 @@ const mobs = [];
 let mobSpawnTimer = 0;
 
 // Procedural 35-tile Pixel-Art Mob Atlas (280x8 px, 0 external assets, 0 extra draw calls)
-const MOB_ATLAS_TILES = 35, MOB_ATLAS_W = MOB_ATLAS_TILES * 8;
+const MOB_ATLAS_TILES = 69, MOB_ATLAS_W = MOB_ATLAS_TILES * 8;
 const mobAtlasCanvas = document.createElement('canvas');
 mobAtlasCanvas.width = MOB_ATLAS_W;
 mobAtlasCanvas.height = 8;
@@ -71,6 +71,7 @@ paintMobTile(32, '#cbd5e1', '#94a3b8', (r) => { r(0,0,2,2,'#475569'); r(6,0,2,2,
 paintMobTile(33, '#cbd5e1', '#94a3b8', (r) => { r(0,0,8,2,'#64748b'); });
 // 34: Slime (Gelatinous Green Cube Face & Body)
 paintMobTile(34, '#4ade80', '#22c55e', (r) => { r(1,2,2,2,'#14532d'); r(5,2,2,2,'#14532d'); r(3,5,2,2,'#14532d'); r(2,1,4,4,'#86efac'); r(1,2,2,2,'#14532d'); r(5,2,2,2,'#14532d'); });
+for (let t = 35; t < MOB_ATLAS_TILES; t++) paintMobTile(t, '#94a3b8', '#64748b');
 
 const mobAtlasTexture = new THREE.CanvasTexture(mobAtlasCanvas);
 mobAtlasTexture.magFilter = THREE.NearestFilter;
@@ -735,7 +736,7 @@ try {
 
     const meshData = { solid, water };
     const tApply0 = performance.now();
-    const ch = chunks.get(chunkKey(cx, cz));
+    const ch = chunks.get(chunkKey(cx, cz)) || (job && job.ch);
     if (ch) {
       if (!job || ch.meshVersion === job.version) {
         applyArraysToMesh(ch, meshData, lodLevel || 0);
@@ -769,7 +770,7 @@ function requestChunkMeshWorker(cx, cz, lodLevel = 0) {
   workerJobsInFlight++;
 
   return new Promise((resolve) => {
-    pendingWorkerJobs.set(jobId, { cx, cz, version, packMs, resolve });
+    pendingWorkerJobs.set(jobId, { ch, cx, cz, version, packMs, resolve });
     meshWorker.postMessage(
       { jobId, cx, cz, sunFactor: 1.0, lodLevel, paddedVoxels, paddedLight },
       [paddedVoxels.buffer, paddedLight.buffer]
