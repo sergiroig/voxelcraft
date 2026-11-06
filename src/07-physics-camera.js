@@ -291,10 +291,12 @@ const playerAvatar = (() => {
   const head = new THREE.Mesh(mobGeos.head, skinMat); head.position.set(0, 1.46, 0); grp.add(head);
   const leftArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat); leftArm.position.set(-0.32, 0.94, 0); grp.add(leftArm);
   const rightArm = new THREE.Mesh(mobGeos.limbBiped, shirtMat); rightArm.position.set(0.32, 0.94, 0); grp.add(rightArm);
+  const heldIcon = new THREE.Mesh(handIconGeo, new THREE.MeshBasicMaterial({ map: handIconTex, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide }));
+  heldIcon.position.set(0, -0.30, -0.18); heldIcon.rotation.y = Math.PI / 2; heldIcon.visible = false; rightArm.add(heldIcon);
   const leftLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat); leftLeg.position.set(-0.12, 0.31, 0); grp.add(leftLeg);
   const rightLeg = new THREE.Mesh(mobGeos.limbBiped, pantsMat); rightLeg.position.set(0.12, 0.31, 0); grp.add(rightLeg);
 
-  grp.userData = { head, torso, leftArm, rightArm, leftLeg, rightLeg };
+  grp.userData = { head, torso, leftArm, rightArm, leftLeg, rightLeg, heldIcon };
   grp.visible = false;
   scene.add(grp);
   return grp;

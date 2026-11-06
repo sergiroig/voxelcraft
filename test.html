@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=28"></iframe>
+    <iframe id="game-frame" src="./index.html?v=29"></iframe>
   </div>
 
   <script>
@@ -1832,6 +1832,35 @@
           vc.closeChestModal();
           vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.AIR);
           delete vc.chestLootMap[key];
+        });
+
+        it('Renderiza el objeto en la mano (handMesh) exactamente igual que su icono de 16×16 píxeles al seleccionarlo', () => {
+          vc.toggleGameMode('creative');
+          for (const testItemId of [vc.BLOCK.TOOL_PICKAXE, vc.BLOCK.CRAFTING_TABLE, vc.BLOCK.ITEM_APPLE, vc.BLOCK.TORCH]) {
+            vc.hotbarSlots[0] = testItemId;
+            vc.updateHotbarSelection(0);
+
+            assert(vc.handMat.map === vc.handIconTex, `Al equipar ${vc.BLOCK_DEFS[testItemId].name}, handMat.map debe ser handIconTex`);
+            assert(vc.handMat.color.getHex() === 0xffffff, 'El color multiplicador de handMat debe ser blanco puro (0xffffff) para no alterar el icono');
+            assert(vc.handMesh.rotation.x === 0 && vc.handMesh.rotation.y === 0 && vc.handMesh.rotation.z === 0, 'handMesh debe estar orientado de frente sin distorsión');
+
+            // Comparar píxel a píxel el canvas de la mano con el icono del slot
+            const refCanvas = doc.createElement('canvas');
+            refCanvas.width = 16; refCanvas.height = 16;
+            vc.drawItemIcon(refCanvas, testItemId);
+            const handPixels = vc.handIconCanvas.getContext('2d').getImageData(0, 0, 16, 16).data;
+            const iconPixels = refCanvas.getContext('2d').getImageData(0, 0, 16, 16).data;
+            let diffPixels = 0;
+            for (let i = 0; i < handPixels.length; i++) {
+              if (handPixels[i] !== iconPixels[i]) diffPixels++;
+            }
+            assert(diffPixels === 0, `La textura del objeto en la mano (${vc.BLOCK_DEFS[testItemId].name}) debe ser 100% idéntica píxel a píxel al icono (diff=${diffPixels})`);
+          }
+
+          // Deseleccionar slot (-1 -> Mano vacía) debe mostrar la mano color piel sin textura de icono
+          vc.updateHotbarSelection(-1);
+          assert(vc.handMat.map === null && vc.handMat.color.getHex() === 0xf1c27d, 'Con la mano vacía (BLOCK.AIR) debe mostrarse el brazo color piel sin icono');
+          vc.toggleGameMode('survival');
         });
       });
 

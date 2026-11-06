@@ -762,6 +762,7 @@ window.__VOXELCRAFT__ = {
   isCraftingTableMode: () => craftingTableMode, openCraftingTable, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
+  handGroup, handMesh, handMat, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,
   player, playerAvatar, toggleCameraMode, toggleZoom, getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
   updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
   chunks, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, mobAtlasCanvas, mobAtlasTexture, mobGeos, activeTNTs,

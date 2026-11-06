@@ -387,37 +387,39 @@ const crackBox = new THREE.Mesh(new THREE.BoxGeometry(1.004, 1.004, 1.004), crac
 crackBox.visible = false;
 scene.add(crackBox);
 
-// 1st-Person Held Block / Pickaxe attached to Camera
+// 1st-Person Held Item / Hand attached to Camera (renders exact 16x16 item icon)
 const handGroup = new THREE.Group();
 camera.add(handGroup);
 handGroup.position.set(0.42, -0.34, -0.58);
 
+const handIconCanvas = document.createElement('canvas');
+handIconCanvas.width = 16; handIconCanvas.height = 16;
+const handIconTex = new THREE.CanvasTexture(handIconCanvas);
+handIconTex.magFilter = THREE.NearestFilter;
+handIconTex.minFilter = THREE.NearestFilter;
+handIconTex.generateMipmaps = false;
+
 const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
-const handMat = new THREE.MeshBasicMaterial({ vertexColors: false, color: 0x5decf5 });
+const handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
+const handMat = new THREE.MeshBasicMaterial({ vertexColors: false, color: 0xf1c27d, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
 const handMesh = new THREE.Mesh(handGeo, handMat);
+handMesh.renderOrder = 999;
 handGroup.add(handMesh);
 
 function updateHeldItemVisual() {
   const bId = getActiveHeldItem();
-  if (bId === BLOCK.AIR) { handMat.color.setHex(0xf1c27d); handMesh.scale.set(0.48, 0.48, 1.15); handMesh.rotation.set(0.35, -0.35, 0.12); return; }
-  const def = BLOCK_DEFS[bId];
-  handMat.color.setHex(def.color || 0xffffff);
-  if (bId === BLOCK.TOOL_PICKAXE || bId === BLOCK.TOOL_SWORD) {
-    handMesh.scale.set(0.28, 1.35, 0.28);
-    handMesh.rotation.set(0.4, 0.3, -0.3);
-  } else if (bId === BLOCK.TOOL_BOW || bId === BLOCK.TOOL_GRAPPLING_HOOK) {
-    handMesh.scale.set(0.24, 1.15, 0.45);
-    handMesh.rotation.set(0.2, 0.15, -0.1);
-  } else if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) {
-    handMesh.scale.set(0.65, 0.65, 0.65);
-    handMesh.rotation.set(0.15, 0.4, 0);
-  } else if (def.shape === 'cross') {
-    handMesh.scale.set(0.32, 1.1, 0.32);
-    handMesh.rotation.set(0.1, 0.4, 0);
-  } else {
-    handMesh.scale.set(1, 1, 1);
-    handMesh.rotation.set(0.2, 0.65, 0);
+  const avHeld = typeof playerAvatar !== 'undefined' && playerAvatar.userData ? playerAvatar.userData.heldIcon : null;
+  if (bId === BLOCK.AIR || typeof drawItemIcon !== 'function') {
+    handMesh.geometry = handGeo; handMat.map = null; handMat.color.setHex(0xf1c27d); handMat.needsUpdate = true;
+    handMesh.scale.set(0.48, 0.48, 1.15); handMesh.rotation.set(0.35, -0.35, 0.12);
+    if (avHeld) avHeld.visible = false;
+    return;
   }
+  drawItemIcon(handIconCanvas, bId);
+  handIconTex.needsUpdate = true;
+  handMesh.geometry = handIconGeo; handMat.map = handIconTex; handMat.color.setHex(0xffffff); handMat.needsUpdate = true;
+  handMesh.scale.set(1, 1, 1); handMesh.rotation.set(0, 0, 0);
+  if (avHeld) avHeld.visible = true;
 }
 
 // Object-Pooled InstancedMesh Particle System (120 particles = 1 Draw Call!)
