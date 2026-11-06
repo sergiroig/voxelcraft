@@ -268,7 +268,7 @@ for (let i = 0; i < MAX_WEATHER_DROPS; i++) {
 }
 
 let weatherMode = 'clear', isSnowing = false, isSandstorm = false;
-let lightningFlash = 0.0, stormThunderAccum = 0.0, lightningCount = 0, autoWeatherTimer = 0.0;
+let lightningFlash = 0.0, stormThunderAccum = 0.0, nextThunderDelay = 38.0, lightningCount = 0, autoWeatherTimer = 0.0;
 const weatherScaleVec = new THREE.Vector3(1, 1, 1), weatherSplashVec = new THREE.Vector3(1, 1, 1), weatherPosVec = new THREE.Vector3(), weatherQuat = new THREE.Quaternion();
 
 function toggleWeather(forceMode) {
@@ -286,7 +286,7 @@ function toggleWeather(forceMode) {
 }
 
 function triggerLightningFlash() {
-  lightningFlash = 1.0; lightningCount++; sfx.play('thunder'); return true;
+  lightningFlash = 0.55 + Math.random() * 0.45; lightningCount++; sfx.play('thunder'); return true;
 }
 
 function updateWeather(dt) {
@@ -313,7 +313,10 @@ function updateWeather(dt) {
   weatherMat.opacity = isSnowing ? (0.12 + 0.32 * dayK) : (0.035 + 0.115 * dayK);
   weatherScaleVec.set(isSnowing ? 1.5 : 0.34, isSnowing ? 0.22 : 0.92, isSnowing ? 1.5 : 0.34);
 
-  if (weatherMode === 'storm') { stormThunderAccum += dt; if (stormThunderAccum > 9.5) { stormThunderAccum = 0; triggerLightningFlash(); } }
+  if (weatherMode === 'storm') {
+    stormThunderAccum += dt;
+    if (stormThunderAccum > nextThunderDelay) { stormThunderAccum = 0; nextThunderDelay = 32.0 + Math.random() * 28.0; triggerLightningFlash(); }
+  }
 
   const fallSpeed = isSnowing ? 3.2 : (isSandstorm ? 5.5 : (weatherMode === 'storm' ? 21.0 : 16.0));
   const px = player.x, py = player.y, pz = player.z, timeVal = gpuShaderUniforms.uTime.value, isRain = !isSnowing && !isSandstorm;

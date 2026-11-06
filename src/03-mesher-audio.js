@@ -584,13 +584,14 @@ class SoundFX {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
       osc.start(now); osc.stop(now + 0.18);
     } else if (type === 'thunder') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(82, now);
-      osc.frequency.exponentialRampToValueAtTime(22, now + 0.75);
-      gain.gain.setValueAtTime(0.28, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+      const prox = 0.2 + Math.random() * 0.8, dur = 0.55 + (1.0 - prox * 0.5) * 0.65, vol = 0.025 + prox * prox * 0.085;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(42 + prox * 34, now);
+      osc.frequency.exponentialRampToValueAtTime(18 + prox * 8, now + dur);
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
       if (this.reverbNode) gain.connect(this.reverbNode);
-      osc.start(now); osc.stop(now + 0.75);
+      osc.start(now); osc.stop(now + dur);
     } else if (type === 'bow') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(280, now);
