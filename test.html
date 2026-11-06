@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=45"></iframe>
+    <iframe id="game-frame" src="./index.html?v=46"></iframe>
   </div>
 
   <script>
@@ -798,7 +798,7 @@
           );
 
           // 2. Pump streaming & wait for any in-flight Worker jobs, then verify zero missing chunk meshes around player
-          for (let step = 0; step < 30; step++) {
+          for (let step = 0; step < 80; step++) {
             vc.updateChunkStreaming();
             if (vc.buildQueue.length === 0 && vc.getWorkerState().workerJobsInFlight === 0) break;
             await new Promise(r => setTimeout(r, 15));
@@ -831,7 +831,7 @@
           // 3. Simulate flying to (29, 24, 22) as in the reported screenshot and verify 0 missing chunk meshes there too
           const savedX = vc.player.x, savedY = vc.player.y, savedZ = vc.player.z;
           vc.player.x = 29; vc.player.y = 24; vc.player.z = 22;
-          for (let step = 0; step < 30; step++) {
+          for (let step = 0; step < 80; step++) {
             vc.updateChunkStreaming();
             if (vc.buildQueue.length === 0 && vc.getWorkerState().workerJobsInFlight === 0) break;
             await new Promise(r => setTimeout(r, 15));
@@ -2654,6 +2654,26 @@
           const dPort = new Uint8Array(vc.CHUNK_VOLUME);
           const pInfo = gen.placeStructureInChunk(dPort, surf, 5, 5, 'ruined_portal');
           assert(pInfo.type === 'ruined_portal' && dPort[idx(8, 28, 8)] === vc.BLOCK.NETHERRACK && dPort[idx(7, 30, 8)] === vc.BLOCK.OBSIDIAN && dPort[idx(9, 33, 8)] === vc.BLOCK.GOLD_BLOCK && dPort[idx(7, 29, 9)] === vc.BLOCK.CHEST, 'El Portal en Ruinas debe incluir Netherrack, marco de Obsidiana coronado con Oro, Lava y Cofre');
+
+          // 5) Cabañas solitarias extremadamente raras (< 1% de chunks) y Pueblos raros estilo Minecraft ('village')
+          let cabinCount = 0, villageCount = 0, totalChecked = 0;
+          for (let cz = -20; cz <= 20; cz++) {
+            for (let cx = -20; cx <= 20; cx++) {
+              totalChecked++;
+              if (gen.isCabinChunk(cx, cz)) cabinCount++;
+              if (gen.isVillageChunk(cx, cz)) villageCount++;
+            }
+          }
+          assert(cabinCount > 0 && cabinCount / totalChecked < 0.01, `Las cabañas solitarias deben ser extremadamente raras (<1% de chunks, obtuvo ${cabinCount}/${totalChecked})`);
+          assert(villageCount >= 4 && villageCount / totalChecked < 0.04, `Los pueblos deben ser raros y agruparse en núcleos de 2×2 chunks (obtuvo ${villageCount}/${totalChecked})`);
+
+          const dVil = new Uint8Array(vc.CHUNK_VOLUME);
+          const vInfo = gen.placeStructureInChunk(dVil, surf, 6, 6, 'village');
+          assert(vInfo.type === 'village', 'placeStructureInChunk debe construir el Pueblo ("village")');
+          assert(dVil[idx(7, 28, 0)] === vc.BLOCK.GRAVEL && dVil[idx(7, 28, 7)] === vc.BLOCK.WATER, 'El Pueblo debe tener calles de Grava y Pozo central con Agua');
+          assert(dVil[idx(2, 29, 2)] === vc.BLOCK.BED && dVil[idx(2, 29, 4)] === vc.BLOCK.BOOKSHELF && dVil[idx(4, 29, 2)] === vc.BLOCK.CRAFTING_TABLE, 'Las casas del Pueblo deben incluir Cama, Estantería y Mesa de Crafteo');
+          assert(dVil[idx(13, 29, 2)] === vc.BLOCK.FURNACE && dVil[idx(11, 29, 2)] === vc.BLOCK.ANVIL && dVil[idx(12, 29, 4)] === vc.BLOCK.CHEST, 'La Herrería del Pueblo debe incluir Horno, Yunque, Lava y Cofre');
+          assert(dVil[idx(12, 28, 12)] === vc.BLOCK.WATER && (dVil[idx(11, 29, 12)] === vc.BLOCK.WHEAT_2 || dVil[idx(11, 29, 12)] === vc.BLOCK.WHEAT_3), 'El Huerto del Pueblo debe tener canal de riego con Agua y cultivos de Trigo');
         });
       });
 

@@ -251,6 +251,21 @@ function createWorldGenerator(seed) {
     return rVal < 0.0095 ? 10 + ((Math.abs(wx + wz)) & 3) : 0;
   }
 
+  function isVillageChunk(cx, cz) {
+    if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false;
+    const rcx = Math.floor(cx / 12), rcz = Math.floor(cz / 12);
+    const regHash = ((Math.imul(rcx, 92837111) ^ Math.imul(rcz, 689287499) ^ Math.imul(seed, 283923481)) >>> 0);
+    if (regHash % 3 !== 0) return false;
+    const vcx = rcx * 12 + 3 + (regHash % 5), vcz = rcz * 12 + 3 + ((regHash >>> 4) % 5);
+    return (cx === vcx || cx === vcx + 1) && (cz === vcz || cz === vcz + 1);
+  }
+
+  function isCabinChunk(cx, cz) {
+    if (cx === 0 && cz === 0) return false;
+    const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
+    return (structHash % 240 === 0);
+  }
+
   // Pre-allocated 5x17x5 coarse 3D noise grid for 4x4x4 trilinear interpolation
   const coarseCave = new Float32Array(5 * 17 * 5);
   const cIdx = (gx, gy, gz) => (gz * 5 + gx) * 17 + gy;
@@ -425,20 +440,24 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 4B: Procedural Structures per Biome (Surface + Subterranean Mineshafts & Dungeons)
+    // Step 4B: Procedural Structures per Biome (Rare Villages, Extremely Rare Cabins, Landmarks & Subterranean)
     const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
     if (notOriginChunk) {
       const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8), centerY = surfaceMap[8 * CHUNK_SIZE + 8];
-      if ((structHash % 8 === 0) && centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12 && data[(8 * CHUNK_SIZE + 8) * CHUNK_HEIGHT + centerY] !== BLOCK.AIR) {
+      const validSurface = centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12 && data[(8 * CHUNK_SIZE + 8) * CHUNK_HEIGHT + centerY] !== BLOCK.AIR;
+      if (validSurface && isVillageChunk(cx, cz) && centerBiome !== 'Cumbres Heladas' && centerBiome !== 'Pantano' && centerBiome !== 'Jungla') {
+        placeStructureInChunk(data, surfaceMap, cx, cz, 'village');
+      } else if (validSurface && isCabinChunk(cx, cz)) {
+        placeStructureInChunk(data, surfaceMap, cx, cz, 'cabin');
+      } else if (validSurface && (structHash % 44 === 0)) {
         const variant = (structHash >>> 4) & 3;
         const sType = variant === 3 ? 'ruined_portal'
           : ((centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
           : ((centerBiome === 'Taiga Nevada' || centerBiome === 'Cumbres Heladas') ? (variant === 2 ? 'watchtower' : 'igloo')
-          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple'
-          : (variant === 2 ? 'watchtower' : 'cabin'))));
+          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple' : 'watchtower')));
         placeStructureInChunk(data, surfaceMap, cx, cz, sType);
       }
-      if ((structHash % 6 === 2) && centerY > SEA_LEVEL) {
+      if ((structHash % 14 === 2) && centerY > SEA_LEVEL) {
         placeStructureInChunk(data, surfaceMap, cx, cz, (structHash & 1) ? 'mineshaft' : 'dungeon');
       }
     }
@@ -457,6 +476,65 @@ function createWorldGenerator(seed) {
       data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId;
     };
 
+    if (type === 'village') {
+      // 1) Gravel roads across the chunk (N-S and E-W) + Central Well at (7..8, 7..8)
+      for (let i = 0; i < CHUNK_SIZE; i++) {
+        for (let r = 7; r <= 8; r++) {
+          const ry1 = surfaceMap ? surfaceMap[i * CHUNK_SIZE + r] : baseY, ry2 = surfaceMap ? surfaceMap[r * CHUNK_SIZE + i] : baseY;
+          setLocal(r, ry1, i, BLOCK.GRAVEL); setLocal(r, ry1 + 1, i, BLOCK.AIR);
+          setLocal(i, ry2, r, BLOCK.GRAVEL); setLocal(i, ry2 + 1, r, BLOCK.AIR);
+        }
+      }
+      for (let dz = 6; dz <= 9; dz++) for (let dx = 6; dx <= 9; dx++) {
+        const isRim = dx === 6 || dx === 9 || dz === 6 || dz === 9, isCorner = (dx === 6 || dx === 9) && (dz === 6 || dz === 9);
+        setLocal(dx, baseY, dz, isRim ? BLOCK.COBBLE : BLOCK.WATER);
+        setLocal(dx, baseY + 1, dz, isRim ? BLOCK.COBBLE : BLOCK.AIR);
+        if (isCorner) { setLocal(dx, baseY + 2, dz, BLOCK.WOOD); setLocal(dx, baseY + 3, dz, BLOCK.WOOD); }
+        setLocal(dx, baseY + 4, dz, BLOCK.PLANKS);
+      }
+      setLocal(6, baseY + 2, 6, BLOCK.TORCH); setLocal(9, baseY + 2, 9, BLOCK.TORCH);
+
+      // 2) Villager House 1 (NW: lx 1..5, lz 1..5) & House 2 (SW: lx 1..5, lz 10..14)
+      for (const z0 of [1, 10]) {
+        for (let dz = 0; dz <= 4; dz++) for (let dx = 0; dx <= 4; dx++) {
+          const lx = 1 + dx, lz = z0 + dz, isCorner = (dx === 0 || dx === 4) && (dz === 0 || dz === 4), isWall = dx === 0 || dx === 4 || dz === 0 || dz === 4;
+          for (let y = baseY - 2; y <= baseY; y++) setLocal(lx, y, lz, BLOCK.COBBLE);
+          for (let dy = 1; dy <= 3; dy++) {
+            if (dx === 4 && dz === 2 && dy <= 2) setLocal(lx, baseY + dy, lz, BLOCK.AIR);
+            else if (isCorner) setLocal(lx, baseY + dy, lz, BLOCK.WOOD);
+            else if (isWall) setLocal(lx, baseY + dy, lz, (dy === 2 && (dx === 2 || dz === 2)) ? BLOCK.GLASS : BLOCK.PLANKS);
+            else setLocal(lx, baseY + dy, lz, BLOCK.AIR);
+          }
+          setLocal(lx, baseY + 4, lz, BLOCK.WOOD);
+        }
+        setLocal(2, baseY + 1, z0 + 1, BLOCK.BED); setLocal(2, baseY + 1, z0 + 3, z0 === 1 ? BLOCK.BOOKSHELF : BLOCK.CHEST);
+        setLocal(4, baseY + 1, z0 + 1, BLOCK.CRAFTING_TABLE); setLocal(3, baseY + 2, z0 + 2, BLOCK.TORCH);
+      }
+
+      // 3) Blacksmith Forge (NE: lx 10..14, lz 1..5)
+      for (let dz = 0; dz <= 4; dz++) for (let dx = 0; dx <= 4; dx++) {
+        const lx = 10 + dx, lz = 1 + dz, isWall = dx === 0 || dx === 4 || dz === 0 || dz === 4;
+        for (let y = baseY - 2; y <= baseY; y++) setLocal(lx, y, lz, BLOCK.COBBLE);
+        for (let dy = 1; dy <= 3; dy++) {
+          if (dx === 0 && dz === 2 && dy <= 2) setLocal(lx, baseY + dy, lz, BLOCK.AIR);
+          else setLocal(lx, baseY + dy, lz, isWall ? BLOCK.BRICK : BLOCK.AIR);
+        }
+        setLocal(lx, baseY + 4, lz, BLOCK.COBBLE);
+      }
+      setLocal(13, baseY + 1, 2, BLOCK.FURNACE); setLocal(13, baseY + 1, 3, BLOCK.LAVA);
+      setLocal(11, baseY + 1, 2, BLOCK.ANVIL); setLocal(12, baseY + 1, 4, BLOCK.CHEST); setLocal(12, baseY + 2, 2, BLOCK.TORCH);
+
+      // 4) Irrigated Wheat Farm (SE: lx 10..14, lz 10..14)
+      for (let dz = 0; dz <= 4; dz++) for (let dx = 0; dx <= 4; dx++) {
+        const lx = 10 + dx, lz = 10 + dz, isBorder = dx === 0 || dx === 4 || dz === 0 || dz === 4;
+        for (let y = baseY - 2; y < baseY; y++) setLocal(lx, y, lz, BLOCK.DIRT);
+        for (let dy = 1; dy <= 4; dy++) setLocal(lx, baseY + dy, lz, BLOCK.AIR);
+        if (isBorder) setLocal(lx, baseY, lz, BLOCK.WOOD);
+        else if (dx === 2) setLocal(lx, baseY, lz, BLOCK.WATER);
+        else { setLocal(lx, baseY, lz, BLOCK.DIRT); setLocal(lx, baseY + 1, lz, ((dx + dz) & 1) ? BLOCK.WHEAT_3 : BLOCK.WHEAT_2); }
+      }
+      return { type: 'village', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+    }
     if (type === 'mineshaft') {
       const my = 14;
       for (let lz = 2; lz <= 13; lz++) {
@@ -583,7 +661,7 @@ function createWorldGenerator(seed) {
     return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
   }
 
-  return { generateChunkVoxels, getBiomeAt, getRiverFactorAt, getRavineFloorAt, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
+  return { generateChunkVoxels, getBiomeAt, getRiverFactorAt, getRavineFloorAt, isVillageChunk, isCabinChunk, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
 }
 
 // ============================================================================
