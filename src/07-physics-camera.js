@@ -288,7 +288,7 @@ function updatePlayerPhysics(dt) {
   const len = Math.hypot(moveX, moveZ), moveMag = Math.min(1.0, len);
   if (len > 0) { moveX = (moveX / len) * moveMag; moveZ = (moveZ / len) * moveMag; }
 
-  const feetInWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.02), Math.floor(player.z)) === BLOCK.WATER || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.WATER;
+  const feetInWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.35), Math.floor(player.z)) === BLOCK.WATER;
   const waistInWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
   const inWater = feetInWater || waistInWater;
   const inLava = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LAVA || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.LAVA;
@@ -366,7 +366,7 @@ function updatePlayerPhysics(dt) {
       player.vy -= (inLava ? 6.0 : 9.0) * dt;
       player.vy *= Math.pow(inLava ? 0.72 : 0.88, dt * 60);
       player.maxFallVel = 0;
-      if (wantJump) player.vy = inLava ? 5.2 : (getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 1.15), Math.floor(player.z)) === BLOCK.WATER ? 6.2 : 8.8);
+      if (wantJump) player.vy = inLava ? 4.2 : 5.45;
       else if (wantDown) player.vy = inLava ? -2.2 : -3.8;
       if (moveMag > 0.15) {
         player.stepAccum += dt * speed * moveMag;

@@ -2457,9 +2457,13 @@
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.player.health = 10; vc.player.air = 10; vc.player.wasInFluid = false;
           assert(vc.handGroup.children[0].material.transparent === true, 'handArmMat debe tener transparent=true para renderizarse DESPUÉS de waterMesh (renderOrder 997 > 0)');
-          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER); vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.LILY_PAD); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy + 1, wz - 2, vc.BLOCK.DIRT);
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER); vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.LILY_PAD); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.SAND);
           vc.player.x = wx + 0.5; vc.player.y = wy + 0.05; vc.player.z = wz + 0.5; vc.player.yaw = 0; vc.player.vy = 0;
-          vc.keys['Space'] = true; vc.keys['KeyW'] = true;
+          vc.keys['Space'] = true; vc.keys['KeyW'] = false;
+          let maxWaterJumpY = vc.player.y;
+          for (let s = 0; s < 120; s++) { vc.updatePlayerPhysics(1 / 240); if (vc.player.y > maxWaterJumpY) maxWaterJumpY = vc.player.y; }
+          assert(maxWaterJumpY >= wy + 1.08 && maxWaterJumpY < wy + 1.40, `El salto desde el agua debe subir solo lo justo para un bloque a la altura del agua (wy+1=${wy + 1}), no >2 bloques (maxY=${maxWaterJumpY.toFixed(2)})`);
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.05; vc.player.z = wz + 0.5; vc.player.vy = 0; vc.keys['KeyW'] = true;
           for (let s = 0; s < 140; s++) vc.updatePlayerPhysics(1 / 240);
           vc.keys['Space'] = false; vc.keys['KeyW'] = false;
           assert(vc.player.y >= wy + 1.0 && vc.player.z < wz, `El jugador debe poder saltar fuera del agua y subir a la orilla en wy+1 (y=${vc.player.y.toFixed(2)}, z=${vc.player.z.toFixed(2)} vs wy+1=${wy + 1})`);
