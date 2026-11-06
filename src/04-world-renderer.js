@@ -368,17 +368,13 @@ waterMaterial.onBeforeCompile = (shader) => {
       float vLit = clamp((vLuma - 0.085) / 0.915, 0.0, 1.0);
       float vSunLit = clamp((vColor.b - 0.085) / 0.85, 0.0, 1.0) * uSunFactor;
       gl_FragColor.rgb *= uSunLightColor * mix(0.22, 1.0, vLit);
-      float caustic = sin(vWorldPos.x * 2.4 + uTime * 2.8) * cos(vWorldPos.z * 2.4 - uTime * 2.2);
-      float crestFoam = smoothstep(0.032, 0.082, vWaveH + caustic * 0.024);
-      vec3 crestCol = vec3(0.76, 0.93, 1.0) * (0.35 + 0.65 * uSunFactor);
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, crestCol, crestFoam * 0.38 * vLit);
-      gl_FragColor.rgb += vec3(0.03, 0.07, 0.11) * caustic * (0.4 + 0.6 * uSunFactor) * vLit;
-      vec3 waveN = normalize(vec3(-cos(uTime * 2.3 + vWorldPos.x * 0.85 + vWorldPos.z * 0.65) * 0.15, 1.0, sin(uTime * 1.7 - vWorldPos.x * 0.55 + vWorldPos.z * 0.90) * 0.12));
+      float crestFoam = 0.0;
+      vec3 waveN = normalize(vec3(-cos(uTime * 2.3 + vWorldPos.x * 0.85 + vWorldPos.z * 0.65) * 0.12, 1.0, sin(uTime * 1.7 - vWorldPos.x * 0.55 + vWorldPos.z * 0.90) * 0.10));
       vec3 viewDir = normalize(cameraPosition - vWorldPos);
       vec3 halfVec = normalize(uLightDir + viewDir);
-      float spec = pow(max(dot(waveN, halfVec), 0.0), 42.0);
-      float fresnel = pow(1.0 - max(dot(waveN, viewDir), 0.0), 3.0) * 0.32;
-      gl_FragColor.rgb += uSunLightColor * (spec * 0.85 + fresnel * 0.24) * vSunLit;
+      float spec = pow(max(dot(waveN, halfVec), 0.0), 48.0) + crestFoam;
+      float fresnel = pow(1.0 - max(dot(waveN, viewDir), 0.0), 3.2) * 0.22;
+      gl_FragColor.rgb += uSunLightColor * (spec * 0.65 + fresnel * 0.18) * vSunLit;
       #include <fog_fragment>`
     );
 };
