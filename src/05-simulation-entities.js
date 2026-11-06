@@ -322,23 +322,20 @@ function updateWeather(dt) {
     const d = weatherDrops[i];
     if (isRain && d.splash > 0) {
       d.splash -= dt;
-      if (d.splash <= 0) { d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
+      if (d.splash <= 0 || Math.abs(py - d.sy) > 12) { d.splash = 0; d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
       else { const p = 1.0 - d.splash / 0.12, sr = 1.2 + p * 2.8; dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(sr, 0.12 * (1.0 - p * 0.65), sr)); }
       weatherInstanced.setMatrixAt(i, dummyMatrix); continue;
     }
     d.oy -= fallSpeed * dt;
     if (d.oy < -4) d.oy = 8 + Math.random() * 6;
-    const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (isSandstorm ? Math.sin(timeVal * 4.5 + d.phase) * 2.2 + 1.6 : (weatherMode === 'storm' ? 0.6 : 0.15));
+    const swayX = isSnowing ? Math.sin(timeVal * 2.0 + d.phase) * 0.8 : (weatherMode === 'storm' ? 0.6 : 0.15);
     const wx = px + d.ox + swayX, wy = py + d.oy, wz = pz + d.oz, ix = Math.floor(wx), iy = Math.floor(wy), iz = Math.floor(wz);
-    const blkAt = getVoxelGlobal(ix, iy, iz), blkBelow = getVoxelGlobal(ix, iy - 1, iz);
-    if (isRain && (blkAt !== BLOCK.AIR || (wy - iy <= 0.32 && blkBelow !== BLOCK.AIR))) {
-      const surfY = blkAt === BLOCK.AIR ? iy : iy + 1;
-      if (getVoxelGlobal(ix, surfY, iz) === BLOCK.AIR && getVoxelGlobal(ix, surfY - 1, iz) !== BLOCK.AIR && (getLightGlobal(ix, surfY, iz) >> 4) === 15) {
-        d.splash = 0.12; d.sx = wx; d.sy = surfY + 0.03; d.sz = wz;
-        dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(1.2, 0.12, 1.2));
-      } else { d.oy = 8 + Math.random() * 6; dummyMatrix.makeTranslation(0, -999, 0); }
-    } else if ((getLightGlobal(ix, iy, iz) >> 4) < 15 || blkAt !== BLOCK.AIR) {
+    const blkAt = getVoxelGlobal(ix, iy, iz), skyLit = (getLightGlobal(ix, iy, iz) >> 4) === 15;
+    if (!skyLit || blkAt !== BLOCK.AIR) {
       dummyMatrix.makeTranslation(0, -999, 0);
+    } else if (isRain && wy - iy <= 0.32 && getVoxelGlobal(ix, iy - 1, iz) !== BLOCK.AIR) {
+      d.splash = 0.12; d.sx = wx; d.sy = iy + 0.03; d.sz = wz;
+      dummyMatrix.compose(weatherPosVec.set(d.sx, d.sy, d.sz), weatherQuat, weatherSplashVec.set(1.2, 0.12, 1.2));
     } else {
       dummyMatrix.compose(weatherPosVec.set(wx, wy, wz), weatherQuat, weatherScaleVec);
     }

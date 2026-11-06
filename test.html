@@ -952,6 +952,8 @@
           vc.setTimeOfDay(origTime);
           vc.updateDynamicSky(0.016);
           vc.player.x = origXRain; vc.player.y = origYRain; vc.player.z = origZRain;
+          vc.toggleGameMode('survival');
+          vc.updateChunkStreaming(true);
 
           vc.toggleWeather('storm');
           assert(vc.getWeatherState().weatherMode === 'storm', 'El modo climático debe ser storm');
@@ -970,6 +972,8 @@
           assert(vc.getWeatherState().lightningFlash > 0.5, 'El destello del relámpago debe estar activo');
 
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          vc.toggleGameMode('survival');
+          vc.updateChunkStreaming(true);
           vc.toggleWeather('clear');
           assert(vc.weatherInstanced.visible === false, 'En modo despejado weatherInstanced debe ocultarse');
         });
