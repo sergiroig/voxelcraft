@@ -372,3 +372,112 @@ function toggleShieldBlock(forceState) {
   isShieldBlocking = next;
   return isShieldBlocking;
 }
+
+// 10. CRAFTABLE CARTOGRAPHY MAP: Empty Map -> Active Map, Fog of War Exploration & Zoom Scales (1x / 2x / 4x)
+const exploredMapCells = new Set();
+const mapState = { initialized: false, centerX: 8, centerZ: 8, zoomScale: 1 };
+
+function isMapCellExplored(wx, wz) {
+  return exploredMapCells.has(`${wx >> 1},${wz >> 1}`);
+}
+
+function revealMapAroundPlayer(wx = player.x, wz = player.z, radius = 18) {
+  const px = Math.floor(wx), pz = Math.floor(wz), rSq = radius * radius;
+  let added = 0;
+  for (let dz = -radius; dz <= radius; dz += 2) {
+    for (let dx = -radius; dx <= radius; dx += 2) {
+      if (dx * dx + dz * dz > rSq) continue;
+      const key = `${(px + dx) >> 1},${(pz + dz) >> 1}`;
+      if (!exploredMapCells.has(key)) { exploredMapCells.add(key); added++; }
+    }
+  }
+  return added;
+}
+
+function useEmptyMap() {
+  if (gameMode === 'survival' && (inventoryCounts[BLOCK.ITEM_EMPTY_MAP] || 0) <= 0) return false;
+  if (gameMode === 'survival') {
+    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_EMPTY_MAP && hotbarCounts[selectedSlot] > 0) {
+      hotbarCounts[selectedSlot]--;
+      if (hotbarCounts[selectedSlot] <= 0) hotbarSlots[selectedSlot] = BLOCK.AIR;
+    } else {
+      const invSlot = invSlots.find(s => s.id === BLOCK.ITEM_EMPTY_MAP && s.count > 0);
+      if (invSlot) { invSlot.count--; if (invSlot.count <= 0) invSlot.id = 0; }
+    }
+    inventoryCounts[BLOCK.ITEM_EMPTY_MAP] = Math.max(0, (inventoryCounts[BLOCK.ITEM_EMPTY_MAP] || 1) - 1);
+  }
+  inventoryCounts[BLOCK.ITEM_MAP] = (inventoryCounts[BLOCK.ITEM_MAP] || 0) + 1;
+  const slotIdx = selectedSlot >= 0 ? selectedSlot : 0;
+  if (hotbarSlots[slotIdx] === BLOCK.AIR || hotbarSlots[slotIdx] === BLOCK.ITEM_EMPTY_MAP) {
+    hotbarSlots[slotIdx] = BLOCK.ITEM_MAP;
+    hotbarCounts[slotIdx] = Math.max(1, hotbarCounts[slotIdx] || 1);
+  } else if (typeof putStackIntoPlayerSlots === 'function') {
+    putStackIntoPlayerSlots(BLOCK.ITEM_MAP, 1, true);
+  }
+  mapState.initialized = true;
+  mapState.centerX = Math.floor(player.x);
+  mapState.centerZ = Math.floor(player.z);
+  mapState.zoomScale = 1;
+  revealMapAroundPlayer(player.x, player.z, 20);
+  player.swingTime = 1.0;
+  sfx.play('place');
+  const lbl = document.getElementById('block-label');
+  if (lbl) lbl.textContent = '🗺 Mapa Cartográfico creado (Escala 1:1): camina con él para descubrir el terreno';
+  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
+  if (typeof updateMinimap === 'function') updateMinimap(0, true);
+  if (typeof saveWorldData === 'function') saveWorldData();
+  return true;
+}
+
+function useCartographyMap() {
+  mapState.initialized = true;
+  mapState.zoomScale = mapState.zoomScale === 1 ? 2 : (mapState.zoomScale === 2 ? 4 : 1);
+  revealMapAroundPlayer(player.x, player.z, 20 * mapState.zoomScale);
+  player.swingTime = 1.0;
+  sfx.play('step');
+  const lbl = document.getElementById('block-label');
+  if (lbl) lbl.textContent = `🗺 Mapa Cartográfico — Zoom 1:${mapState.zoomScale} (${exploredMapCells.size} zonas cartografiadas)`;
+  if (typeof updateMinimap === 'function') updateMinimap(0, true);
+  if (typeof updateHeldItemVisual === 'function') updateHeldItemVisual();
+  return mapState.zoomScale;
+}
+
+function drawPaperOrMapIcon(ctx, itemId) {
+  if (itemId === BLOCK.ITEM_PAPER) {
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(2, 1, 12, 14);
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(3, 2, 10, 12);
+    ctx.fillStyle = '#94a3b8'; ctx.fillRect(4, 4, 8, 1); ctx.fillRect(4, 7, 7, 1); ctx.fillRect(4, 10, 6, 1);
+    return;
+  }
+  if (itemId === BLOCK.ITEM_EMPTY_MAP) {
+    ctx.fillStyle = '#92400e'; ctx.fillRect(1, 1, 14, 14);
+    ctx.fillStyle = '#e6d2a8'; ctx.fillRect(2, 2, 12, 12);
+    ctx.fillStyle = '#c4a472'; ctx.fillRect(4, 5, 8, 1); ctx.fillRect(4, 8, 8, 1); ctx.fillRect(4, 11, 6, 1);
+    ctx.fillStyle = '#b45309'; ctx.fillRect(7, 6, 2, 4); ctx.fillRect(6, 7, 4, 2);
+    return;
+  }
+  ctx.fillStyle = '#78350f'; ctx.fillRect(1, 1, 14, 14);
+  ctx.fillStyle = '#e6d2a8'; ctx.fillRect(2, 2, 12, 12);
+  const px = typeof player !== 'undefined' ? Math.floor(player.x) : 8;
+  const pz = typeof player !== 'undefined' ? Math.floor(player.z) : 8;
+  const step = 4 * (mapState.zoomScale || 1);
+  for (let my = 0; my < 12; my++) {
+    for (let mx = 0; mx < 12; mx++) {
+      const wx = px + (mx - 6) * step, wz = pz + (my - 6) * step;
+      if (!isMapCellExplored(wx, wz)) {
+        if ((mx + my) % 3 === 0) { ctx.fillStyle = '#d8c194'; ctx.fillRect(2 + mx, 2 + my, 1, 1); }
+        continue;
+      }
+      const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
+      const ch = typeof chunks !== 'undefined' ? chunks.get(`${cx},${cz}`) : null;
+      if (ch && ch.mapColors) {
+        const col32 = ch.mapColors[(wz - cz * CHUNK_SIZE) * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)];
+        ctx.fillStyle = `rgb(${col32 & 255},${(col32 >> 8) & 255},${(col32 >> 16) & 255})`;
+      } else {
+        ctx.fillStyle = '#4ade80';
+      }
+      ctx.fillRect(2 + mx, 2 + my, 1, 1);
+    }
+  }
+  ctx.fillStyle = '#ef4444'; ctx.fillRect(7, 7, 2, 2);
+}

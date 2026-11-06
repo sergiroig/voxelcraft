@@ -123,10 +123,11 @@ function drawItemIcon(canvas, itemId) {
     const night = typeof isNight !== 'undefined' && isNight, ang = typeof celestialAngle !== 'undefined' ? celestialAngle : 0;
     ctx.fillStyle = night ? '#0f172a' : '#1d4ed8'; ctx.fillRect(5, 5, 6, 6);
     ctx.fillStyle = night ? '#e2e8f0' : '#fef08a'; ctx.fillRect(7 + Math.round(Math.sin(ang) * 1.6), 6, 2, 2);
+  } else if (itemId >= BLOCK.ITEM_PAPER && itemId <= BLOCK.ITEM_MAP && typeof drawPaperOrMapIcon === 'function') {
+    drawPaperOrMapIcon(ctx, itemId);
   } else {
     const def = BLOCK_DEFS[itemId];
-    const tileIndex = def.tiles[2];
-    ctx.drawImage(atlasCanvas, tileIndex * TILE_PX, 0, TILE_PX, TILE_PX, 0, 0, 16, 16);
+    ctx.drawImage(atlasCanvas, def.tiles[2] * TILE_PX, 0, TILE_PX, TILE_PX, 0, 0, 16, 16);
   }
   if (typeof getItemEnchantLevel === 'function' && getItemEnchantLevel(itemId) > 0) {
     ctx.fillStyle = '#e879f9'; ctx.fillRect(11, 2, 2, 2); ctx.fillRect(3, 11, 2, 2); ctx.fillStyle = '#c084fc'; ctx.fillRect(12, 4, 1, 2);
@@ -262,17 +263,10 @@ function buildHotbarUI() {
     const slot = document.createElement('div');
     slot.className = 'slot' + (idx === selectedSlot ? ' active' : '');
     slot.innerHTML = `<span class="key">${idx + 1}</span><span class="count">${formatItemCountBadge(bId)}</span>`;
-
-    const icon = document.createElement('canvas');
-    icon.width = 16; icon.height = 16;
-    drawItemIcon(icon, bId);
-
+    const icon = document.createElement('canvas'); icon.width = 16; icon.height = 16; drawItemIcon(icon, bId);
     slot.appendChild(icon);
     slot.addEventListener('click', () => updateHotbarSelection(selectedSlot === idx ? -1 : idx));
-    slot.addEventListener('touchstart', (e) => {
-      e.preventDefault(); e.stopPropagation();
-      updateHotbarSelection(selectedSlot === idx ? -1 : idx);
-    }, { passive: false });
+    slot.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); updateHotbarSelection(selectedSlot === idx ? -1 : idx); }, { passive: false });
     hotbarEl.appendChild(slot);
   });
   updateHotbarSelection(selectedSlot);
@@ -522,24 +516,21 @@ function placeBlockAtCurrentTarget() {
     sfx.play('waypoint'); return true;
   }
   if (bId === BLOCK.ITEM_CLOCK) { toggleDayNight(); if (typeof updateHeldItemVisual === 'function') updateHeldItemVisual(); sfx.play('chime'); return true; }
+  if (bId === BLOCK.ITEM_EMPTY_MAP) return useEmptyMap();
+  if (bId === BLOCK.ITEM_MAP) { useCartographyMap(); return true; }
   if (bId === BLOCK.TOOL_BOW) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
-    shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
-    player.swingTime = 1.0; return true;
+    shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); player.swingTime = 1.0; return true;
   }
   if (bId === BLOCK.TOOL_GRAPPLING_HOOK) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
-    shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);
-    player.swingTime = 1.0; return true;
+    shootGrappleHook(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z); player.swingTime = 1.0; return true;
   }
   if (isSwordItem(bId)) { toggleShieldBlock(); return true; }
   if (!currentHit) return false;
 
-  if (bId === BLOCK.TOOL_HOE && (currentHit.block === BLOCK.GRASS || currentHit.block === BLOCK.DIRT)) {
-    if (getVoxelGlobal(currentHit.x, currentHit.y + 1, currentHit.z) === BLOCK.AIR) {
-      setVoxelGlobal(currentHit.x, currentHit.y + 1, currentHit.z, BLOCK.WHEAT_1);
-      sfx.play('place'); player.swingTime = 1.0; return true;
-    }
+  if (bId === BLOCK.TOOL_HOE && (currentHit.block === BLOCK.GRASS || currentHit.block === BLOCK.DIRT) && getVoxelGlobal(currentHit.x, currentHit.y + 1, currentHit.z) === BLOCK.AIR) {
+    setVoxelGlobal(currentHit.x, currentHit.y + 1, currentHit.z, BLOCK.WHEAT_1); sfx.play('place'); player.swingTime = 1.0; return true;
   }
   if (bId === BLOCK.ITEM_BUCKET) {
     const adjX = currentHit.x + currentHit.nx, adjY = currentHit.y + currentHit.ny, adjZ = currentHit.z + currentHit.nz;
@@ -607,13 +598,9 @@ function placeBlockAtCurrentTarget() {
   if (!overlapsPlayer) {
     let actualPlaceId = bId;
     if (bId === BLOCK.REDSTONE_LAMP_OFF || bId === BLOCK.DOOR_CLOSED || bId === BLOCK.TRAPDOOR_CLOSED) {
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dz = -3; dz <= 3; dz++) {
-          for (let dx = -3; dx <= 3; dx++) {
-            if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 4 && getVoxelGlobal(px + dx, py + dy, pz + dz) === BLOCK.LEVER_ON) {
-              actualPlaceId = (bId === BLOCK.REDSTONE_LAMP_OFF) ? BLOCK.REDSTONE_LAMP_ON : (bId === BLOCK.DOOR_CLOSED ? BLOCK.DOOR_OPEN : BLOCK.TRAPDOOR_OPEN);
-            }
-          }
+      for (let dy = -2; dy <= 2; dy++) for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+        if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 4 && getVoxelGlobal(px + dx, py + dy, pz + dz) === BLOCK.LEVER_ON) {
+          actualPlaceId = (bId === BLOCK.REDSTONE_LAMP_OFF) ? BLOCK.REDSTONE_LAMP_ON : (bId === BLOCK.DOOR_CLOSED ? BLOCK.DOOR_OPEN : BLOCK.TRAPDOOR_OPEN);
         }
       }
     }
@@ -621,15 +608,12 @@ function placeBlockAtCurrentTarget() {
       if (gameMode === 'survival') {
         if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
         inventoryCounts[bId] = Math.max(0, (inventoryCounts[bId] || 1) - 1);
-        if ((inventoryCounts[bId] <= 0 || hotbarCounts[selectedSlot] <= 0) && selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId) {
-          if (inventoryCounts[bId] <= 0) hotbarSlots[selectedSlot] = BLOCK.AIR;
-        }
+        if ((inventoryCounts[bId] <= 0 || hotbarCounts[selectedSlot] <= 0) && selectedSlot >= 0 && hotbarSlots[selectedSlot] === bId && inventoryCounts[bId] <= 0) hotbarSlots[selectedSlot] = BLOCK.AIR;
         saveWorldData(); refreshInventoryCountsUI();
       }
       if (actualPlaceId === BLOCK.GLOWSTONE) trySummonIronGolem(px, py, pz);
       if (actualPlaceId === BLOCK.PORTAL) registerPortalAt(px, py, pz);
-      player.swingTime = 1.0; sfx.play('place');
-      return true;
+      player.swingTime = 1.0; sfx.play('place'); return true;
     }
   }
   return false;
@@ -745,29 +729,41 @@ function teleportToBiome(targetBiome) {
 // ============================================================================
 const minimapCanvas = document.getElementById('minimap-canvas'), minimapCtx = minimapCanvas.getContext('2d', { willReadFrequently: true });
 const MAP_SIZE = 68, minimapImgData = minimapCtx.createImageData(MAP_SIZE, MAP_SIZE), minimapPixels32 = new Uint32Array(minimapImgData.data.buffer);
-const EMPTY_MAP_PIXEL = (255 << 24) | (42 << 16) | (23 << 8) | 15;
+const EMPTY_MAP_PIXEL = (255 << 24) | (42 << 16) | (23 << 8) | 15, PARCHMENT_MAP_PIXEL = (255 << 24) | (168 << 16) | (210 << 8) | 230;
 let minimapAccum = 0, minimapUpdatesCount = 0;
 
 function updateMinimap(dt, forceRender = false) {
   minimapAccum += dt; if (!forceRender && minimapAccum < 0.10) return false;
   minimapAccum = 0; minimapUpdatesCount++;
+  const heldMap = getActiveHeldItem() === BLOCK.ITEM_MAP;
+  const scale = heldMap && typeof mapState !== 'undefined' ? (mapState.zoomScale || 1) : 1;
+  if ((heldMap || (typeof mapState !== 'undefined' && mapState.initialized)) && typeof revealMapAroundPlayer === 'function') {
+    revealMapAroundPlayer(player.x, player.z, 18 * scale);
+  }
+  const mapLblEl = document.getElementById('minimap-label');
+  if (mapLblEl) mapLblEl.textContent = heldMap ? `🗺 MAPA 1:${scale}` : 'RADAR 2D';
   const px = Math.floor(player.x), pz = Math.floor(player.z), half = MAP_SIZE >> 1;
   for (let mz = 0; mz < MAP_SIZE; mz++) {
-    const wz = pz + (mz - half), cz = Math.floor(wz / CHUNK_SIZE), lz = wz - cz * CHUNK_SIZE, rowOff = mz * MAP_SIZE;
+    const wz = pz + (mz - half) * scale, cz = Math.floor(wz / CHUNK_SIZE), lz = wz - cz * CHUNK_SIZE, rowOff = mz * MAP_SIZE;
     let cachedCx = 999999, cachedColors = null;
     for (let mx = 0; mx < MAP_SIZE; mx++) {
-      const wx = px + (mx - half), cx = Math.floor(wx / CHUNK_SIZE);
+      const wx = px + (mx - half) * scale;
+      if (heldMap && gameMode === 'survival' && typeof isMapCellExplored === 'function' && !isMapCellExplored(wx, wz)) {
+        minimapPixels32[rowOff + mx] = PARCHMENT_MAP_PIXEL; continue;
+      }
+      const cx = Math.floor(wx / CHUNK_SIZE);
       if (cx !== cachedCx) {
         cachedCx = cx; const ch = chunks.get(`${cx},${cz}`);
         if (ch && !ch.mapColors) computeChunkLighting(ch, getChunkIfLoaded);
         cachedColors = ch ? ch.mapColors : null;
       }
-      minimapPixels32[rowOff + mx] = cachedColors ? cachedColors[lz * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)] : EMPTY_MAP_PIXEL;
+      minimapPixels32[rowOff + mx] = cachedColors ? cachedColors[lz * CHUNK_SIZE + (wx - cx * CHUNK_SIZE)] : (heldMap ? PARCHMENT_MAP_PIXEL : EMPTY_MAP_PIXEL);
     }
   }
   minimapCtx.putImageData(minimapImgData, 0, 0);
+  if (heldMap && typeof handIconCanvas !== 'undefined') { drawItemIcon(handIconCanvas, BLOCK.ITEM_MAP); handIconTex.needsUpdate = true; }
   for (let i = 0; i < mobs.length; i++) {
-    const m = mobs[i], rx = Math.round(half + (m.x - player.x)), rz = Math.round(half + (m.z - player.z));
+    const m = mobs[i], rx = Math.round(half + (m.x - player.x) / scale), rz = Math.round(half + (m.z - player.z) / scale);
     if (rx >= 1 && rx < MAP_SIZE - 1 && rz >= 1 && rz < MAP_SIZE - 1) {
       minimapCtx.fillStyle = m.allied ? '#38bdf8' : (m.type === 'creeper' ? '#22c55e' : (m.type === 'skeleton' ? '#fde047' : (m.type === 'enderman' ? '#c084fc' : (isHostileMob(m) ? '#ef4444' : '#f8fafc'))));
       minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
@@ -775,7 +771,7 @@ function updateMinimap(dt, forceRender = false) {
   }
   if (gameMode === 'creative') {
     for (let i = 0; i < waypoints.length; i++) {
-      const wp = waypoints[i], rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x)))), rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
+      const wp = waypoints[i], rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x) / scale))), rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z) / scale)));
       minimapCtx.fillStyle = '#0f172a'; minimapCtx.fillRect(rx - 2, rz - 2, 5, 5); minimapCtx.fillStyle = wp.color || '#f43f5e'; minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
     }
   }

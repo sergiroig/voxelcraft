@@ -2990,6 +2990,36 @@
             prevMask = mask;
           }
         });
+
+        it('Permite fabricar Papel y Mapa en Blanco, activarlo como Mapa Cartográfico con Niebla de Guerra y cambiar su escala (1:1 / 1:2 / 1:4)', () => {
+          vc.toggleGameMode('survival');
+          vc.exploredMapCells.clear();
+          vc.inventoryCounts[vc.BLOCK.TALL_GRASS] = 6;
+          vc.inventoryCounts[vc.BLOCK.ITEM_COMPASS] = 1;
+          const paperRecIdx = vc.CRAFTING_RECIPES.findIndex(r => r.outId === vc.BLOCK.ITEM_PAPER);
+          const emptyMapRecIdx = vc.CRAFTING_RECIPES.findIndex(r => r.outId === vc.BLOCK.ITEM_EMPTY_MAP);
+          assert(paperRecIdx !== -1 && emptyMapRecIdx !== -1, 'Deben existir las recetas de Papel de Caña y Mapa en Blanco');
+
+          assert(vc.craftRecipe(paperRecIdx) && vc.craftRecipe(paperRecIdx) && vc.craftRecipe(paperRecIdx), 'Debe poder fabricar 9× Papel de Caña a partir de Hierba Alta');
+          assert(vc.inventoryCounts[vc.BLOCK.ITEM_PAPER] >= 8, 'El inventario debe tener al menos 8× Papel');
+
+          vc.openCraftingTable(0, 42, 0);
+          assert(vc.craftRecipe(emptyMapRecIdx, true) === true, 'Debe poder fabricar 1× Mapa en Blanco en la Mesa 3×3 con 1× Brújula + 8× Papel');
+          vc.toggleInventory(false);
+          assert(vc.inventoryCounts[vc.BLOCK.ITEM_EMPTY_MAP] === 1, 'El jugador debe tener 1× Mapa en Blanco');
+
+          vc.hotbarSlots[0] = vc.BLOCK.ITEM_EMPTY_MAP;
+          vc.hotbarCounts[0] = 1;
+          vc.updateHotbarSelection(0);
+          assert(vc.useEmptyMap() === true, 'useEmptyMap() debe activar el Mapa en Blanco y convertirlo en Mapa Cartográfico');
+          assert(vc.inventoryCounts[vc.BLOCK.ITEM_MAP] >= 1 && vc.hotbarSlots[0] === vc.BLOCK.ITEM_MAP, 'El Mapa en Blanco debe transformarse en BLOCK.ITEM_MAP equipado');
+          assert(vc.isMapCellExplored(Math.floor(vc.player.x), Math.floor(vc.player.z)) === true, 'La zona actual del jugador debe quedar revelada en el mapa');
+          assert(vc.isMapCellExplored(Math.floor(vc.player.x) + 300, Math.floor(vc.player.z) + 300) === false, 'Las zonas lejanas no visitadas deben permanecer ocultas bajo Niebla de Guerra');
+
+          assert(vc.useCartographyMap() === 2, 'Usar el Mapa Cartográfico debe cambiar la escala de zoom a 1:2');
+          assert(vc.useCartographyMap() === 4, 'Volver a usar el Mapa Cartográfico debe cambiar la escala de zoom a 1:4');
+          assert(vc.useCartographyMap() === 1, 'Volver a usar el Mapa Cartográfico debe regresar a escala 1:1');
+        });
       });
 
       // Execute all suites

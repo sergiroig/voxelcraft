@@ -28,7 +28,8 @@ const BLOCK = {
   ARMOR_DIAMOND_HELMET: 133, ARMOR_DIAMOND_CHESTPLATE: 134, ARMOR_DIAMOND_LEGGINGS: 135, ARMOR_DIAMOND_BOOTS: 136,
   TOOL_FISHING_ROD: 137, ITEM_BONE: 138, ITEM_BONE_MEAL: 139,
   ITEM_RAW_PORKCHOP: 140, ITEM_COOKED_PORKCHOP: 141, ITEM_RAW_FISH: 142, ITEM_COOKED_FISH: 143, ITEM_GOLDEN_APPLE: 144,
-  ITEM_EMERALD: 145, ITEM_ENDER_PEARL: 146, ITEM_COMPASS: 147, ITEM_CLOCK: 148
+  ITEM_EMERALD: 145, ITEM_ENDER_PEARL: 146, ITEM_COMPASS: 147, ITEM_CLOCK: 148,
+  ITEM_PAPER: 149, ITEM_EMPTY_MAP: 150, ITEM_MAP: 151
 };
 
 // Atlas has 72 tiles (columns) of 16x16 pixels
@@ -153,14 +154,17 @@ const BLOCK_DEFS = {
   [BLOCK.ITEM_EMERALD]:            { name: 'Gema de Esmeralda',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x10b981, tiles: [71,71,71,71,71,71] },
   [BLOCK.ITEM_ENDER_PEARL]:        { name: 'Perla de Ender',             solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x0d9488, tiles: [49,49,49,49,49,49] },
   [BLOCK.ITEM_COMPASS]:            { name: 'Brújula Magnética',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xef4444, tiles: [55,55,55,55,55,55] },
-  [BLOCK.ITEM_CLOCK]:              { name: 'Reloj Solar',                solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] }
+  [BLOCK.ITEM_CLOCK]:              { name: 'Reloj Solar',                solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] },
+  [BLOCK.ITEM_PAPER]:              { name: 'Papel de Caña',              solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xf8fafc, tiles: [68,68,68,68,68,68] },
+  [BLOCK.ITEM_EMPTY_MAP]:          { name: 'Mapa en Blanco (Usar)',      solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xe6d2a8, tiles: [4,4,4,4,4,4] },
+  [BLOCK.ITEM_MAP]:                { name: 'Mapa Cartográfico',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xd97706, tiles: [4,4,4,4,4,4] }
 };
 
 const ALL_INVENTORY_ITEMS = [
   BLOCK.TOOL_PICKAXE, BLOCK.TOOL_IRON_PICKAXE, BLOCK.TOOL_STONE_PICKAXE, BLOCK.TOOL_WOOD_PICKAXE, BLOCK.TOOL_GOLD_PICKAXE,
   BLOCK.TOOL_SWORD, BLOCK.TOOL_IRON_SWORD, BLOCK.TOOL_STONE_SWORD, BLOCK.TOOL_WOOD_SWORD, BLOCK.TOOL_GOLD_SWORD,
   BLOCK.TOOL_AXE, BLOCK.TOOL_SHOVEL, BLOCK.TOOL_HOE, BLOCK.TOOL_SHEARS, BLOCK.TOOL_FLINT_AND_STEEL, BLOCK.TOOL_FISHING_ROD,
-  BLOCK.TOOL_BOW, BLOCK.TOOL_GRAPPLING_HOOK, BLOCK.ITEM_COMPASS, BLOCK.ITEM_CLOCK, BLOCK.ITEM_ENDER_PEARL,
+  BLOCK.TOOL_BOW, BLOCK.TOOL_GRAPPLING_HOOK, BLOCK.ITEM_COMPASS, BLOCK.ITEM_CLOCK, BLOCK.ITEM_MAP, BLOCK.ITEM_EMPTY_MAP, BLOCK.ITEM_PAPER, BLOCK.ITEM_ENDER_PEARL,
   BLOCK.ARMOR_DIAMOND_HELMET, BLOCK.ARMOR_DIAMOND_CHESTPLATE, BLOCK.ARMOR_DIAMOND_LEGGINGS, BLOCK.ARMOR_DIAMOND_BOOTS,
   BLOCK.ARMOR_IRON_HELMET, BLOCK.ARMOR_IRON_CHESTPLATE, BLOCK.ARMOR_IRON_LEGGINGS, BLOCK.ARMOR_IRON_BOOTS,
   BLOCK.ITEM_BUCKET, BLOCK.ITEM_WATER_BUCKET, BLOCK.ITEM_LAVA_BUCKET,
@@ -190,7 +194,7 @@ function getArmorSlotForItem(id) {
 }
 function isArmorItem(id) { return getArmorSlotForItem(id) !== -1; }
 function isFoodItem(id) { return id === BLOCK.ITEM_APPLE || id === BLOCK.ITEM_BREAD || (id >= BLOCK.ITEM_RAW_PORKCHOP && id <= BLOCK.ITEM_GOLDEN_APPLE); }
-function isNonStackTool(id) { return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125) || (id >= 129 && id <= 137) || id === BLOCK.ITEM_COMPASS || id === BLOCK.ITEM_CLOCK; }
+function isNonStackTool(id) { return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125) || (id >= 129 && id <= 137) || id === BLOCK.ITEM_COMPASS || id === BLOCK.ITEM_CLOCK || id === BLOCK.ITEM_MAP; }
 
 const hotbarSlots = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -276,17 +280,15 @@ const CRAFTING_RECIPES = [
   { name: '4× Antorchas (Carbón + Palo)',      outId: BLOCK.TORCH,            outCount: 4, gridSize: 2, pattern: [BLOCK.ITEM_COAL, 0, BLOCK.ITEM_STICK, 0], ingredients: [{ id: BLOCK.ITEM_COAL, count: 1 }, { id: BLOCK.ITEM_STICK, count: 1 }] },
   { name: '4× Escalera Clásica (7× Palos)',    outId: BLOCK.LADDER,           outCount: 4, gridSize: 3, pattern: [BLOCK.ITEM_STICK, 0, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, BLOCK.ITEM_STICK, 0, BLOCK.ITEM_STICK], ingredients: [{ id: BLOCK.ITEM_STICK, count: 7 }] },
   { name: '1× Pan Clásico (3× Trigo)',         outId: BLOCK.ITEM_BREAD,       outCount: 1, gridSize: 3, pattern: [BLOCK.WHEAT_3, BLOCK.WHEAT_3, BLOCK.WHEAT_3, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.WHEAT_3, count: 3 }] },
-  { name: '1× Cofre Clásico (8× Tablones)',    outId: BLOCK.CHEST,            outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS], ingredients: [{ id: BLOCK.PLANKS, count: 8 }] }
+  { name: '1× Cofre Clásico (8× Tablones)',    outId: BLOCK.CHEST,            outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS], ingredients: [{ id: BLOCK.PLANKS, count: 8 }] },
+  { name: '3× Papel de Caña',                  outId: BLOCK.ITEM_PAPER,       outCount: 3, gridSize: 2, pattern: [BLOCK.TALL_GRASS, BLOCK.TALL_GRASS, 0, 0], ingredients: [{ id: BLOCK.TALL_GRASS, count: 2 }] },
+  { name: '1× Mapa en Blanco (Brújula+Papel)', outId: BLOCK.ITEM_EMPTY_MAP,   outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_PAPER, BLOCK.ITEM_PAPER, BLOCK.ITEM_PAPER, BLOCK.ITEM_PAPER, BLOCK.ITEM_COMPASS, BLOCK.ITEM_PAPER, BLOCK.ITEM_PAPER, BLOCK.ITEM_PAPER, BLOCK.ITEM_PAPER], ingredients: [{ id: BLOCK.ITEM_COMPASS, count: 1 }, { id: BLOCK.ITEM_PAPER, count: 8 }] }
 ];
 
 function normalizeCraftingId(id) {
-  if (id === BLOCK.ITEM_DIAMOND) return BLOCK.DIAMOND_ORE;
-  if (id === BLOCK.ITEM_COAL) return BLOCK.COAL_ORE;
-  return id || 0;
+  return id === BLOCK.ITEM_DIAMOND ? BLOCK.DIAMOND_ORE : (id === BLOCK.ITEM_COAL ? BLOCK.COAL_ORE : (id || 0));
 }
-function areCraftingItemsEquivalent(idA, idB) {
-  return idA > 0 && idB > 0 && normalizeCraftingId(idA) === normalizeCraftingId(idB);
-}
+function areCraftingItemsEquivalent(idA, idB) { return idA > 0 && idB > 0 && normalizeCraftingId(idA) === normalizeCraftingId(idB); }
 function getAvailIngredientCount(ingId) {
   const norm = normalizeCraftingId(ingId);
   if (norm === BLOCK.DIAMOND_ORE) return (inventoryCounts[BLOCK.DIAMOND_ORE] || 0) + (inventoryCounts[BLOCK.ITEM_DIAMOND] || 0);
@@ -297,22 +299,14 @@ function consumeInventoryIngredient(ingId, count) {
   const norm = normalizeCraftingId(ingId);
   const candidates = norm === BLOCK.DIAMOND_ORE ? [BLOCK.ITEM_DIAMOND, BLOCK.DIAMOND_ORE] : (norm === BLOCK.COAL_ORE ? [BLOCK.ITEM_COAL, BLOCK.COAL_ORE] : [ingId]);
   let rem = count;
-  for (const cid of candidates) {
-    const take = Math.min(rem, inventoryCounts[cid] || 0);
-    if (take > 0) { inventoryCounts[cid] -= take; rem -= take; }
-  }
+  for (const cid of candidates) { const take = Math.min(rem, inventoryCounts[cid] || 0); if (take > 0) { inventoryCounts[cid] -= take; rem -= take; } }
 }
 
 const SMELT_RECIPES = [
-  { inId: BLOCK.IRON_ORE, outId: BLOCK.ITEM_IRON_INGOT, count: 1 },
-  { inId: BLOCK.GOLD_ORE, outId: BLOCK.ITEM_GOLD_INGOT, count: 1 },
-  { inId: BLOCK.DIAMOND_ORE, outId: BLOCK.ITEM_DIAMOND, count: 1 },
-  { inId: BLOCK.ITEM_RAW_PORKCHOP, outId: BLOCK.ITEM_COOKED_PORKCHOP, count: 1 },
-  { inId: BLOCK.ITEM_RAW_FISH, outId: BLOCK.ITEM_COOKED_FISH, count: 1 },
-  { inId: BLOCK.CLAY, outId: BLOCK.BRICK, count: 2 },
-  { inId: BLOCK.SAND, outId: BLOCK.GLASS, count: 1 },
-  { inId: BLOCK.COBBLE, outId: BLOCK.STONE, count: 1 },
-  { inId: BLOCK.WOOD, outId: BLOCK.ITEM_COAL, count: 1 }
+  { inId: BLOCK.IRON_ORE, outId: BLOCK.ITEM_IRON_INGOT, count: 1 }, { inId: BLOCK.GOLD_ORE, outId: BLOCK.ITEM_GOLD_INGOT, count: 1 },
+  { inId: BLOCK.DIAMOND_ORE, outId: BLOCK.ITEM_DIAMOND, count: 1 }, { inId: BLOCK.ITEM_RAW_PORKCHOP, outId: BLOCK.ITEM_COOKED_PORKCHOP, count: 1 },
+  { inId: BLOCK.ITEM_RAW_FISH, outId: BLOCK.ITEM_COOKED_FISH, count: 1 }, { inId: BLOCK.CLAY, outId: BLOCK.BRICK, count: 2 },
+  { inId: BLOCK.SAND, outId: BLOCK.GLASS, count: 1 }, { inId: BLOCK.COBBLE, outId: BLOCK.STONE, count: 1 }, { inId: BLOCK.WOOD, outId: BLOCK.ITEM_COAL, count: 1 }
 ];
 
 const recipeBookState = { category: 'all', search: '', craftableOnly: false };
@@ -320,7 +314,7 @@ const recipeBookState = { category: 'all', search: '', craftableOnly: false };
 function getRecipeCategory(rec) {
   const id = rec.outId;
   if (isPickaxeItem(id) || isSwordItem(id) || id === BLOCK.TOOL_BOW || id === BLOCK.TOOL_GRAPPLING_HOOK || id === BLOCK.TOOL_FISHING_ROD || (id >= BLOCK.TOOL_AXE && id <= BLOCK.ITEM_LAVA_BUCKET)) return 'tools';
-  if (isArmorItem(id) || isFoodItem(id) || id === BLOCK.CAKE || id === BLOCK.BED || id === BLOCK.ITEM_BONE_MEAL) return 'equip';
+  if (isArmorItem(id) || isFoodItem(id) || id === BLOCK.CAKE || id === BLOCK.BED || id === BLOCK.ITEM_BONE_MEAL || id === BLOCK.ITEM_PAPER || id === BLOCK.ITEM_EMPTY_MAP || id === BLOCK.ITEM_MAP) return 'equip';
   if (id === BLOCK.LEVER_OFF || id === BLOCK.REDSTONE_LAMP_OFF || id === BLOCK.PISTON || id === BLOCK.DOOR_CLOSED || id === BLOCK.TRAPDOOR_CLOSED || id === BLOCK.RAIL || id === BLOCK.ITEM_MINECART || id === BLOCK.ITEM_BOAT || id === BLOCK.PORTAL || id === BLOCK.TNT || id === BLOCK.ITEM_ENDER_PEARL || id === BLOCK.ITEM_COMPASS || id === BLOCK.ITEM_CLOCK) return 'redstone';
   return 'blocks';
 }
