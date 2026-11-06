@@ -170,6 +170,12 @@ isFoodItem = function(id) {
 // Extend getDropItemForBlock for new ores, crops & leaves
 const _origGetDropItem = getDropItemForBlock;
 getDropItemForBlock = function(blockId, toolId) {
+  if (blockId === BLOCK.COAL_ORE) return BLOCK.ITEM_COAL;
+  if (toolId !== undefined) {
+    if (blockId === BLOCK.IRON_ORE) return BLOCK.ITEM_IRON_INGOT;
+    if (blockId === BLOCK.GOLD_ORE) return BLOCK.ITEM_GOLD_INGOT;
+    if (blockId === BLOCK.DIAMOND_ORE) return BLOCK.ITEM_DIAMOND;
+  }
   if (blockId === BLOCK.DEEPSLATE) return BLOCK.COBBLED_DEEPSLATE;
   if (blockId === BLOCK.COPPER_ORE) return BLOCK.ITEM_COPPER_INGOT;
   if (blockId === BLOCK.LAPIS_ORE) return BLOCK.ITEM_LAPIS_LAZULI;

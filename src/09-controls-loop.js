@@ -713,6 +713,8 @@ const recipeTabsEl = document.getElementById('mc-recipe-tabs'), recipeSearchEl =
 const recipeCraftOnlyEl = document.getElementById('mc-recipe-craftable-only');
 
 if (btnInvCloseEl) btnInvCloseEl.addEventListener('click', (e) => { e.preventDefault(); toggleInventory(false); });
+if (invModalEl) invModalEl.addEventListener('click', (e) => { if (e.target === invModalEl && invOpen) toggleInventory(false); });
+if (chestModalEl) chestModalEl.addEventListener('click', (e) => { if (e.target === chestModalEl && chestOpen) closeChestModal(); });
 if (btnRecipeBookEl && recipeDrawerEl) btnRecipeBookEl.addEventListener('click', (e) => { e.preventDefault(); recipeDrawerEl.classList.toggle('hidden'); btnRecipeBookEl.classList.toggle('toggled', !recipeDrawerEl.classList.contains('hidden')); });
 if (btnRecipeCloseEl && recipeDrawerEl) btnRecipeCloseEl.addEventListener('click', (e) => { e.preventDefault(); recipeDrawerEl.classList.add('hidden'); if (btnRecipeBookEl) btnRecipeBookEl.classList.remove('toggled'); });
 if (recipeTabsEl) recipeTabsEl.querySelectorAll('.mc-recipe-tab').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ category: btn.dataset.cat }); }));

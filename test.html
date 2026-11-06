@@ -1437,13 +1437,15 @@
           delete vc.chestLootMap[key];
           vc.setVoxelGlobal(cx, cy, cz, vc.BLOCK.CHEST);
 
-          const diamondsBefore = vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] || 0;
+          const coalBefore = vc.inventoryCounts[vc.BLOCK.ITEM_COAL] || 0;
           const res1 = vc.openVoxelChest(cx, cy, cz);
           assert(res1 && res1.action === 'looted', 'La primera apertura del cofre debe otorgar el botín (action="looted")');
           assert(
-            vc.inventoryCounts[vc.BLOCK.DIAMOND_ORE] >= diamondsBefore + 2,
-            'Abrir el cofre del tesoro debe añadir Diamantes al inventario'
+            vc.inventoryCounts[vc.BLOCK.ITEM_COAL] >= coalBefore + 2 && !res1.lootItems.some(it => it.id === vc.BLOCK.DIAMOND_ORE || it.id === vc.BLOCK.GOLD_ORE),
+            'Abrir el cofre debe otorgar suministros básicos en forma de mineral/ítem (sin cubos de piedra de oro o diamante)'
           );
+          doc.getElementById('chest-modal').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+          assert(doc.getElementById('chest-modal').classList.contains('hidden'), 'Clicar fuera del cofre (#chest-modal) debe cerrar la ventana del cofre');
 
           // Second interaction stores items from currently selected hotbar slot
           vc.hotbarSlots[6] = vc.BLOCK.COBBLE;
@@ -2744,10 +2746,10 @@
           const tInfo = gen.placeStructureInChunk(dTow, surf, 4, 4, 'watchtower');
           assert(tInfo.type === 'watchtower' && dTow[idx(8, 29, 8)] === vc.BLOCK.ANVIL && dTow[idx(7, 31, 7)] === vc.BLOCK.LADDER && dTow[idx(9, 29, 7)] === vc.BLOCK.CHEST, 'La Torre de Vigía debe incluir Yunque, Escalera de mano hasta el mirador y Cofre');
 
-          // 4) Portal en Ruinas ('ruined_portal') con suelo de Netherrack, marco de Obsidiana + Bloque de Oro, Lava y Cofre
+          // 4) Portal en Ruinas ('ruined_portal') con suelo de Netherrack, marco de Obsidiana + Adoquín, Lava y Cofre (sin bloques de oro gratuitos)
           const dPort = new Uint8Array(vc.CHUNK_VOLUME);
           const pInfo = gen.placeStructureInChunk(dPort, surf, 5, 5, 'ruined_portal');
-          assert(pInfo.type === 'ruined_portal' && dPort[idx(8, 28, 8)] === vc.BLOCK.NETHERRACK && dPort[idx(7, 30, 8)] === vc.BLOCK.OBSIDIAN && dPort[idx(9, 33, 8)] === vc.BLOCK.GOLD_BLOCK && dPort[idx(7, 29, 9)] === vc.BLOCK.CHEST, 'El Portal en Ruinas debe incluir Netherrack, marco de Obsidiana coronado con Oro, Lava y Cofre');
+          assert(pInfo.type === 'ruined_portal' && dPort[idx(8, 28, 8)] === vc.BLOCK.NETHERRACK && dPort[idx(7, 30, 8)] === vc.BLOCK.OBSIDIAN && dPort[idx(9, 33, 8)] === vc.BLOCK.COBBLE && dPort[idx(7, 29, 9)] === vc.BLOCK.CHEST, 'El Portal en Ruinas debe incluir Netherrack, marco de Obsidiana deteriorado con Adoquín, Lava y Cofre');
 
           // 5) Cabañas solitarias extremadamente raras (< 1% de chunks) y Pueblos raros estilo Minecraft ('village')
           let cabinCount = 0, villageCount = 0, totalChecked = 0;

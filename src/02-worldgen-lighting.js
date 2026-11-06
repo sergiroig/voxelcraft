@@ -227,18 +227,18 @@ function createWorldGenerator(seed) {
   }
 
   function isVillageChunk(cx, cz) {
-    if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) return false;
-    const rcx = Math.floor(cx / 12), rcz = Math.floor(cz / 12);
+    if (Math.abs(cx) <= 2 && Math.abs(cz) <= 2) return false;
+    const rcx = Math.floor(cx / 16), rcz = Math.floor(cz / 16);
     const regHash = ((Math.imul(rcx, 92837111) ^ Math.imul(rcz, 689287499) ^ Math.imul(seed, 283923481)) >>> 0);
-    if (regHash % 3 !== 0) return false;
-    const vcx = rcx * 12 + 3 + (regHash % 5), vcz = rcz * 12 + 3 + ((regHash >>> 4) % 5);
+    if (regHash % 4 !== 0) return false;
+    const vcx = rcx * 16 + 3 + (regHash % 9), vcz = rcz * 16 + 3 + ((regHash >>> 4) % 9);
     return (cx === vcx || cx === vcx + 1) && (cz === vcz || cz === vcz + 1);
   }
 
   function isCabinChunk(cx, cz) {
     if (cx === 0 && cz === 0) return false;
     const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
-    return (structHash % 240 === 0);
+    return (structHash % 480 === 0);
   }
 
   // Pre-allocated 5x17x5 coarse 3D noise grid for 4x4x4 trilinear interpolation
@@ -380,7 +380,7 @@ function createWorldGenerator(seed) {
       } else if (validSurface && isCabinChunk(cx, cz)) {
         placeStructureInChunk(data, surfaceMap, cx, cz, 'cabin');
         surfaceStructType = 'cabin';
-      } else if (validSurface && (structHash % 140 === 0)) {
+      } else if (validSurface && (structHash % 600 === 0)) {
         const variant = (structHash >>> 4) & 3;
         const sType = variant === 3 ? 'ruined_portal'
           : ((centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
@@ -561,7 +561,7 @@ function createWorldGenerator(seed) {
         setLocal(8 + dx, baseY, 8 + dz, (Math.abs(dx) + Math.abs(dz) <= 2) ? BLOCK.NETHERRACK : BLOCK.COBBLE);
         for (let dy = 1; dy <= 5; dy++) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
       }
-      for (let dx = -1; dx <= 1; dx++) { setLocal(8 + dx, baseY + 1, 8, BLOCK.OBSIDIAN); setLocal(8 + dx, baseY + 5, 8, dx === 1 ? BLOCK.GOLD_BLOCK : BLOCK.OBSIDIAN); }
+      for (let dx = -1; dx <= 1; dx++) { setLocal(8 + dx, baseY + 1, 8, BLOCK.OBSIDIAN); setLocal(8 + dx, baseY + 5, 8, dx === 1 ? BLOCK.COBBLE : BLOCK.OBSIDIAN); }
       for (let dy = 2; dy <= 4; dy++) { setLocal(7, baseY + dy, 8, BLOCK.OBSIDIAN); if (dy < 4) setLocal(9, baseY + dy, 8, BLOCK.OBSIDIAN); }
       setLocal(8, baseY, 9, BLOCK.LAVA); setLocal(7, baseY + 1, 9, BLOCK.CHEST); setLocal(9, baseY + 1, 9, BLOCK.GLOWSTONE);
       return { type: 'ruined_portal', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };

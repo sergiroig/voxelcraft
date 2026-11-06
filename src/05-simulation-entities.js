@@ -620,19 +620,17 @@ function openVoxelChest(wx, wy, wz) {
   let record = chestLootMap[key];
   if (!record || !record.opened) {
     const lootItems = [
-      { id: BLOCK.DIAMOND_ORE, count: 2 },
-      { id: BLOCK.GOLD_ORE, count: 3 },
+      { id: BLOCK.ITEM_COAL, count: 2 },
       { id: BLOCK.ITEM_BREAD, count: 2 },
-      { id: BLOCK.ITEM_APPLE, count: 2 },
-      { id: BLOCK.RAIL, count: 8 },
-      { id: BLOCK.ITEM_MINECART, count: 1 }
+      { id: BLOCK.ITEM_APPLE, count: 1 },
+      { id: BLOCK.TORCH, count: 4 }
     ];
     for (const item of lootItems) {
       inventoryCounts[item.id] = (inventoryCounts[item.id] || 0) + item.count;
       autoEquipToHotbar(item.id);
     }
     record = { opened: true, storedId: 0, storedCount: 0, items: [], slots: Array.from({ length: 27 }, () => ({ id: 0, count: 0 })), lastLoot: lootItems, lootAwarded: lootItems.length };
-    const lootPositions = [4, 11, 13, 15, 21, 23];
+    const lootPositions = [4, 12, 14, 22];
     lootItems.forEach((it, idx) => { record.slots[lootPositions[idx]] = { id: it.id, count: it.count }; });
     chestLootMap[key] = record;
     refreshInventoryCountsUI();
