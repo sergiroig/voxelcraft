@@ -444,29 +444,28 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 4C: Cascade any floating water/sand into caves/mines below
-    for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+    if (deltaList && deltaList.length > 0) for (let i = 0; i < deltaList.length; i += 2) data[deltaList[i]] = deltaList[i + 1];
+    for (let pass = 0; pass < 2; pass++) for (let lz = 0; lz < CHUNK_SIZE; lz++) {
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
         const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
         for (let y = SEA_LEVEL; y >= 3; y--) {
           const bBelow = data[colOffset + y - 1];
           if (data[colOffset + y] === BLOCK.WATER && (bBelow === BLOCK.AIR || (BLOCK_DEFS[bBelow].shape === 'cross' && bBelow !== BLOCK.LADDER))) data[colOffset + y - 1] = BLOCK.WATER;
         }
+        for (let y = 2; y <= SEA_LEVEL; y++) {
+          const b = data[colOffset + y];
+          if (b === BLOCK.AIR || (BLOCK_DEFS[b].shape === 'cross' && b !== BLOCK.LADDER)) {
+            const wN = (lx > 0 && data[colOffset - CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lx < 15 && data[colOffset + CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lz > 0 && data[colOffset - 1024 + y] === BLOCK.WATER ? 1 : 0) + (lz < 15 && data[colOffset + 1024 + y] === BLOCK.WATER ? 1 : 0);
+            if ((b !== BLOCK.AIR && wN >= 1) || (b === BLOCK.AIR && (wN >= 3 || (wN >= 1 && data[colOffset + y - 1] === BLOCK.WATER)))) data[colOffset + y] = BLOCK.WATER;
+          }
+        }
       }
-    }
-    // Step 5: Apply user delta modifications
-    if (deltaList && deltaList.length > 0) {
-      for (let i = 0; i < deltaList.length; i += 2) data[deltaList[i]] = deltaList[i + 1];
     }
     return data;
   }
 
   function placeStructureInChunk(data, surfaceMap, cx, cz, type = 'pyramid') {
-    const baseY = surfaceMap ? surfaceMap[8 * CHUNK_SIZE + 8] : 28;
-    const setLocal = (lx, y, lz, bId) => {
-      if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE || y <= 1 || y >= CHUNK_HEIGHT) return;
-      data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId;
-    };
+    const baseY = surfaceMap ? surfaceMap[8 * CHUNK_SIZE + 8] : 28, setLocal = (lx, y, lz, bId) => { if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE && y > 1 && y < CHUNK_HEIGHT) data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId; };
 
     if (type === 'village') {
       // 1) Gravel roads across the chunk (N-S and E-W) + Central Well at (7..8, 7..8)
