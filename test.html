@@ -3611,7 +3611,9 @@
               resolve(ctx.getImageData(0, 0, sw, sh).data);
             };
             img.onerror = () => reject(new Error(`No se pudo cargar mc-reference/assets/minecraft/textures/${relPath}`));
-            img.src = `./mc-reference/assets/minecraft/textures/${relPath}`;
+            const remoteUrl = `https://raw.githubusercontent.com/misode/mcmeta/assets-tiny/assets/minecraft/textures/${relPath}`; img.crossOrigin = 'anonymous';
+            img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = remoteUrl; } else reject(new Error(`No se pudo cargar mc-reference/assets/minecraft/textures/${relPath}`)); };
+            img.src = (typeof location !== 'undefined' && location.hostname.endsWith('github.io')) ? remoteUrl : `./mc-reference/assets/minecraft/textures/${relPath}`;
           });
 
           // 1) Igualdad píxel a píxel (maxDiff === 0) en los tiles de bloques de mc-reference/assets/minecraft/textures/block/*.png

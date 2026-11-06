@@ -1,6 +1,6 @@
 # PLAN.md — Hoja de Ruta para Incorporar Todo `mc-reference/` en VoxelCraft HTML5
 
-Este documento define el plan técnico, de arquitectura y de fases para incorporar progresivamente la totalidad de bloques, criaturas, ítems, texturas de entorno, interfaz (GUI), partículas, cuadros y efectos de estado disponibles en [`mc-reference/assets/minecraft/textures/`](mc-reference/assets/minecraft/textures/) (`4,225` archivos `.png` oficiales del **Minecraft Default Pack**), manteniendo **60 FPS constantes**, **coste 0 de Garbage Collector (Zero-GC)**, archivos **`< 800` líneas** y el **contrato de igualdad píxel a píxel (`maxDiff === 0`) en [`test.html`](test.html) (`Suite 52`)**.
+Este documento define el plan técnico, de arquitectura y de fases para incorporar progresivamente la totalidad de bloques, criaturas, ítems, texturas de entorno, interfaz (GUI), partículas, cuadros y efectos de estado disponibles en [`mc-reference/assets/minecraft/textures/`](mc-reference/assets/minecraft/textures/) (`4,225` archivos `.png` oficiales del **Minecraft Default Pack**, ignorados en Git mediante [`.gitignore`](.gitignore) y descargables localmente en cada PC según la **Regla 7** de [`AGENTS.md`](AGENTS.md)), manteniendo **60 FPS constantes**, **coste 0 de Garbage Collector (Zero-GC)**, archivos **`< 800` líneas** y el **contrato de igualdad píxel a píxel (`maxDiff === 0`) en [`test.html`](test.html) (`Suite 52` y `Suite 53`)**.
 
 ---
 

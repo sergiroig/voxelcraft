@@ -567,7 +567,9 @@ async function loadMcReferenceTextures() {
     const img = new Image();
     img.onload = () => { imgMap.set(rel, img); resolve(); };
     img.onerror = () => resolve();
-    img.src = `./mc-reference/assets/minecraft/textures/${rel}`;
+    const remoteUrl = `https://raw.githubusercontent.com/misode/mcmeta/assets-tiny/assets/minecraft/textures/${rel}`; img.crossOrigin = 'anonymous';
+    img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = remoteUrl; } else resolve(); };
+    img.src = (typeof location !== 'undefined' && location.hostname.endsWith('github.io')) ? remoteUrl : `./mc-reference/assets/minecraft/textures/${rel}`;
   })));
   if (imgMap.size === 0) return false;
 

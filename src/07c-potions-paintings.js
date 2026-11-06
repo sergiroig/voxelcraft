@@ -84,10 +84,11 @@ async function loadExtendedMcAssets() {
   ];
 
   await Promise.all(paths.map(rel => new Promise(resolve => {
-    const img = new Image();
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    const remoteUrl = `https://raw.githubusercontent.com/misode/mcmeta/assets-tiny/assets/minecraft/textures/${rel}`;
     img.onload = () => { mcHudAssets.set(rel, img); resolve(); };
-    img.onerror = () => resolve();
-    img.src = `./mc-reference/assets/minecraft/textures/${rel}`;
+    img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = remoteUrl; } else resolve(); };
+    img.src = (typeof location !== 'undefined' && location.hostname.endsWith('github.io')) ? remoteUrl : `./mc-reference/assets/minecraft/textures/${rel}`;
   })));
 
   // 1) Cumulative official destroy_stage_0..7.png onto crackTextures[]

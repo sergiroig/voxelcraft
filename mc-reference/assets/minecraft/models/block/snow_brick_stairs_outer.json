@@ -1,8 +1,0 @@
-{
-  "parent": "minecraft:block/outer_stairs",
-  "textures": {
-    "bottom": "minecraft:block/snow_bricks",
-    "side": "minecraft:block/snow_bricks",
-    "top": "minecraft:block/snow_bricks"
-  }
-}
