@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=44"></iframe>
+    <iframe id="game-frame" src="./index.html?v=45"></iframe>
   </div>
 
   <script>
@@ -2609,6 +2609,51 @@
           assert(zombie.hp < zHpBefore, `El Lobo domesticado debe atacar al Zombi cercano (HP ${zombie.hp} vs ${zHpBefore})`);
 
           while (vc.mobs.length > 0) vc.removeMobAt(0);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 46: Ríos Serpenteantes, Cañones (Ravines), Voladizos 3D y 4 Nuevas Estructuras
+      // =========================================================================
+      describe('46. Ríos Serpenteantes, Cañones (Ravines), Voladizos 3D y 4 Nuevas Estructuras (Mina, Mazmorra, Torre y Portal en Ruinas)', () => {
+        it('Evalúa ríos serpenteantes (getRiverFactorAt) y cañones tectónicos (getRavineFloorAt) en el generador del mundo', () => {
+          const gen = vc.getGenerator();
+          assert(typeof gen.getRiverFactorAt === 'function' && typeof gen.getRavineFloorAt === 'function', 'El generador debe exponer getRiverFactorAt y getRavineFloorAt');
+          let foundRiver = false, foundRavine = false;
+          for (let z = -600; z <= 600 && (!foundRiver || !foundRavine); z += 3) {
+            for (let x = -600; x <= 600 && (!foundRiver || !foundRavine); x += 3) {
+              if (!foundRiver && gen.getRiverFactorAt(x, z) > 0.25) foundRiver = true;
+              if (!foundRavine && gen.getRavineFloorAt(x, z) >= 10) foundRavine = true;
+            }
+          }
+          assert(foundRiver, 'El generador debe producir cauces de ríos serpenteantes continuos (getRiverFactorAt > 0.25)');
+          assert(foundRavine, 'El generador debe producir grietas/cañones tectónicos profundos (getRavineFloorAt >= 10)');
+        });
+
+        it('Construye Minas Abandonadas con raíles (mineshaft), Mazmorras subterráneas (dungeon), Torres de Vigía (watchtower) y Portales en Ruinas (ruined_portal)', () => {
+          const gen = vc.getGenerator();
+          const idx = (x, y, z) => (z * 16 + x) * 64 + y;
+          const surf = new Uint8Array(256).fill(28);
+
+          // 1) Mina Abandonada ('mineshaft') en y=14 con vía continua BLOCK.RAIL, arcos de madera y Cofre
+          const dMine = new Uint8Array(vc.CHUNK_VOLUME);
+          const mInfo = gen.placeStructureInChunk(dMine, surf, 2, 2, 'mineshaft');
+          assert(mInfo.type === 'mineshaft' && dMine[idx(8, 14, 5)] === vc.BLOCK.RAIL && dMine[idx(7, 15, 7)] === vc.BLOCK.WOOD && dMine[idx(7, 14, 8)] === vc.BLOCK.CHEST, 'La Mina Abandonada debe incluir vía de ferrocarril (BLOCK.RAIL), pilares de madera y Cofre');
+
+          // 2) Mazmorra Subterránea ('dungeon') en y=12 con cámara de adoquín/ladrillo, Hongos Luminosos, Oro/Diamante y Cofre
+          const dDung = new Uint8Array(vc.CHUNK_VOLUME);
+          const dInfo = gen.placeStructureInChunk(dDung, surf, 3, 3, 'dungeon');
+          assert(dInfo.type === 'dungeon' && dDung[idx(8, 13, 8)] === vc.BLOCK.CHEST && dDung[idx(7, 13, 7)] === vc.BLOCK.GOLD_ORE && dDung[idx(9, 13, 7)] === vc.BLOCK.DIAMOND_ORE, 'La Mazmorra Subterránea debe contener Cofre, Mena de Oro y Mena de Diamante');
+
+          // 3) Torre de Vigía ('watchtower') con escalera interior, Yunque, Cofre y almenas
+          const dTow = new Uint8Array(vc.CHUNK_VOLUME);
+          const tInfo = gen.placeStructureInChunk(dTow, surf, 4, 4, 'watchtower');
+          assert(tInfo.type === 'watchtower' && dTow[idx(8, 29, 8)] === vc.BLOCK.ANVIL && dTow[idx(7, 31, 7)] === vc.BLOCK.LADDER && dTow[idx(9, 29, 7)] === vc.BLOCK.CHEST, 'La Torre de Vigía debe incluir Yunque, Escalera de mano hasta el mirador y Cofre');
+
+          // 4) Portal en Ruinas ('ruined_portal') con suelo de Netherrack, marco de Obsidiana + Bloque de Oro, Lava y Cofre
+          const dPort = new Uint8Array(vc.CHUNK_VOLUME);
+          const pInfo = gen.placeStructureInChunk(dPort, surf, 5, 5, 'ruined_portal');
+          assert(pInfo.type === 'ruined_portal' && dPort[idx(8, 28, 8)] === vc.BLOCK.NETHERRACK && dPort[idx(7, 30, 8)] === vc.BLOCK.OBSIDIAN && dPort[idx(9, 33, 8)] === vc.BLOCK.GOLD_BLOCK && dPort[idx(7, 29, 9)] === vc.BLOCK.CHEST, 'El Portal en Ruinas debe incluir Netherrack, marco de Obsidiana coronado con Oro, Lava y Cofre');
         });
       });
 

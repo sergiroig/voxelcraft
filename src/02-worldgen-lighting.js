@@ -237,6 +237,20 @@ function createWorldGenerator(seed) {
     return { type: 'boulder' };
   }
 
+  function getRiverFactorAt(wx, wz) {
+    const warp = noise2D(wx * 0.015 + 311.7, wz * 0.015 - 193.3) * 14.0;
+    const rVal = Math.abs(noise2D((wx + warp) * 0.0042 - 912.4, (wz + warp) * 0.0042 + 417.8));
+    return rVal < 0.018 ? (0.018 - rVal) / 0.018 : 0;
+  }
+
+  function getRavineFloorAt(wx, wz) {
+    const mask = noise2D(wx * 0.004 - 220.5, wz * 0.004 + 220.5);
+    if (mask < 0.21) return 0;
+    const warp = noise2D(wx * 0.02 + 19.3, wz * 0.02 - 41.7) * 6.0;
+    const rVal = Math.abs(noise2D((wx + warp) * 0.0075 + 711.2, (wz - warp) * 0.018 - 388.6));
+    return rVal < 0.0095 ? 10 + ((Math.abs(wx + wz)) & 3) : 0;
+  }
+
   // Pre-allocated 5x17x5 coarse 3D noise grid for 4x4x4 trilinear interpolation
   const coarseCave = new Float32Array(5 * 17 * 5);
   const cIdx = (gx, gy, gz) => (gz * 5 + gx) * 17 + gy;
@@ -244,6 +258,7 @@ function createWorldGenerator(seed) {
   function generateChunkVoxels(cx, cz, deltaList) {
     const data = new Uint8Array(CHUNK_VOLUME);
     const wx0 = cx * CHUNK_SIZE, wz0 = cz * CHUNK_SIZE;
+    const notOriginChunk = (cx !== 0 || cz !== 0);
 
     // Step 1: Sample 3D cave noise on 4x4x4 coarse grid (only 425 evaluations!)
     for (let gz = 0; gz <= 4; gz++) {
@@ -261,7 +276,7 @@ function createWorldGenerator(seed) {
 
     const surfaceMap = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
 
-    // Step 2: Heightmap, 9 Biomes, Riverbeds (Clay/Gravel) & Strata
+    // Step 2: Heightmap, 9 Biomes, Winding Rivers, Riverbeds (Clay/Gravel) & Strata
     for (let lz = 0; lz < CHUNK_SIZE; lz++) {
       const wz = wz0 + lz;
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
@@ -274,6 +289,10 @@ function createWorldGenerator(seed) {
         if (biome === 'Pantano') h = Math.floor(SEA_LEVEL + continental * 4 + detail * 2);
         else if (biome === 'Meseta') h += Math.floor(Math.max(0, detail) * 6);
         else if (biome === 'Cumbres Heladas') h += Math.floor(mountain * 8);
+        if (notOriginChunk && h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 13) {
+          const rf = getRiverFactorAt(wx, wz);
+          if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 3) * rf);
+        }
         if (h < 5) h = 5;
         if (h >= CHUNK_HEIGHT - 6) h = CHUNK_HEIGHT - 7;
         surfaceMap[lz * CHUNK_SIZE + lx] = h;
@@ -314,7 +333,7 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 3: Carve 3D Caves via Trilinear Interpolation + Place Ores
+    // Step 3: Carve 3D Caves, 3D Mountain Overhangs/Arches, Tectonic Ravines + Place Ores (including Emerald)
     for (let gz = 0; gz < 4; gz++) {
       for (let gx = 0; gx < 4; gx++) {
         for (let gy = 0; gy < 15; gy++) {
@@ -328,21 +347,28 @@ function createWorldGenerator(seed) {
             for (let dx = 0; dx < 4; dx++) {
               const fx = dx * 0.25, lx = gx * 4 + dx, surfY = surfaceMap[lz * CHUNK_SIZE + lx];
               const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
+              const ravFloor = (notOriginChunk && surfY > SEA_LEVEL + 3) ? getRavineFloorAt(wx0 + lx, wz0 + lz) : 0;
               for (let dy = 0; dy < 4; dy++) {
                 const y = gy * 4 + dy;
+                if (ravFloor > 0 && y >= ravFloor && y <= surfY) {
+                  data[colOffset + y] = (y === ravFloor) ? ((lx + lz) & 1 ? BLOCK.LAVA : BLOCK.WATER) : BLOCK.AIR;
+                  continue;
+                }
                 if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 1 && y >= surfY - 4)) continue;
                 const fy = dy * 0.25;
                 const c0 = (v000 + fx * (v100 - v000)) + fy * ((v010 + fx * (v110 - v010)) - (v000 + fx * (v100 - v000)));
                 const c1 = (v001 + fx * (v101 - v001)) + fy * ((v011 + fx * (v111 - v011)) - (v001 + fx * (v101 - v001)));
                 const caveVal = c0 + fz * (c1 - c0);
+                const isOverhang = notOriginChunk && surfY >= SEA_LEVEL + 9 && y >= SEA_LEVEL + 4 && y <= surfY - 2 && caveVal < 0.195;
 
-                if (caveVal < 0.165) {
+                if (caveVal < 0.165 || isOverhang) {
                   if (y <= 4) data[colOffset + y] = BLOCK.LAVA;
                   else if (y <= 22 && data[colOffset + y - 1] === BLOCK.STONE && hash3D(wx0 + lx, y, wz0 + lz) > 0.968) data[colOffset + y] = BLOCK.GLOW_MUSHROOM;
                   else data[colOffset + y] = BLOCK.AIR;
                 } else if (data[colOffset + y] === BLOCK.STONE) {
                   const r = hash3D(wx0 + lx, y, wz0 + lz);
                   if (caveVal < 0.192 && y >= 5 && y <= 20 && r > 0.945) data[colOffset + y] = BLOCK.AMETHYST;
+                  else if (surfY >= 31 && y < 24 && r > 0.9945) data[colOffset + y] = BLOCK.EMERALD_BLOCK;
                   else if (y < 14 && r > 0.992) data[colOffset + y] = BLOCK.DIAMOND_ORE;
                   else if (y < 24 && r > 0.988) data[colOffset + y] = BLOCK.GOLD_ORE;
                   else if (y < 40 && r > 0.978) data[colOffset + y] = BLOCK.IRON_ORE;
@@ -369,7 +395,7 @@ function createWorldGenerator(seed) {
             for (let ty = 1; ty <= ch; ty++) data[colOffset + sy + ty] = BLOCK.CACTUS;
           } else if (biome === 'Desierto' && r < 0.0025 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'oasis');
-          } else if ((cx !== 0 || cz !== 0) && r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
+          } else if (notOriginChunk && r > 0.0025 && r < 0.0042 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'lava_pool');
           } else if (biome === 'Meseta' && r < 0.006) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
@@ -387,11 +413,11 @@ function createWorldGenerator(seed) {
           } else if (r > treeThr - 0.005 && (biome === 'Taiga Nevada' || biome === 'Llanura')) {
             placeEnvFeatureInChunk(data, lx, sy, lz, 'boulder');
           } else if (r > treeThr - 0.0065 && sy > SEA_LEVEL + 2 && lx >= 3 && lx <= 12 && lz >= 3 && lz <= 12) {
-            placeEnvFeatureInChunk(data, lx, sy, lz, (biome === 'Sabana' && (cx !== 0 || cz !== 0)) ? 'lava_pool' : 'water_spring');
+            placeEnvFeatureInChunk(data, lx, sy, lz, (biome === 'Sabana' && notOriginChunk) ? 'lava_pool' : 'water_spring');
           } else if (topBlock === BLOCK.GRASS && data[colOffset + sy + 1] === BLOCK.AIR) {
             const grassLim = (biome === 'Jungla' || biome === 'Sabana') ? 0.16 : 0.085;
             if (r < grassLim) data[colOffset + sy + 1] = BLOCK.TALL_GRASS;
-            else if (r < grassLim + 0.012) data[colOffset + sy + 1] = (biome === 'Pantano' && (cx !== 0 || cz !== 0)) ? BLOCK.GLOW_MUSHROOM : BLOCK.FLOWER_RED;
+            else if (r < grassLim + 0.012) data[colOffset + sy + 1] = (biome === 'Pantano' && notOriginChunk) ? BLOCK.GLOW_MUSHROOM : BLOCK.FLOWER_RED;
             else if (r < grassLim + 0.022) data[colOffset + sy + 1] = BLOCK.FLOWER_YELLOW;
             else if (r < grassLim + 0.027) data[colOffset + sy + 1] = BLOCK.WHEAT_1;
           }
@@ -399,15 +425,21 @@ function createWorldGenerator(seed) {
       }
     }
 
-    // Step 4B: Procedural Structures per Biome (Desert Pyramids, Arctic Igloos, Jungle Temples & Explorer Cabins)
+    // Step 4B: Procedural Structures per Biome (Surface + Subterranean Mineshafts & Dungeons)
     const structHash = ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ Math.imul(seed, 83492791)) >>> 0);
-    if ((cx !== 0 || cz !== 0) && (structHash % 9 === 0)) {
+    if (notOriginChunk) {
       const centerBiome = getBiomeAt(wx0 + 8, wz0 + 8), centerY = surfaceMap[8 * CHUNK_SIZE + 8];
-      if (centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12) {
-        const sType = (centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
-          : ((centerBiome === 'Taiga Nevada' || centerBiome === 'Cumbres Heladas') ? 'igloo'
-          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple' : 'cabin'));
+      if ((structHash % 8 === 0) && centerY > SEA_LEVEL + 1 && centerY < CHUNK_HEIGHT - 12 && data[(8 * CHUNK_SIZE + 8) * CHUNK_HEIGHT + centerY] !== BLOCK.AIR) {
+        const variant = (structHash >>> 4) & 3;
+        const sType = variant === 3 ? 'ruined_portal'
+          : ((centerBiome === 'Desierto' || centerBiome === 'Meseta') ? 'pyramid'
+          : ((centerBiome === 'Taiga Nevada' || centerBiome === 'Cumbres Heladas') ? (variant === 2 ? 'watchtower' : 'igloo')
+          : ((centerBiome === 'Jungla' || centerBiome === 'Pantano') ? 'temple'
+          : (variant === 2 ? 'watchtower' : 'cabin'))));
         placeStructureInChunk(data, surfaceMap, cx, cz, sType);
+      }
+      if ((structHash % 6 === 2) && centerY > SEA_LEVEL) {
+        placeStructureInChunk(data, surfaceMap, cx, cz, (structHash & 1) ? 'mineshaft' : 'dungeon');
       }
     }
 
@@ -425,6 +457,61 @@ function createWorldGenerator(seed) {
       data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId;
     };
 
+    if (type === 'mineshaft') {
+      const my = 14;
+      for (let lz = 2; lz <= 13; lz++) {
+        for (let lx = 7; lx <= 9; lx++) {
+          setLocal(lx, my - 1, lz, BLOCK.PLANKS);
+          for (let dy = 0; dy <= 2; dy++) setLocal(lx, my + dy, lz, BLOCK.AIR);
+        }
+        setLocal(8, my, lz, BLOCK.RAIL);
+        if (lz === 3 || lz === 7 || lz === 11) {
+          for (let dy = 0; dy <= 2; dy++) { setLocal(7, my + dy, lz, BLOCK.WOOD); setLocal(9, my + dy, lz, BLOCK.WOOD); }
+          setLocal(8, my + 2, lz, BLOCK.PLANKS);
+          setLocal(8, my + 1, lz - 1, BLOCK.TORCH);
+        }
+      }
+      setLocal(7, my, 8, BLOCK.CHEST); setLocal(9, my, 8, BLOCK.TNT);
+      return { type: 'mineshaft', x: cx * CHUNK_SIZE + 8, y: my, z: cz * CHUNK_SIZE + 8 };
+    }
+    if (type === 'dungeon') {
+      const dy0 = 12;
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        setLocal(8 + dx, dy0, 8 + dz, ((dx + dz) & 1) ? BLOCK.COBBLE : BLOCK.BRICK);
+        setLocal(8 + dx, dy0 + 4, 8 + dz, BLOCK.COBBLE);
+        const isWall = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+        for (let h = 1; h <= 3; h++) setLocal(8 + dx, dy0 + h, 8 + dz, isWall ? BLOCK.COBBLE : BLOCK.AIR);
+      }
+      setLocal(8, dy0 + 1, 10, BLOCK.AIR); setLocal(8, dy0 + 2, 10, BLOCK.AIR);
+      setLocal(8, dy0 + 1, 8, BLOCK.CHEST); setLocal(7, dy0 + 1, 7, BLOCK.GOLD_ORE); setLocal(9, dy0 + 1, 7, BLOCK.DIAMOND_ORE);
+      setLocal(7, dy0 + 1, 9, BLOCK.GLOW_MUSHROOM); setLocal(9, dy0 + 1, 9, BLOCK.GLOW_MUSHROOM);
+      return { type: 'dungeon', x: cx * CHUNK_SIZE + 8, y: dy0 + 1, z: cz * CHUNK_SIZE + 8 };
+    }
+    if (type === 'watchtower') {
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        setLocal(8 + dx, baseY, 8 + dz, BLOCK.COBBLE);
+        const isWall = Math.abs(dx) === 2 || Math.abs(dz) === 2, isCorner = Math.abs(dx) === 2 && Math.abs(dz) === 2;
+        for (let dy = 1; dy <= 5; dy++) {
+          if (dx === 0 && dz === 2 && dy <= 2) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+          else if (isWall) setLocal(8 + dx, baseY + dy, 8 + dz, (dy === 3 && (dx === 0 || dz === 0)) ? BLOCK.AIR : (isCorner ? BLOCK.BRICK : BLOCK.COBBLE));
+          else setLocal(8 + dx, baseY + dy, 8 + dz, dy === 5 ? BLOCK.PLANKS : BLOCK.AIR);
+        }
+        if (isWall && ((dx + dz) & 1) === 0) setLocal(8 + dx, baseY + 6, 8 + dz, BLOCK.COBBLE);
+      }
+      for (let dy = 1; dy <= 5; dy++) setLocal(7, baseY + dy, 7, BLOCK.LADDER);
+      setLocal(8, baseY + 1, 8, BLOCK.ANVIL); setLocal(9, baseY + 1, 7, BLOCK.CHEST); setLocal(8, baseY + 6, 8, BLOCK.TORCH);
+      return { type: 'watchtower', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+    }
+    if (type === 'ruined_portal') {
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+        setLocal(8 + dx, baseY, 8 + dz, (Math.abs(dx) + Math.abs(dz) <= 2) ? BLOCK.NETHERRACK : BLOCK.COBBLE);
+        for (let dy = 1; dy <= 5; dy++) setLocal(8 + dx, baseY + dy, 8 + dz, BLOCK.AIR);
+      }
+      for (let dx = -1; dx <= 1; dx++) { setLocal(8 + dx, baseY + 1, 8, BLOCK.OBSIDIAN); setLocal(8 + dx, baseY + 5, 8, dx === 1 ? BLOCK.GOLD_BLOCK : BLOCK.OBSIDIAN); }
+      for (let dy = 2; dy <= 4; dy++) { setLocal(7, baseY + dy, 8, BLOCK.OBSIDIAN); if (dy < 4) setLocal(9, baseY + dy, 8, BLOCK.OBSIDIAN); }
+      setLocal(8, baseY, 9, BLOCK.LAVA); setLocal(7, baseY + 1, 9, BLOCK.CHEST); setLocal(9, baseY + 1, 9, BLOCK.GLOWSTONE);
+      return { type: 'ruined_portal', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+    }
     if (type === 'pyramid') {
       for (let layer = 0; layer <= 4; layer++) {
         const r = 4 - layer;
@@ -496,7 +583,7 @@ function createWorldGenerator(seed) {
     return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
   }
 
-  return { generateChunkVoxels, getBiomeAt, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
+  return { generateChunkVoxels, getBiomeAt, getRiverFactorAt, getRavineFloorAt, placeTreeInChunk, placeEnvFeatureInChunk, placeStructureInChunk };
 }
 
 // ============================================================================
