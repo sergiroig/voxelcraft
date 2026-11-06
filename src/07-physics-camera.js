@@ -517,7 +517,7 @@ function updateMining(dt, currentHit) {
   mineHitTimer += dt;
   if (mineHitTimer > 0.16) {
     mineHitTimer = 0; sfx.play('hit');
-    spawnBlockParticles(currentHit.x, currentHit.y, currentHit.z, currentHit.block, 3);
+    spawnBlockParticles(currentHit.x + (currentHit.nx || 0) * 0.35, currentHit.y + (currentHit.ny || 0) * 0.35, currentHit.z + (currentHit.nz || 0) * 0.35, currentHit.block, 4);
   }
 
   if (mineProgress >= 1.0) {
@@ -537,7 +537,9 @@ function updateMining(dt, currentHit) {
     crackBox.visible = false; mineBarWrap.style.display = 'none';
   } else {
     const stage = Math.min(7, Math.floor(mineProgress * 8));
-    crackMat.map = crackTextures[stage]; crackMat.needsUpdate = true;
+    if (crackMat.map !== crackTextures[stage]) { crackMat.map = crackTextures[stage]; crackMat.needsUpdate = true; }
+    const pulse = 1.0 + Math.max(0, 0.06 - mineHitTimer) * 0.15;
+    crackBox.scale.set(pulse, pulse, pulse);
     crackBox.position.set(currentHit.x + 0.5, currentHit.y + 0.5, currentHit.z + 0.5);
     crackBox.visible = def.shape === 'cube';
     mineBarWrap.style.display = 'block';

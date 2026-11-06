@@ -2967,6 +2967,29 @@
           assert(rendered === true && vc.getShadowPassCount() === prevPasses + 1, 'En modo shadowmap, updateShadowMapPass(true) debe renderizar el mapa de profundidad solar en shadowMapTarget');
           vc.setTimeOfDay(5.82);
         });
+
+        it('Genera grietas de rotura pixel-art 100% acumulativas en 8 fases sin saltar de ángulo entre etapas', () => {
+          assert(vc.crackTextures && vc.crackTextures.length === 8, 'Deben existir 8 texturas de grietas progresivas');
+          let prevCount = 0, prevMask = null;
+          for (let s = 0; s < 8; s++) {
+            const cv = vc.crackTextures[s].image;
+            const data = cv.getContext('2d').getImageData(0, 0, 16, 16).data;
+            let count = 0;
+            const mask = new Uint8Array(256);
+            for (let p = 0; p < 256; p++) {
+              if (data[p * 4 + 3] > 0) {
+                count++;
+                mask[p] = 1;
+              }
+              if (prevMask && prevMask[p] === 1) {
+                assert(mask[p] === 1, `La fase de grieta ${s} debe conservar todos los píxeles de la fase ${s - 1} sin cambiar de ángulo`);
+              }
+            }
+            assert(count > prevCount, `La fase ${s} debe añadir nuevos píxeles de fisura acumulativos (${count} > ${prevCount})`);
+            prevCount = count;
+            prevMask = mask;
+          }
+        });
       });
 
       // Execute all suites

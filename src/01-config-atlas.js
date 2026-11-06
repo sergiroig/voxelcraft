@@ -767,25 +767,30 @@ function createProceduralAtlas() {
   return { texture, canvas };
 }
 
-// Create 8-stage Crack Overlay Atlas for progressive block mining
+// Create 8-stage Cumulative Pixel-Art Fracture Overlay Atlas (Minecraft destroy_stage_0..7 style)
+const CRACK_STAGE_PIXELS = [
+  [[7,7],[8,7],[7,8],[8,6],[6,8]],
+  [[6,6],[9,6],[8,9],[5,8],[9,8],[7,5]],
+  [[5,5],[10,5],[10,6],[9,10],[4,9],[6,10],[11,8]],
+  [[4,4],[6,4],[11,4],[10,11],[8,11],[3,9],[4,7],[12,9]],
+  [[3,3],[7,3],[12,3],[12,5],[11,12],[7,12],[2,10],[3,6],[13,10],[5,11]],
+  [[2,2],[8,2],[13,2],[13,6],[12,13],[6,13],[1,11],[2,5],[14,10],[4,12],[9,4],[10,9]],
+  [[1,1],[8,1],[14,2],[14,6],[13,14],[5,14],[1,12],[1,5],[14,11],[3,13],[6,7],[9,7],[7,9],[11,7]],
+  [[0,1],[9,0],[15,1],[15,6],[14,15],[4,15],[0,13],[0,4],[15,11],[2,14],[5,6],[10,7],[6,9],[9,9],[8,8]]
+];
 function createCrackTextures() {
   const stages = [];
   for (let s = 0; s < 8; s++) {
-    const c = document.createElement('canvas');
-    c.width = 16; c.height = 16;
+    const c = document.createElement('canvas'); c.width = 16; c.height = 16;
     const ctx = c.getContext('2d');
-    ctx.strokeStyle = 'rgba(15, 15, 15, 0.82)';
-    ctx.lineWidth = 1.3;
-    const branches = (s + 1) * 2;
-    for (let b = 0; b < branches; b++) {
-      ctx.beginPath();
-      ctx.moveTo(8, 8);
-      const angle = (b / branches) * Math.PI * 2 + b * 0.4, len = 2 + (s + 1) * 1.15;
-      ctx.lineTo(8 + Math.cos(angle) * len, 8 + Math.sin(angle) * len);
-      ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+    for (let w = 0; w <= s; w++) for (const [x, y] of CRACK_STAGE_PIXELS[w]) if (x < 15 && y < 15) ctx.fillRect(x + 1, y + 1, 1, 1);
+    for (let w = 0; w <= s; w++) {
+      ctx.fillStyle = w <= s - 3 ? 'rgba(8, 10, 14, 0.94)' : 'rgba(16, 20, 28, 0.84)';
+      for (const [x, y] of CRACK_STAGE_PIXELS[w]) ctx.fillRect(x, y, 1, 1);
     }
     const tex = new THREE.CanvasTexture(c);
-    tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
     stages.push(tex);
   }
   return stages;
