@@ -65,6 +65,73 @@ const player = {
 };
 
 let isShieldBlocking = false;
+const armorSlots = [0, 0, 0, 0]; // [Helmet, Chestplate, Leggings, Boots]
+
+function getArmorDefenseRatio() {
+  let def = 0;
+  for (let i = 0; i < 4; i++) {
+    const id = armorSlots[i];
+    if (id >= BLOCK.ARMOR_DIAMOND_HELMET && id <= BLOCK.ARMOR_DIAMOND_BOOTS) def += 0.18;
+    else if (id >= BLOCK.ARMOR_IRON_HELMET && id <= BLOCK.ARMOR_IRON_BOOTS) def += 0.12;
+  }
+  return Math.min(0.75, def);
+}
+
+function equipArmorItem(itemId) {
+  const sIdx = getArmorSlotForItem(itemId);
+  if (sIdx < 0) return false;
+  if (gameMode === 'survival' && (inventoryCounts[itemId] || 0) <= 0) return false;
+  const prevId = armorSlots[sIdx];
+  if (prevId > 0 && gameMode === 'survival') inventoryCounts[prevId] = (inventoryCounts[prevId] || 0) + 1;
+  if (gameMode === 'survival') {
+    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === itemId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
+    inventoryCounts[itemId] = Math.max(0, (inventoryCounts[itemId] || 1) - 1);
+    if (inventoryCounts[itemId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === itemId) hotbarSlots[selectedSlot] = BLOCK.AIR;
+  }
+  armorSlots[sIdx] = itemId;
+  sfx.play('shield');
+  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
+  if (typeof saveWorldData === 'function') saveWorldData();
+  return true;
+}
+
+function applyBoneMealAt(wx, wy, wz) {
+  if (gameMode === 'survival' && (inventoryCounts[BLOCK.ITEM_BONE_MEAL] || 0) <= 0) return false;
+  const b = getVoxelGlobal(wx, wy, wz);
+  let applied = false;
+  if (b === BLOCK.WHEAT_1 || b === BLOCK.WHEAT_2) {
+    setVoxelGlobal(wx, wy, wz, BLOCK.WHEAT_3); applied = true;
+  } else if (b === BLOCK.SAPLING) {
+    growTreeAt(wx, wy, wz); applied = true;
+  } else if (b === BLOCK.GRASS || b === BLOCK.DIRT) {
+    if (b === BLOCK.DIRT) setVoxelGlobal(wx, wy, wz, BLOCK.GRASS);
+    if (getVoxelGlobal(wx, wy + 1, wz) === BLOCK.AIR) setVoxelGlobal(wx, wy + 1, wz, BLOCK.TALL_GRASS);
+    applied = true;
+  }
+  if (!applied) return false;
+  if (gameMode === 'survival') {
+    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_BONE_MEAL && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
+    inventoryCounts[BLOCK.ITEM_BONE_MEAL] = Math.max(0, (inventoryCounts[BLOCK.ITEM_BONE_MEAL] || 1) - 1);
+    if (inventoryCounts[BLOCK.ITEM_BONE_MEAL] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === BLOCK.ITEM_BONE_MEAL) hotbarSlots[selectedSlot] = BLOCK.AIR;
+  }
+  spawnBlockParticles(wx, wy + 0.5, wz, BLOCK.SAPLING, 14);
+  sfx.play('chime'); player.swingTime = 1.0;
+  if (typeof refreshInventoryCountsUI === 'function') refreshInventoryCountsUI();
+  if (typeof saveWorldData === 'function') saveWorldData();
+  return true;
+}
+
+function useFishingRod(wx, wy, wz) {
+  const tx = wx !== undefined ? wx : Math.floor(player.x - Math.sin(player.yaw) * 2.5);
+  const ty = wy !== undefined ? wy : Math.floor(player.y);
+  const tz = wz !== undefined ? wz : Math.floor(player.z - Math.cos(player.yaw) * 2.5);
+  spawnBlockParticles(tx, ty + 0.5, tz, BLOCK.WATER, 16);
+  sfx.play('splash'); player.swingTime = 1.0;
+  addInventoryItem(BLOCK.ITEM_RAW_FISH, 1);
+  const lbl = document.getElementById('block-label');
+  if (lbl) lbl.textContent = '🎣 ¡Has pescado 1× Pescado Crudo (+2❤)!';
+  return BLOCK.ITEM_RAW_FISH;
+}
 
 function toggleShieldBlock(forceState) {
   const next = typeof forceState === 'boolean' ? forceState : !isShieldBlocking;
@@ -90,6 +157,8 @@ function damagePlayer(amount) {
     amount = Math.floor(amount * 0.2);
     if (amount <= 0) return;
   }
+  const armorDef = getArmorDefenseRatio();
+  if (armorDef > 0) amount = Math.max(1, Math.round(amount * (1 - armorDef)));
   player.health = Math.max(1, player.health - amount);
   renderHeartsUI();
   sfx.play('hurt');

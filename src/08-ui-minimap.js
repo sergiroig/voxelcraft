@@ -62,10 +62,33 @@ function drawItemIcon(canvas, itemId) {
     ctx.fillStyle = '#cbd5e1'; for (let y = 3; y <= 13; y++) ctx.fillRect(4, y, 1, 1);
     ctx.fillStyle = '#92400e'; ctx.fillRect(5, 2, 4, 2); ctx.fillRect(9, 4, 2, 8); ctx.fillRect(5, 12, 4, 2);
     ctx.fillStyle = '#fef08a'; ctx.fillRect(3, 7, 10, 2);
-  } else if (itemId === BLOCK.ITEM_APPLE) {
+  } else if (isArmorItem(itemId)) {
+    const isDia = itemId >= BLOCK.ARMOR_DIAMOND_HELMET, sIdx = getArmorSlotForItem(itemId);
+    ctx.fillStyle = isDia ? '#0284c7' : '#64748b';
+    if (sIdx === 0) { ctx.fillRect(2, 3, 12, 9); ctx.fillStyle = isDia ? '#5decf5' : '#e2e8f0'; ctx.fillRect(3, 4, 10, 4); ctx.fillRect(3, 8, 3, 3); ctx.fillRect(10, 8, 3, 3); }
+    else if (sIdx === 1) { ctx.fillRect(2, 2, 12, 12); ctx.fillStyle = isDia ? '#5decf5' : '#e2e8f0'; ctx.fillRect(3, 3, 3, 4); ctx.fillRect(10, 3, 3, 4); ctx.fillRect(4, 6, 8, 7); }
+    else if (sIdx === 2) { ctx.fillRect(3, 2, 10, 12); ctx.fillStyle = isDia ? '#5decf5' : '#e2e8f0'; ctx.fillRect(4, 3, 8, 3); ctx.fillRect(4, 6, 3, 7); ctx.fillRect(9, 6, 3, 7); }
+    else { ctx.fillRect(2, 6, 5, 8); ctx.fillRect(9, 6, 5, 8); ctx.fillStyle = isDia ? '#5decf5' : '#e2e8f0'; ctx.fillRect(3, 7, 3, 6); ctx.fillRect(10, 7, 3, 6); }
+  } else if (itemId === BLOCK.TOOL_FISHING_ROD) {
+    ctx.fillStyle = '#7a542e'; for (let i = 2; i <= 12; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(13, 4, 1, 7); ctx.fillStyle = '#ef4444'; ctx.fillRect(12, 11, 3, 3);
+  } else if (itemId === BLOCK.ITEM_BONE) {
+    ctx.fillStyle = '#e2e8f0'; for (let i = 4; i <= 11; i++) ctx.fillRect(i, 15 - i, 2, 2);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(2, 11, 4, 3); ctx.fillRect(10, 2, 4, 3);
+  } else if (itemId === BLOCK.ITEM_BONE_MEAL) {
+    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(3, 7, 10, 6); ctx.fillStyle = '#ffffff'; ctx.fillRect(5, 5, 6, 6); ctx.fillRect(4, 8, 8, 4);
+  } else if (itemId === BLOCK.ITEM_RAW_PORKCHOP || itemId === BLOCK.ITEM_COOKED_PORKCHOP) {
+    ctx.fillStyle = itemId === BLOCK.ITEM_COOKED_PORKCHOP ? '#92400e' : '#be123c'; ctx.fillRect(3, 4, 10, 8);
+    ctx.fillStyle = itemId === BLOCK.ITEM_COOKED_PORKCHOP ? '#f59e0b' : '#fda4af'; ctx.fillRect(4, 5, 8, 6);
+    ctx.fillStyle = '#fef2f2'; ctx.fillRect(9, 6, 2, 2);
+  } else if (itemId === BLOCK.ITEM_RAW_FISH || itemId === BLOCK.ITEM_COOKED_FISH) {
+    ctx.fillStyle = itemId === BLOCK.ITEM_COOKED_FISH ? '#b45309' : '#0284c7'; ctx.fillRect(3, 5, 9, 6); ctx.fillRect(11, 4, 3, 8);
+    ctx.fillStyle = itemId === BLOCK.ITEM_COOKED_FISH ? '#fbbf24' : '#7dd3fc'; ctx.fillRect(4, 6, 7, 4);
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(4, 6, 2, 2);
+  } else if (itemId === BLOCK.ITEM_APPLE || itemId === BLOCK.ITEM_GOLDEN_APPLE) {
     ctx.fillStyle = '#22c55e'; ctx.fillRect(8, 2, 3, 2);
-    ctx.fillStyle = '#ef4444'; ctx.fillRect(4, 4, 8, 9); ctx.fillRect(3, 5, 10, 7);
-    ctx.fillStyle = '#fca5a5'; ctx.fillRect(5, 5, 2, 2);
+    ctx.fillStyle = itemId === BLOCK.ITEM_GOLDEN_APPLE ? '#eab308' : '#ef4444'; ctx.fillRect(4, 4, 8, 9); ctx.fillRect(3, 5, 10, 7);
+    ctx.fillStyle = itemId === BLOCK.ITEM_GOLDEN_APPLE ? '#fef08a' : '#fca5a5'; ctx.fillRect(5, 5, 2, 2);
   } else if (itemId === BLOCK.ITEM_BREAD) {
     ctx.fillStyle = '#92400e'; ctx.fillRect(2, 6, 12, 6);
     ctx.fillStyle = '#d97706'; ctx.fillRect(3, 5, 10, 6);
@@ -367,84 +390,49 @@ window.addEventListener('touchstart', () => {
 }, { once: true, passive: true });
 
 function startGameplay() {
-  sfx.init();
-  invOpen = false;
-  chestOpen = false;
-  menuOpen = false;
+  sfx.init(); invOpen = false; chestOpen = false; menuOpen = false;
   invModalEl.classList.add('hidden');
-  const cm = document.getElementById('chest-modal');
-  if (cm) cm.classList.add('hidden');
+  const cm = document.getElementById('chest-modal'); if (cm) cm.classList.add('hidden');
   overlayEl.classList.add('hidden');
   if (isTouchMode || !canvasEl.requestPointerLock) {
-    touchPlaying = true;
-    touchControlsEl.classList.add('active');
-    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
+    touchPlaying = true; touchControlsEl.classList.add('active');
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
   } else {
-    try {
-      const lockPromise = canvasEl.requestPointerLock();
-      if (lockPromise && typeof lockPromise.catch === 'function') lockPromise.catch(() => {});
-    } catch (_) {}
+    try { const p = canvasEl.requestPointerLock(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch (_) {}
   }
 }
 
 function togglePauseMenu(forceOpen) {
   const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !menuOpen;
   if (nextOpen) {
-    menuOpen = true;
-    isMiningHeld = false;
-    invOpen = false;
-    chestOpen = false;
+    menuOpen = true; isMiningHeld = false; invOpen = false; chestOpen = false;
     invModalEl.classList.add('hidden');
-    const cm = document.getElementById('chest-modal');
-    if (cm) cm.classList.add('hidden');
+    const cm = document.getElementById('chest-modal'); if (cm) cm.classList.add('hidden');
     overlayEl.classList.remove('hidden');
-    if (touchPlaying) {
-      touchPlaying = false;
-      resetJoystick();
-    }
-    if (document.pointerLockElement) {
-      try { document.exitPointerLock(); } catch (_) {}
-    }
-  } else {
-    startGameplay();
-  }
+    if (touchPlaying) { touchPlaying = false; resetJoystick(); }
+    if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (_) {} }
+  } else startGameplay();
   return menuOpen;
 }
 
 function toggleInventory(force, asCraftingTable = false) {
   const nextOpen = typeof force === 'boolean' ? force : !invOpen;
-  if (!nextOpen && invOpen && typeof returnCraftAndCursorItemsToInventory === 'function') {
-    returnCraftAndCursorItemsToInventory();
-  }
-  invOpen = nextOpen;
-  craftingTableMode = invOpen ? !!asCraftingTable : false;
-  if (invOpen) {
-    chestOpen = false;
-    const cm = document.getElementById('chest-modal');
-    if (cm) cm.classList.add('hidden');
-  }
+  if (!nextOpen && invOpen && typeof returnCraftAndCursorItemsToInventory === 'function') returnCraftAndCursorItemsToInventory();
+  invOpen = nextOpen; craftingTableMode = invOpen ? !!asCraftingTable : false;
+  if (invOpen) { chestOpen = false; const cm = document.getElementById('chest-modal'); if (cm) cm.classList.add('hidden'); }
   invModalEl.classList.toggle('hidden', !invOpen);
-  if (invOpen) {
-    isMiningHeld = false;
-    buildInventoryModal();
-    if (document.pointerLockElement) document.exitPointerLock();
-  } else {
-    startGameplay();
-  }
+  if (invOpen) { isMiningHeld = false; buildInventoryModal(); if (document.pointerLockElement) document.exitPointerLock(); }
+  else startGameplay();
 }
 
-function openCraftingTable(wx, wy, wz) {
-  sfx.play('wood');
-  toggleInventory(true, true);
-  return true;
-}
+function openCraftingTable(wx, wy, wz) { sfx.play('wood'); toggleInventory(true, true); return true; }
 
 const SMELT_RECIPES = [
   { inId: BLOCK.IRON_ORE, outId: BLOCK.ITEM_IRON_INGOT, count: 1 },
   { inId: BLOCK.GOLD_ORE, outId: BLOCK.ITEM_GOLD_INGOT, count: 1 },
   { inId: BLOCK.DIAMOND_ORE, outId: BLOCK.ITEM_DIAMOND, count: 1 },
+  { inId: BLOCK.ITEM_RAW_PORKCHOP, outId: BLOCK.ITEM_COOKED_PORKCHOP, count: 1 },
+  { inId: BLOCK.ITEM_RAW_FISH, outId: BLOCK.ITEM_COOKED_FISH, count: 1 },
   { inId: BLOCK.SAND, outId: BLOCK.GLASS, count: 1 },
   { inId: BLOCK.COBBLE, outId: BLOCK.STONE, count: 1 },
   { inId: BLOCK.WOOD, outId: BLOCK.ITEM_COAL, count: 1 }
@@ -498,10 +486,18 @@ function placeBlockAtCurrentTarget() {
     if (currentHit.block === BLOCK.CRAFTING_TABLE) { openCraftingTable(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.FURNACE) { smeltInFurnace(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
     if (currentHit.block === BLOCK.CHEST) { openVoxelChest(currentHit.x, currentHit.y, currentHit.z); player.swingTime = 1.0; return true; }
+    if (currentHit.block === BLOCK.CAKE) {
+      setVoxelGlobal(currentHit.x, currentHit.y, currentHit.z, BLOCK.AIR);
+      player.health = Math.min(player.maxHealth, player.health + 6);
+      renderHeartsUI(); sfx.play('eat'); player.swingTime = 1.0; return true;
+    }
+    if (bId === BLOCK.ITEM_BONE_MEAL && applyBoneMealAt(currentHit.x, currentHit.y, currentHit.z)) return true;
   }
 
-  // 2. Consumables, Bow, Grappling Hook or Sword Shield
-  if (bId === BLOCK.ITEM_APPLE || bId === BLOCK.ITEM_BREAD) return eatHeldApple(bId);
+  // 2. Consumables, Armor, Fishing Rod, Bow, Grappling Hook or Sword Shield
+  if (isFoodItem(bId)) return eatHeldApple(bId);
+  if (isArmorItem(bId)) return equipArmorItem(bId);
+  if (bId === BLOCK.TOOL_FISHING_ROD) return !!useFishingRod(currentHit ? currentHit.x : undefined, currentHit ? currentHit.y : undefined, currentHit ? currentHit.z : undefined);
   if (bId === BLOCK.TOOL_BOW) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
     shootArrow(camera.position.x, camera.position.y, camera.position.z, dir.x, dir.y, dir.z);

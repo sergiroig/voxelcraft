@@ -10,95 +10,27 @@ const CHUNK_VOLUME = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE; // 16,384 bytes
 const SEA_LEVEL = 20;
 
 const BLOCK = {
-  AIR: 0,
-  GRASS: 1,
-  DIRT: 2,
-  STONE: 3,
-  SAND: 4,
-  WOOD: 5,
-  LEAVES: 6,
-  PLANKS: 7,
-  COBBLE: 8,
-  BRICK: 9,
-  GLASS: 10,
-  WATER: 11,
-  SNOW: 12,
-  GLOWSTONE: 13,
-  BEDROCK: 14,
-  COAL_ORE: 15,
-  IRON_ORE: 16,
-  GOLD_ORE: 17,
-  DIAMOND_ORE: 18,
-  TORCH: 19,
-  TALL_GRASS: 20,
-  FLOWER_RED: 21,
-  FLOWER_YELLOW: 22,
-  CACTUS: 23,
-  TNT: 24,
-  LAVA: 25,
-  OBSIDIAN: 26,
-  LEVER_OFF: 27,
-  LEVER_ON: 28,
-  REDSTONE_LAMP_OFF: 29,
-  REDSTONE_LAMP_ON: 30,
-  SAPLING: 31,
-  WHEAT_1: 32,
-  WHEAT_2: 33,
-  WHEAT_3: 34,
-  AMETHYST: 35,
-  GLOW_MUSHROOM: 36,
-  SLIME: 37,
-  DOOR_CLOSED: 38,
-  DOOR_OPEN: 39,
-  LADDER: 40,
-  TRAPDOOR_CLOSED: 41,
-  TRAPDOOR_OPEN: 42,
-  RAIL: 43,
-  CHEST: 44,
-  LILY_PAD: 45,
-  PISTON: 46,
-  PORTAL: 47,
-  ICE: 48,
-  CRAFTING_TABLE: 49,
-  FURNACE: 50,
-  IRON_BLOCK: 51,
-  GOLD_BLOCK: 52,
-  DIAMOND_BLOCK: 53,
-  BOOKSHELF: 54,
-  // Special Tool, Material & Consumable IDs (not placed as blocks)
-  TOOL_PICKAXE: 100,
-  TOOL_SWORD: 101,
-  TOOL_BOW: 102,
-  ITEM_APPLE: 103,
-  ITEM_BREAD: 104,
-  ITEM_MINECART: 105,
-  ITEM_BOAT: 106,
-  TOOL_GRAPPLING_HOOK: 107,
-  ITEM_STICK: 108,
-  ITEM_COAL: 109,
-  ITEM_IRON_INGOT: 110,
-  ITEM_GOLD_INGOT: 111,
-  ITEM_DIAMOND: 112,
-  TOOL_WOOD_PICKAXE: 113,
-  TOOL_STONE_PICKAXE: 114,
-  TOOL_IRON_PICKAXE: 115,
-  TOOL_GOLD_PICKAXE: 116,
-  TOOL_WOOD_SWORD: 117,
-  TOOL_STONE_SWORD: 118,
-  TOOL_IRON_SWORD: 119,
-  TOOL_GOLD_SWORD: 120,
-  TOOL_AXE: 121,
-  TOOL_SHOVEL: 122,
-  TOOL_HOE: 123,
-  TOOL_SHEARS: 124,
-  TOOL_FLINT_AND_STEEL: 125,
-  ITEM_BUCKET: 126,
-  ITEM_WATER_BUCKET: 127,
-  ITEM_LAVA_BUCKET: 128
+  AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, WOOD: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, BRICK: 9,
+  GLASS: 10, WATER: 11, SNOW: 12, GLOWSTONE: 13, BEDROCK: 14, COAL_ORE: 15, IRON_ORE: 16, GOLD_ORE: 17, DIAMOND_ORE: 18, TORCH: 19,
+  TALL_GRASS: 20, FLOWER_RED: 21, FLOWER_YELLOW: 22, CACTUS: 23, TNT: 24, LAVA: 25, OBSIDIAN: 26, LEVER_OFF: 27, LEVER_ON: 28,
+  REDSTONE_LAMP_OFF: 29, REDSTONE_LAMP_ON: 30, SAPLING: 31, WHEAT_1: 32, WHEAT_2: 33, WHEAT_3: 34, AMETHYST: 35, GLOW_MUSHROOM: 36,
+  SLIME: 37, DOOR_CLOSED: 38, DOOR_OPEN: 39, LADDER: 40, TRAPDOOR_CLOSED: 41, TRAPDOOR_OPEN: 42, RAIL: 43, CHEST: 44,
+  LILY_PAD: 45, PISTON: 46, PORTAL: 47, ICE: 48, CRAFTING_TABLE: 49, FURNACE: 50, IRON_BLOCK: 51, GOLD_BLOCK: 52, DIAMOND_BLOCK: 53, BOOKSHELF: 54, CAKE: 55,
+  // Special Tool, Material, Armor & Consumable IDs (not placed as blocks)
+  TOOL_PICKAXE: 100, TOOL_SWORD: 101, TOOL_BOW: 102, ITEM_APPLE: 103, ITEM_BREAD: 104, ITEM_MINECART: 105, ITEM_BOAT: 106, TOOL_GRAPPLING_HOOK: 107,
+  ITEM_STICK: 108, ITEM_COAL: 109, ITEM_IRON_INGOT: 110, ITEM_GOLD_INGOT: 111, ITEM_DIAMOND: 112,
+  TOOL_WOOD_PICKAXE: 113, TOOL_STONE_PICKAXE: 114, TOOL_IRON_PICKAXE: 115, TOOL_GOLD_PICKAXE: 116,
+  TOOL_WOOD_SWORD: 117, TOOL_STONE_SWORD: 118, TOOL_IRON_SWORD: 119, TOOL_GOLD_SWORD: 120,
+  TOOL_AXE: 121, TOOL_SHOVEL: 122, TOOL_HOE: 123, TOOL_SHEARS: 124, TOOL_FLINT_AND_STEEL: 125,
+  ITEM_BUCKET: 126, ITEM_WATER_BUCKET: 127, ITEM_LAVA_BUCKET: 128,
+  ARMOR_IRON_HELMET: 129, ARMOR_IRON_CHESTPLATE: 130, ARMOR_IRON_LEGGINGS: 131, ARMOR_IRON_BOOTS: 132,
+  ARMOR_DIAMOND_HELMET: 133, ARMOR_DIAMOND_CHESTPLATE: 134, ARMOR_DIAMOND_LEGGINGS: 135, ARMOR_DIAMOND_BOOTS: 136,
+  TOOL_FISHING_ROD: 137, ITEM_BONE: 138, ITEM_BONE_MEAL: 139,
+  ITEM_RAW_PORKCHOP: 140, ITEM_COOKED_PORKCHOP: 141, ITEM_RAW_FISH: 142, ITEM_COOKED_FISH: 143, ITEM_GOLDEN_APPLE: 144
 };
 
-// Atlas has 59 tiles (columns) of 16x16 pixels
-const ATLAS_COLS = 59;
+// Atlas has 61 tiles (columns) of 16x16 pixels
+const ATLAS_COLS = 61;
 const TILE_PX = 16;
 
 // Block Definitions:
@@ -161,6 +93,7 @@ const BLOCK_DEFS = {
   [BLOCK.GOLD_BLOCK]:          { name: 'Bloque de Oro',            solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.45, stoneLike: true,  color: 0xfacc15, tiles: [56,56,56,56,56,56] },
   [BLOCK.DIAMOND_BLOCK]:       { name: 'Bloque de Diamante',       solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 1.75, stoneLike: true,  color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
   [BLOCK.BOOKSHELF]:           { name: 'Estantería de Libros',     solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.65, stoneLike: false, color: 0xb45309, tiles: [ 8, 8,58,58,58,58] },
+  [BLOCK.CAKE]:                { name: 'Tarta Dulce (+6❤)',        solid: true,  opaque: true,  shape: 'cube',  light: 0,  hardness: 0.25, stoneLike: false, color: 0xf43f5e, tiles: [59, 8,60,60,60,60] },
   [BLOCK.TOOL_PICKAXE]:        { name: 'Pico de Diamante',         solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x5decf5, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_SWORD]:          { name: 'Espada de Diamante',       solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x38bdf8, tiles: [20,20,20,20,20,20] },
   [BLOCK.TOOL_BOW]:            { name: 'Arco y Flechas',           solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xd97706, tiles: [5,5,5,5,5,5] },
@@ -189,17 +122,36 @@ const BLOCK_DEFS = {
   [BLOCK.TOOL_FLINT_AND_STEEL]:{ name: 'Mechero de Pedernal',      solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf97316, tiles: [28,28,28,28,28,28] },
   [BLOCK.ITEM_BUCKET]:         { name: 'Cubo Vacío',               solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xcbd5e1, tiles: [55,55,55,55,55,55] },
   [BLOCK.ITEM_WATER_BUCKET]:   { name: 'Cubo con Agua',            solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0x3b82f6, tiles: [12,12,12,12,12,12] },
-  [BLOCK.ITEM_LAVA_BUCKET]:    { name: 'Cubo con Lava',            solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf97316, tiles: [28,28,28,28,28,28] }
+  [BLOCK.ITEM_LAVA_BUCKET]:    { name: 'Cubo con Lava',            solid: false, opaque: false, shape: 'tool',  light: 0,  hardness: 0,    stoneLike: false, color: 0xf97316, tiles: [28,28,28,28,28,28] },
+  [BLOCK.ARMOR_IRON_HELMET]:       { name: 'Casco de Hierro',            solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ARMOR_IRON_CHESTPLATE]:   { name: 'Peto de Hierro',             solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ARMOR_IRON_LEGGINGS]:     { name: 'Grebas de Hierro',           solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ARMOR_IRON_BOOTS]:        { name: 'Botas de Hierro',            solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xe2e8f0, tiles: [55,55,55,55,55,55] },
+  [BLOCK.ARMOR_DIAMOND_HELMET]:    { name: 'Casco de Diamante',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
+  [BLOCK.ARMOR_DIAMOND_CHESTPLATE]:{ name: 'Peto de Diamante',           solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
+  [BLOCK.ARMOR_DIAMOND_LEGGINGS]:  { name: 'Grebas de Diamante',         solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
+  [BLOCK.ARMOR_DIAMOND_BOOTS]:     { name: 'Botas de Diamante',          solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x38bdf8, tiles: [57,57,57,57,57,57] },
+  [BLOCK.TOOL_FISHING_ROD]:        { name: 'Caña de Pescar',             solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xa16207, tiles: [8,8,8,8,8,8] },
+  [BLOCK.ITEM_BONE]:               { name: 'Hueso de Esqueleto',         solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xf8fafc, tiles: [13,13,13,13,13,13] },
+  [BLOCK.ITEM_BONE_MEAL]:          { name: 'Polvo de Hueso',             solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xffffff, tiles: [13,13,13,13,13,13] },
+  [BLOCK.ITEM_RAW_PORKCHOP]:       { name: 'Chuleta Cruda (+3❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfda4af, tiles: [23,23,23,23,23,23] },
+  [BLOCK.ITEM_COOKED_PORKCHOP]:    { name: 'Chuleta Asada (+8❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xd97706, tiles: [37,37,37,37,37,37] },
+  [BLOCK.ITEM_RAW_FISH]:           { name: 'Pescado Crudo (+2❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0x38bdf8, tiles: [12,12,12,12,12,12] },
+  [BLOCK.ITEM_COOKED_FISH]:        { name: 'Pescado Asado (+6❤)',        solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xf59e0b, tiles: [37,37,37,37,37,37] },
+  [BLOCK.ITEM_GOLDEN_APPLE]:       { name: 'Manzana Dorada (+10❤)',      solid: false, opaque: false, shape: 'tool', light: 0, hardness: 0, stoneLike: false, color: 0xfacc15, tiles: [56,56,56,56,56,56] }
 };
 
 const ALL_INVENTORY_ITEMS = [
   BLOCK.TOOL_PICKAXE, BLOCK.TOOL_IRON_PICKAXE, BLOCK.TOOL_STONE_PICKAXE, BLOCK.TOOL_WOOD_PICKAXE, BLOCK.TOOL_GOLD_PICKAXE,
   BLOCK.TOOL_SWORD, BLOCK.TOOL_IRON_SWORD, BLOCK.TOOL_STONE_SWORD, BLOCK.TOOL_WOOD_SWORD, BLOCK.TOOL_GOLD_SWORD,
-  BLOCK.TOOL_AXE, BLOCK.TOOL_SHOVEL, BLOCK.TOOL_HOE, BLOCK.TOOL_SHEARS, BLOCK.TOOL_FLINT_AND_STEEL,
+  BLOCK.TOOL_AXE, BLOCK.TOOL_SHOVEL, BLOCK.TOOL_HOE, BLOCK.TOOL_SHEARS, BLOCK.TOOL_FLINT_AND_STEEL, BLOCK.TOOL_FISHING_ROD,
   BLOCK.TOOL_BOW, BLOCK.TOOL_GRAPPLING_HOOK,
+  BLOCK.ARMOR_DIAMOND_HELMET, BLOCK.ARMOR_DIAMOND_CHESTPLATE, BLOCK.ARMOR_DIAMOND_LEGGINGS, BLOCK.ARMOR_DIAMOND_BOOTS,
+  BLOCK.ARMOR_IRON_HELMET, BLOCK.ARMOR_IRON_CHESTPLATE, BLOCK.ARMOR_IRON_LEGGINGS, BLOCK.ARMOR_IRON_BOOTS,
   BLOCK.ITEM_BUCKET, BLOCK.ITEM_WATER_BUCKET, BLOCK.ITEM_LAVA_BUCKET,
-  BLOCK.ITEM_STICK, BLOCK.ITEM_COAL, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_DIAMOND,
-  BLOCK.ITEM_APPLE, BLOCK.ITEM_BREAD, BLOCK.ITEM_MINECART, BLOCK.ITEM_BOAT,
+  BLOCK.ITEM_STICK, BLOCK.ITEM_COAL, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_DIAMOND, BLOCK.ITEM_BONE, BLOCK.ITEM_BONE_MEAL,
+  BLOCK.ITEM_APPLE, BLOCK.ITEM_GOLDEN_APPLE, BLOCK.ITEM_BREAD, BLOCK.CAKE, BLOCK.ITEM_RAW_PORKCHOP, BLOCK.ITEM_COOKED_PORKCHOP, BLOCK.ITEM_RAW_FISH, BLOCK.ITEM_COOKED_FISH,
+  BLOCK.ITEM_MINECART, BLOCK.ITEM_BOAT,
   BLOCK.CRAFTING_TABLE, BLOCK.FURNACE, BLOCK.CHEST, BLOCK.BOOKSHELF,
   BLOCK.IRON_BLOCK, BLOCK.GOLD_BLOCK, BLOCK.DIAMOND_BLOCK,
   BLOCK.RAIL, BLOCK.LILY_PAD, BLOCK.PISTON, BLOCK.PORTAL, BLOCK.ICE, BLOCK.LADDER, BLOCK.TRAPDOOR_CLOSED,
@@ -211,17 +163,18 @@ const ALL_INVENTORY_ITEMS = [
   BLOCK.FLOWER_RED, BLOCK.FLOWER_YELLOW, BLOCK.TALL_GRASS, BLOCK.CACTUS
 ];
 
-function isPickaxeItem(id) {
-  return id === BLOCK.TOOL_PICKAXE || id === BLOCK.TOOL_WOOD_PICKAXE || id === BLOCK.TOOL_STONE_PICKAXE || id === BLOCK.TOOL_IRON_PICKAXE || id === BLOCK.TOOL_GOLD_PICKAXE;
+function isPickaxeItem(id) { return id === BLOCK.TOOL_PICKAXE || (id >= BLOCK.TOOL_WOOD_PICKAXE && id <= BLOCK.TOOL_GOLD_PICKAXE); }
+function isSwordItem(id) { return id === BLOCK.TOOL_SWORD || (id >= BLOCK.TOOL_WOOD_SWORD && id <= BLOCK.TOOL_GOLD_SWORD); }
+function getArmorSlotForItem(id) {
+  if (id === BLOCK.ARMOR_IRON_HELMET || id === BLOCK.ARMOR_DIAMOND_HELMET) return 0;
+  if (id === BLOCK.ARMOR_IRON_CHESTPLATE || id === BLOCK.ARMOR_DIAMOND_CHESTPLATE) return 1;
+  if (id === BLOCK.ARMOR_IRON_LEGGINGS || id === BLOCK.ARMOR_DIAMOND_LEGGINGS) return 2;
+  if (id === BLOCK.ARMOR_IRON_BOOTS || id === BLOCK.ARMOR_DIAMOND_BOOTS) return 3;
+  return -1;
 }
-
-function isSwordItem(id) {
-  return id === BLOCK.TOOL_SWORD || id === BLOCK.TOOL_WOOD_SWORD || id === BLOCK.TOOL_STONE_SWORD || id === BLOCK.TOOL_IRON_SWORD || id === BLOCK.TOOL_GOLD_SWORD;
-}
-
-function isNonStackTool(id) {
-  return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125);
-}
+function isArmorItem(id) { return getArmorSlotForItem(id) !== -1; }
+function isFoodItem(id) { return id === BLOCK.ITEM_APPLE || id === BLOCK.ITEM_BREAD || (id >= BLOCK.ITEM_RAW_PORKCHOP && id <= BLOCK.ITEM_GOLDEN_APPLE); }
+function isNonStackTool(id) { return (id >= 100 && id <= 102) || id === BLOCK.TOOL_GRAPPLING_HOOK || (id >= 113 && id <= 125) || (id >= 129 && id <= 137); }
 
 const hotbarSlots = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -274,7 +227,19 @@ const CRAFTING_RECIPES = [
   { name: '1× Bloque de Hierro',        outId: BLOCK.IRON_BLOCK,          outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 4 }] },
   { name: '1× Bloque de Oro',           outId: BLOCK.GOLD_BLOCK,          outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_GOLD_INGOT, 0, BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_GOLD_INGOT, count: 4 }] },
   { name: '1× Bloque de Diamante',      outId: BLOCK.DIAMOND_BLOCK,       outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, 0, 0, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 4 }] },
-  { name: '1× Estantería de Libros',    outId: BLOCK.BOOKSHELF,           outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.WHEAT_3, BLOCK.WHEAT_3, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS], ingredients: [{ id: BLOCK.PLANKS, count: 6 }, { id: BLOCK.WHEAT_3, count: 2 }] }
+  { name: '1× Estantería de Libros',    outId: BLOCK.BOOKSHELF,           outCount: 1, gridSize: 3, pattern: [BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.WHEAT_3, BLOCK.WHEAT_3, 0, BLOCK.PLANKS, BLOCK.PLANKS, BLOCK.PLANKS], ingredients: [{ id: BLOCK.PLANKS, count: 6 }, { id: BLOCK.WHEAT_3, count: 2 }] },
+  { name: '1× Casco de Hierro',         outId: BLOCK.ARMOR_IRON_HELMET,        outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 5 }] },
+  { name: '1× Peto de Hierro',          outId: BLOCK.ARMOR_IRON_CHESTPLATE,    outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 8 }] },
+  { name: '1× Grebas de Hierro',        outId: BLOCK.ARMOR_IRON_LEGGINGS,      outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 7 }] },
+  { name: '1× Botas de Hierro',         outId: BLOCK.ARMOR_IRON_BOOTS,         outCount: 1, gridSize: 3, pattern: [0, 0, 0, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT, BLOCK.ITEM_IRON_INGOT, 0, BLOCK.ITEM_IRON_INGOT], ingredients: [{ id: BLOCK.ITEM_IRON_INGOT, count: 4 }] },
+  { name: '1× Casco de Diamante',       outId: BLOCK.ARMOR_DIAMOND_HELMET,     outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, 0, 0, 0], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 5 }] },
+  { name: '1× Peto de Diamante',        outId: BLOCK.ARMOR_DIAMOND_CHESTPLATE, outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 8 }] },
+  { name: '1× Grebas de Diamante',      outId: BLOCK.ARMOR_DIAMOND_LEGGINGS,   outCount: 1, gridSize: 3, pattern: [BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 7 }] },
+  { name: '1× Botas de Diamante',       outId: BLOCK.ARMOR_DIAMOND_BOOTS,      outCount: 1, gridSize: 3, pattern: [0, 0, 0, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE, BLOCK.DIAMOND_ORE, 0, BLOCK.DIAMOND_ORE], ingredients: [{ id: BLOCK.DIAMOND_ORE, count: 4 }] },
+  { name: '1× Caña de Pescar',          outId: BLOCK.TOOL_FISHING_ROD,         outCount: 1, gridSize: 3, pattern: [0, 0, BLOCK.ITEM_STICK, 0, BLOCK.ITEM_STICK, BLOCK.TALL_GRASS, BLOCK.ITEM_STICK, 0, BLOCK.TALL_GRASS], ingredients: [{ id: BLOCK.ITEM_STICK, count: 3 }, { id: BLOCK.TALL_GRASS, count: 2 }] },
+  { name: '3× Polvo de Hueso',          outId: BLOCK.ITEM_BONE_MEAL,           outCount: 3, gridSize: 2, pattern: [BLOCK.ITEM_BONE, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_BONE, count: 1 }] },
+  { name: '1× Manzana Dorada (+10❤)',   outId: BLOCK.ITEM_GOLDEN_APPLE,        outCount: 1, gridSize: 3, pattern: [BLOCK.ITEM_GOLD_INGOT, BLOCK.ITEM_APPLE, BLOCK.ITEM_GOLD_INGOT, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.ITEM_APPLE, count: 1 }, { id: BLOCK.ITEM_GOLD_INGOT, count: 2 }] },
+  { name: '1× Tarta Dulce (+6❤)',       outId: BLOCK.CAKE,                     outCount: 1, gridSize: 3, pattern: [BLOCK.WHEAT_3, BLOCK.ITEM_APPLE, BLOCK.WHEAT_3, 0, 0, 0, 0, 0, 0], ingredients: [{ id: BLOCK.WHEAT_3, count: 2 }, { id: BLOCK.ITEM_APPLE, count: 1 }] }
 ];
 
 function createInitialInventoryCounts() {
@@ -748,6 +713,21 @@ function createProceduralAtlas() {
     const bc = bookColors[spine % bookColors.length];
     if ((x - 1) % 3 === 2) return shade(30, 20, 10, 0.94);
     return shade(bc[0], bc[1], bc[2], 0.88 + r * 0.14);
+  });
+  // 59: Cake Top (White vanilla frosting with red berry toppings)
+  drawTile(59, (x, y, r) => {
+    if (x <= 1 || x >= 14 || y <= 1 || y >= 14) return shade(217, 119, 6, 0.92);
+    const berry = ((x === 5 || x === 10) && (y === 5 || y === 10)) || (x >= 7 && x <= 8 && y >= 7 && y <= 8);
+    if (berry) return shade(225, 29, 72, 0.96);
+    return shade(248, 250, 252, 0.94 + r * 0.06);
+  });
+  // 60: Cake Side (Golden sponge base + white frosting drip + strawberry dots)
+  drawTile(60, (x, y, r) => {
+    if (y <= 5 || (y === 6 && x % 3 !== 0)) {
+      if (y === 3 && (x === 4 || x === 8 || x === 12)) return shade(225, 29, 72, 0.96);
+      return shade(248, 250, 252, 0.94 + r * 0.06);
+    }
+    return shade(217, 119, 6, 0.88 + r * 0.16);
   });
 
   const texture = new THREE.CanvasTexture(canvas);

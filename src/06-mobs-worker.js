@@ -222,7 +222,7 @@ function damageMob(mob, dmg, kdx, kdz) {
 
   if (mob.hp <= 0) {
     const pBlock = (mob.type === 'zombie' || mob.type === 'creeper') ? BLOCK.LEAVES : (mob.type === 'golem' || mob.type === 'skeleton' ? BLOCK.IRON_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.BRICK));
-    const lootId = mob.type === 'creeper' ? BLOCK.TNT : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'skeleton' ? BLOCK.AMETHYST : (mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.DIRT))));
+    const lootId = mob.type === 'creeper' ? BLOCK.TNT : (mob.type === 'golem' ? BLOCK.IRON_ORE : (mob.type === 'skeleton' ? BLOCK.ITEM_BONE : (mob.type === 'zombie' ? BLOCK.COAL_ORE : (mob.type === 'sheep' ? BLOCK.SNOW : BLOCK.ITEM_RAW_PORKCHOP))));
     spawnBlockParticles(mob.x - 0.5, mob.y + 0.4, mob.z - 0.5, pBlock, 22);
     spawnItemDrop(mob.x - 0.5, mob.y + 0.2, mob.z - 0.5, lootId, 2);
     const idx = mobs.indexOf(mob);

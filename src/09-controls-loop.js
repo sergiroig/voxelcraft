@@ -280,15 +280,12 @@ function recomputeInventoryCountsFromSlots() {
     const id = hotbarSlots[i] || 0, c = hotbarCounts[i] || 0;
     if (id > 0 && c > 0) inventoryCounts[id] = (inventoryCounts[id] || 0) + c;
     else if (gameMode === 'survival') { hotbarSlots[i] = 0; hotbarCounts[i] = 0; }
+    if (craftGridSlots[i].id > 0 && craftGridSlots[i].count > 0) inventoryCounts[craftGridSlots[i].id] = (inventoryCounts[craftGridSlots[i].id] || 0) + craftGridSlots[i].count;
   }
   for (let i = 0; i < 27; i++) {
     const s = invSlots[i];
     if (s.id > 0 && s.count > 0) inventoryCounts[s.id] = (inventoryCounts[s.id] || 0) + s.count;
     else { s.id = 0; s.count = 0; }
-  }
-  for (let i = 0; i < 9; i++) {
-    const s = craftGridSlots[i];
-    if (s.id > 0 && s.count > 0) inventoryCounts[s.id] = (inventoryCounts[s.id] || 0) + s.count;
   }
   if (cursorItem.id > 0 && cursorItem.count > 0) inventoryCounts[cursorItem.id] = (inventoryCounts[cursorItem.id] || 0) + cursorItem.count;
 }
@@ -307,36 +304,25 @@ function reconcileSlotsFromInventoryCounts() {
   }
   for (const bId of ALL_INVENTORY_ITEMS) {
     let sum = (cursorItem.id === bId ? cursorItem.count : 0);
-    for (let i = 0; i < 9; i++) {
-      if (hotbarSlots[i] === bId) sum += hotbarCounts[i];
-      if (craftGridSlots[i].id === bId) sum += craftGridSlots[i].count;
-    }
+    for (let i = 0; i < 9; i++) { if (hotbarSlots[i] === bId) sum += hotbarCounts[i]; if (craftGridSlots[i].id === bId) sum += craftGridSlots[i].count; }
     for (let i = 0; i < 27; i++) if (invSlots[i].id === bId) sum += invSlots[i].count;
     const diff = Math.max(0, inventoryCounts[bId] || 0) - sum;
     if (diff > 0) {
-      const hIdx = hotbarSlots.indexOf(bId);
+      const hIdx = hotbarSlots.indexOf(bId), exSlot = invSlots.find(s => s.id === bId && s.count > 0);
       if (hIdx !== -1) { hotbarCounts[hIdx] += diff; continue; }
-      const exSlot = invSlots.find(s => s.id === bId && s.count > 0);
       if (exSlot) { exSlot.count += diff; continue; }
-      const empH = hotbarSlots.indexOf(0);
+      const empH = hotbarSlots.indexOf(0), empI = invSlots.find(s => s.id === 0 || s.count <= 0);
       if (empH !== -1) { hotbarSlots[empH] = bId; hotbarCounts[empH] = diff; continue; }
-      const empI = invSlots.find(s => s.id === 0 || s.count <= 0);
       if (empI) { empI.id = bId; empI.count = diff; }
     } else if (diff < 0) {
       let rem = -diff;
-      for (let i = 26; i >= 0 && rem > 0; i--) {
-        if (invSlots[i].id === bId) {
-          const take = Math.min(rem, invSlots[i].count);
-          invSlots[i].count -= take; rem -= take;
-          if (invSlots[i].count <= 0) { invSlots[i].id = 0; invSlots[i].count = 0; }
-        }
+      for (let i = 26; i >= 0 && rem > 0; i--) if (invSlots[i].id === bId) {
+        const take = Math.min(rem, invSlots[i].count); invSlots[i].count -= take; rem -= take;
+        if (invSlots[i].count <= 0) { invSlots[i].id = 0; invSlots[i].count = 0; }
       }
-      for (let i = 8; i >= 0 && rem > 0; i--) {
-        if (hotbarSlots[i] === bId) {
-          const take = Math.min(rem, hotbarCounts[i]);
-          hotbarCounts[i] -= take; rem -= take;
-          if (hotbarCounts[i] <= 0 && gameMode === 'survival') hotbarSlots[i] = 0;
-        }
+      for (let i = 8; i >= 0 && rem > 0; i--) if (hotbarSlots[i] === bId) {
+        const take = Math.min(rem, hotbarCounts[i]); hotbarCounts[i] -= take; rem -= take;
+        if (hotbarCounts[i] <= 0 && gameMode === 'survival') hotbarSlots[i] = 0;
       }
     }
   }
@@ -344,16 +330,10 @@ function reconcileSlotsFromInventoryCounts() {
 
 function putStackIntoPlayerSlots(itemId, count, preferHotbar = true) {
   if (!itemId || count <= 0) return false;
-  if (preferHotbar) {
-    const hMatch = hotbarSlots.indexOf(itemId);
-    if (hMatch !== -1) { hotbarCounts[hMatch] += count; return true; }
-  }
+  if (preferHotbar) { const hMatch = hotbarSlots.indexOf(itemId); if (hMatch !== -1) { hotbarCounts[hMatch] += count; return true; } }
   const iMatch = invSlots.find(s => s.id === itemId && s.count > 0);
   if (iMatch) { iMatch.count += count; return true; }
-  if (preferHotbar) {
-    const hEmpty = hotbarSlots.indexOf(0);
-    if (hEmpty !== -1) { hotbarSlots[hEmpty] = itemId; hotbarCounts[hEmpty] = count; return true; }
-  }
+  if (preferHotbar) { const hEmpty = hotbarSlots.indexOf(0); if (hEmpty !== -1) { hotbarSlots[hEmpty] = itemId; hotbarCounts[hEmpty] = count; return true; } }
   const iEmpty = invSlots.find(s => s.id === 0 || s.count <= 0);
   if (iEmpty) { iEmpty.id = itemId; iEmpty.count = count; return true; }
   const hEmpty2 = hotbarSlots.indexOf(0);
@@ -362,16 +342,10 @@ function putStackIntoPlayerSlots(itemId, count, preferHotbar = true) {
 }
 
 function returnCraftAndCursorItemsToInventory() {
-  for (let i = 0; i < 9; i++) {
-    if (craftGridSlots[i].id > 0 && craftGridSlots[i].count > 0) {
-      putStackIntoPlayerSlots(craftGridSlots[i].id, craftGridSlots[i].count, true);
-      craftGridSlots[i].id = 0; craftGridSlots[i].count = 0;
-    }
+  for (let i = 0; i < 9; i++) if (craftGridSlots[i].id > 0 && craftGridSlots[i].count > 0) {
+    putStackIntoPlayerSlots(craftGridSlots[i].id, craftGridSlots[i].count, true); craftGridSlots[i].id = 0; craftGridSlots[i].count = 0;
   }
-  if (cursorItem.id > 0 && cursorItem.count > 0) {
-    putStackIntoPlayerSlots(cursorItem.id, cursorItem.count, true);
-    cursorItem.id = 0; cursorItem.count = 0;
-  }
+  if (cursorItem.id > 0 && cursorItem.count > 0) { putStackIntoPlayerSlots(cursorItem.id, cursorItem.count, true); cursorItem.id = 0; cursorItem.count = 0; }
   craftOutputSlot.id = 0; craftOutputSlot.count = 0; craftOutputSlot.recipeIdx = -1;
   recomputeInventoryCountsFromSlots(); updateCursorItemDOM();
 }
@@ -512,6 +486,7 @@ function giveCreativeStackToSlot(bId) {
 }
 
 function getSlotRef(container, idx) {
+  if (container === 'armor') return { get id() { return armorSlots[idx] || 0; }, set id(v) { armorSlots[idx] = v; }, get count() { return armorSlots[idx] > 0 ? 1 : 0; }, set count(v) { if (v <= 0) armorSlots[idx] = 0; } };
   if (container === 'hotbar') return { get id() { return hotbarSlots[idx] || 0; }, set id(v) { hotbarSlots[idx] = v; }, get count() { return hotbarCounts[idx] || 0; }, set count(v) { hotbarCounts[idx] = v; } };
   if (container === 'inv') return invSlots[idx];
   if (container === 'craft') return craftGridSlots[idx];
@@ -535,10 +510,14 @@ function clickSlot(container, idx, button = 0, shiftKey = false) {
   if (container === 'output') return craftFromOutputSlot();
   const slot = getSlotRef(container, idx);
   if (!slot) return false;
+  if (container === 'armor' && cursorItem.id > 0 && getArmorSlotForItem(cursorItem.id) !== idx) return false;
   const isShift = shiftKey || quickMoveMode;
 
   if (isShift && slot.id > 0 && slot.count > 0) {
-    if (container === 'chest' || container === 'craft') {
+    if (!chestOpen && (container === 'inv' || container === 'hotbar') && isArmorItem(slot.id)) {
+      const aIdx = getArmorSlotForItem(slot.id);
+      if (armorSlots[aIdx] === 0) { armorSlots[aIdx] = slot.id; slot.count--; if (slot.count <= 0) slot.id = 0; }
+    } else if (container === 'armor' || container === 'chest' || container === 'craft') {
       putStackIntoPlayerSlots(slot.id, slot.count, true); slot.id = 0; slot.count = 0;
     } else if (chestOpen && (container === 'inv' || container === 'hotbar')) {
       const cSlots = ensureChestSlots(chestLootMap[activeChestKey]);
@@ -575,7 +554,7 @@ function clickSlot(container, idx, button = 0, shiftKey = false) {
       if (slot.id > 0 && slot.count > 0) { cursorItem.id = slot.id; cursorItem.count = slot.count; slot.id = 0; slot.count = 0; }
     } else {
       if (slot.id === 0 || slot.count <= 0) { slot.id = cursorItem.id; slot.count = cursorItem.count; cursorItem.id = 0; cursorItem.count = 0; }
-      else if (slot.id === cursorItem.id) { slot.count += cursorItem.count; cursorItem.id = 0; cursorItem.count = 0; }
+      else if (slot.id === cursorItem.id && container !== 'armor') { slot.count += cursorItem.count; cursorItem.id = 0; cursorItem.count = 0; }
       else { const tmpId = slot.id, tmpCnt = slot.count; slot.id = cursorItem.id; slot.count = cursorItem.count; cursorItem.id = tmpId; cursorItem.count = tmpCnt; }
     }
   }
@@ -599,15 +578,13 @@ function createMcSlotEl(itemId, count, container, idx, extraClass = '', keyLabel
     const badge = document.createElement('span'); badge.className = 'count'; badge.textContent = count > 1 ? `${count}` : '';
     el.appendChild(badge);
   }
-  if (keyLabel) {
-    const k = document.createElement('span'); k.className = 'key'; k.textContent = keyLabel;
-    el.appendChild(k);
-  }
+  if (keyLabel) { const k = document.createElement('span'); k.className = 'key'; k.textContent = keyLabel; el.appendChild(k); }
   el.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); clickSlot(container, idx, e.button, e.shiftKey); updateCursorItemDOM(e.clientX, e.clientY); });
   el.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); clickSlot(container, idx, 0, quickMoveMode); }, { passive: false });
   return el;
 }
 
+const ARMOR_SLOT_ICONS = ['🪖', '🦺', '👖', '🥾'];
 function drawPlayerAvatar2D() {
   const cv = document.getElementById('mc-avatar-canvas');
   if (!cv) return;
@@ -615,11 +592,15 @@ function drawPlayerAvatar2D() {
   ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.fillStyle = '#5c3a21'; ctx.fillRect(16, 4, 16, 5);
   ctx.fillStyle = '#f1c27d'; ctx.fillRect(16, 9, 16, 12);
+  if (armorSlots[0] > 0) { ctx.fillStyle = armorSlots[0] >= BLOCK.ARMOR_DIAMOND_HELMET ? '#38bdf8' : '#e2e8f0'; ctx.fillRect(15, 3, 18, 7); }
   ctx.fillStyle = '#1e293b'; ctx.fillRect(19, 13, 3, 3); ctx.fillRect(26, 13, 3, 3);
   ctx.fillStyle = '#b45309'; ctx.fillRect(22, 17, 4, 2);
-  ctx.fillStyle = '#0284c7'; ctx.fillRect(14, 21, 20, 22);
+  ctx.fillStyle = armorSlots[1] > 0 ? (armorSlots[1] >= BLOCK.ARMOR_DIAMOND_HELMET ? '#38bdf8' : '#e2e8f0') : '#0284c7';
+  ctx.fillRect(14, 21, 20, 22);
   ctx.fillStyle = '#f1c27d'; ctx.fillRect(8, 21, 6, 20); ctx.fillRect(34, 21, 6, 20);
-  ctx.fillStyle = '#334155'; ctx.fillRect(15, 43, 9, 21); ctx.fillRect(24, 43, 9, 21);
+  ctx.fillStyle = armorSlots[2] > 0 ? (armorSlots[2] >= BLOCK.ARMOR_DIAMOND_HELMET ? '#0284c7' : '#94a3b8') : '#334155';
+  ctx.fillRect(15, 43, 9, 21); ctx.fillRect(24, 43, 9, 21);
+  if (armorSlots[3] > 0) { ctx.fillStyle = armorSlots[3] >= BLOCK.ARMOR_DIAMOND_HELMET ? '#38bdf8' : '#e2e8f0'; ctx.fillRect(15, 57, 9, 7); ctx.fillRect(24, 57, 9, 7); }
 }
 
 function renderMinecraftInventoryDOM() {
@@ -628,7 +609,20 @@ function renderMinecraftInventoryDOM() {
   const playerPreviewEl = document.getElementById('mc-player-preview-box'), craftLabelEl = document.getElementById('mc-craft-label');
   if (!craftSlotsEl || !invSlotsEl || !hbSlotsEl) return;
 
-  if (playerPreviewEl) playerPreviewEl.style.display = craftingTableMode ? 'none' : 'flex';
+  if (playerPreviewEl) {
+    playerPreviewEl.style.display = craftingTableMode ? 'none' : 'flex';
+    const domArmor = playerPreviewEl.querySelectorAll('.mc-armor-slot');
+    domArmor.forEach((el, aIdx) => {
+      el.innerHTML = '';
+      if (armorSlots[aIdx] > 0) {
+        el.title = BLOCK_DEFS[armorSlots[aIdx]]?.name || '';
+        const cv = document.createElement('canvas'); cv.width = 16; cv.height = 16;
+        drawItemIcon(cv, armorSlots[aIdx]); el.appendChild(cv);
+      } else el.textContent = ARMOR_SLOT_ICONS[aIdx];
+      el.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); clickSlot('armor', aIdx, e.button, e.shiftKey); updateCursorItemDOM(e.clientX, e.clientY); };
+      el.ontouchend = (e) => { e.preventDefault(); e.stopPropagation(); clickSlot('armor', aIdx, 0, true); };
+    });
+  }
   if (!craftingTableMode) drawPlayerAvatar2D();
   if (craftLabelEl) craftLabelEl.textContent = craftingTableMode ? '⚒ Mesa de Crafteo (Cuadrícula 3×3)' : 'Fabricación Manual (2×2)';
 
@@ -760,8 +754,9 @@ renderMinecraftInventoryDOM();
 requestAnimationFrame(animate);
 
 window.__VOXELCRAFT__ = {
-  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem,
-  isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isNonStackTool, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
+  BLOCK, BLOCK_DEFS, ALL_INVENTORY_ITEMS, CRAFTING_RECIPES, hotbarSlots, hotbarCounts, invSlots, craftGridSlots, craftOutputSlot, cursorItem, armorSlots,
+  isCraftingTableMode: () => craftingTableMode, openCraftingTable, smeltInFurnace, isPickaxeItem, isSwordItem, isArmorItem, getArmorSlotForItem, isFoodItem, isNonStackTool,
+  getArmorDefenseRatio, equipArmorItem, applyBoneMealAt, useFishingRod, reconcileSlotsFromInventoryCounts, recomputeInventoryCountsFromSlots,
   evaluateCraftingGrid, craftFromOutputSlot, fillOrCraftRecipeInGrid, clickSlot, inventoryCounts, createInitialInventoryCounts, getActiveHeldItem, autoEquipToHotbar,
   CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_VOLUME, SEA_LEVEL, ATLAS_COLS, atlasCanvas, atlasTexture, crackTextures, scene, camera, renderer,
   handGroup, handMesh, handMat, handIconCanvas, handIconTex, updateHeldItemVisual, drawItemIcon,

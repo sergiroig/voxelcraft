@@ -446,21 +446,25 @@ function updateArrows(dt) {
   if (anyUpdated) arrowInstanced.instanceMatrix.needsUpdate = true;
 }
 
+const FOOD_HEAL_MAP = {
+  [BLOCK.ITEM_APPLE]: 4, [BLOCK.ITEM_BREAD]: 5, [BLOCK.CAKE]: 6,
+  [BLOCK.ITEM_RAW_PORKCHOP]: 3, [BLOCK.ITEM_COOKED_PORKCHOP]: 8,
+  [BLOCK.ITEM_RAW_FISH]: 2, [BLOCK.ITEM_COOKED_FISH]: 6, [BLOCK.ITEM_GOLDEN_APPLE]: 10
+};
+
 function eatHeldApple(foodItemOverride) {
-  const heldId = foodItemOverride || (getActiveHeldItem() === BLOCK.ITEM_BREAD ? BLOCK.ITEM_BREAD : BLOCK.ITEM_APPLE);
-  const healAmount = heldId === BLOCK.ITEM_BREAD ? 5 : 4;
+  const heldId = foodItemOverride || (isFoodItem(getActiveHeldItem()) ? getActiveHeldItem() : BLOCK.ITEM_APPLE);
+  const healAmount = FOOD_HEAL_MAP[heldId] || 4;
   if (gameMode === 'survival' && (inventoryCounts[heldId] || 0) <= 0) return false;
-  if (player.health >= player.maxHealth && gameMode === 'survival') return false;
+  if (player.health >= player.maxHealth && gameMode === 'survival' && heldId !== BLOCK.ITEM_GOLDEN_APPLE) return false;
   if (gameMode === 'survival') {
+    if (selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId && hotbarCounts[selectedSlot] > 0) hotbarCounts[selectedSlot]--;
     inventoryCounts[heldId] = Math.max(0, (inventoryCounts[heldId] || 1) - 1);
     if (inventoryCounts[heldId] <= 0 && selectedSlot >= 0 && hotbarSlots[selectedSlot] === heldId) hotbarSlots[selectedSlot] = BLOCK.AIR;
   }
   player.health = Math.min(player.maxHealth, player.health + healAmount);
-  renderHeartsUI();
-  refreshInventoryCountsUI();
-  saveWorldData();
-  player.swingTime = 1.0;
-  sfx.play('eat');
+  renderHeartsUI(); refreshInventoryCountsUI(); saveWorldData();
+  player.swingTime = 1.0; sfx.play('eat');
   return true;
 }
 

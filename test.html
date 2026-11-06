@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=30"></iframe>
+    <iframe id="game-frame" src="./index.html?v=31"></iframe>
   </div>
 
   <script>
@@ -1962,6 +1962,109 @@
           assert(vc.activeTNTs.length > 0, 'Clic derecho con Mechero de Pedernal sobre TNT debe encender su mecha');
           vc.activeTNTs.length = 0;
           vc.setVoxelGlobal(bx, by, bz, vc.BLOCK.AIR);
+        });
+      });
+
+      // =========================================================================
+      // SUITE 38: Fase 2 de Objetos de Minecraft — Armaduras Equipables, Pesca, Polvo de Hueso y Comidas
+      // =========================================================================
+      describe('38. Fase 2 de Objetos de Minecraft: Armaduras Equipables, Caña de Pescar, Polvo de Hueso y Comidas', () => {
+        it('Equipa el conjunto de Armadura de Hierro/Diamante en las 4 ranuras (.mc-armor-slot) y reduce el daño recibido hasta un 72%', () => {
+          vc.toggleGameMode('survival');
+          vc.armorSlots.fill(0);
+          assert(vc.getArmorDefenseRatio() === 0, 'Sin armadura equipada la reducción de daño debe ser 0');
+
+          const diamondPieces = [
+            vc.BLOCK.ARMOR_DIAMOND_HELMET,
+            vc.BLOCK.ARMOR_DIAMOND_CHESTPLATE,
+            vc.BLOCK.ARMOR_DIAMOND_LEGGINGS,
+            vc.BLOCK.ARMOR_DIAMOND_BOOTS
+          ];
+          for (const pieceId of diamondPieces) {
+            vc.inventoryCounts[pieceId] = 1;
+            const ok = vc.equipArmorItem(pieceId);
+            assert(ok === true, `equipArmorItem debe equipar ${vc.BLOCK_DEFS[pieceId].name}`);
+          }
+          assert(
+            vc.armorSlots[0] === vc.BLOCK.ARMOR_DIAMOND_HELMET &&
+            vc.armorSlots[1] === vc.BLOCK.ARMOR_DIAMOND_CHESTPLATE &&
+            vc.armorSlots[2] === vc.BLOCK.ARMOR_DIAMOND_LEGGINGS &&
+            vc.armorSlots[3] === vc.BLOCK.ARMOR_DIAMOND_BOOTS,
+            'Las 4 ranuras de armadura deben contener el Casco, Peto, Grebas y Botas de Diamante'
+          );
+          assertApprox(vc.getArmorDefenseRatio(), 0.72, 0.01, 'El conjunto completo de Diamante debe otorgar un 72% de defensa');
+
+          // Verificar reducción de daño real en damagePlayer(6): 6 * (1 - 0.72) = 1.68 -> round = 2 de daño en lugar de 6
+          vc.player.flying = false;
+          vc.player.health = 10;
+          vc.damagePlayer(6);
+          assert(vc.player.health === 8, `Con armadura completa de Diamante un golpe de 6 debe reducirse a 2 de daño (HP=${vc.player.health})`);
+          vc.player.health = 10;
+          vc.armorSlots.fill(0);
+        });
+
+        it('Pesca con la Caña (TOOL_FISHING_ROD), fabrica Polvo de Hueso (ITEM_BONE_MEAL) y acelera cultivos y árboles al instante', () => {
+          vc.toggleGameMode('survival');
+          const fishBefore = vc.inventoryCounts[vc.BLOCK.ITEM_RAW_FISH] || 0;
+          const caughtId = vc.useFishingRod(10, 52, 10);
+          assert(caughtId === vc.BLOCK.ITEM_RAW_FISH && (vc.inventoryCounts[vc.BLOCK.ITEM_RAW_FISH] || 0) === fishBefore + 1, 'useFishingRod debe pescar 1× Pescado Crudo (ITEM_RAW_FISH)');
+
+          // Probar Polvo de Hueso sobre Semillas de Trigo (WHEAT_1 -> WHEAT_3) y sobre Brote de Árbol (SAPLING -> WOOD)
+          const gx = 13, gy = 53, gz = 13;
+          vc.setVoxelGlobal(gx, gy - 1, gz, vc.BLOCK.GRASS);
+          vc.setVoxelGlobal(gx, gy, gz, vc.BLOCK.WHEAT_1);
+          vc.inventoryCounts[vc.BLOCK.ITEM_BONE_MEAL] = 2;
+          const grownWheat = vc.applyBoneMealAt(gx, gy, gz);
+          assert(grownWheat === true && vc.getVoxelGlobal(gx, gy, gz) === vc.BLOCK.WHEAT_3, 'applyBoneMealAt sobre WHEAT_1 debe madurarlo al instante a WHEAT_3');
+
+          vc.setVoxelGlobal(gx, gy, gz, vc.BLOCK.SAPLING);
+          const grownTree = vc.applyBoneMealAt(gx, gy, gz);
+          assert(grownTree === true && vc.getVoxelGlobal(gx, gy, gz) === vc.BLOCK.WOOD, 'applyBoneMealAt sobre SAPLING debe hacer crecer un árbol de roble al instante');
+
+          for (let dy = 0; dy <= 6; dy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) vc.setVoxelGlobal(gx + dx, gy + dy, gz + dz, vc.BLOCK.AIR);
+        });
+
+        it('Cocina Chuletas y Pescado en el Horno, consume Manzana Dorada y Tarta Colocable (BLOCK.CAKE), y dibuja los 17 iconos 16×16', () => {
+          vc.toggleGameMode('survival');
+          const fx = 11, fy = 53, fz = 11;
+          vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.FURNACE);
+          vc.inventoryCounts[vc.BLOCK.ITEM_RAW_PORKCHOP] = 1;
+          vc.hotbarSlots[0] = vc.BLOCK.ITEM_RAW_PORKCHOP; vc.hotbarCounts[0] = 1;
+          vc.reconcileSlotsFromInventoryCounts();
+          vc.updateHotbarSelection(0);
+
+          const smeltPork = vc.smeltInFurnace(fx, fy, fz);
+          assert(smeltPork && smeltPork.outId === vc.BLOCK.ITEM_COOKED_PORKCHOP, 'El Horno debe asar Chuleta Cruda en Chuleta Asada (ITEM_COOKED_PORKCHOP)');
+          vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.AIR);
+
+          // Colocar y comer una Tarta Dulce (BLOCK.CAKE) haciendo clic derecho sobre ella (+6❤)
+          vc.player.health = 3;
+          vc.setVoxelGlobal(fx, fy, fz, vc.BLOCK.CAKE);
+          vc.setCurrentHit({ x: fx, y: fy, z: fz, nx: 0, ny: 1, nz: 0, block: vc.BLOCK.CAKE });
+          vc.placeBlockAtCurrentTarget();
+          assert(vc.getVoxelGlobal(fx, fy, fz) === vc.BLOCK.AIR && vc.player.health === 9, `Hacer clic derecho sobre BLOCK.CAKE debe comerla y curar +6❤ (HP=${vc.player.health})`);
+
+          // Verificar que los 17 bloques/objetos de la Fase 2 tienen definición e icono 16×16 válido
+          const phase2Ids = [
+            vc.BLOCK.CAKE,
+            vc.BLOCK.ARMOR_IRON_HELMET, vc.BLOCK.ARMOR_IRON_CHESTPLATE, vc.BLOCK.ARMOR_IRON_LEGGINGS, vc.BLOCK.ARMOR_IRON_BOOTS,
+            vc.BLOCK.ARMOR_DIAMOND_HELMET, vc.BLOCK.ARMOR_DIAMOND_CHESTPLATE, vc.BLOCK.ARMOR_DIAMOND_LEGGINGS, vc.BLOCK.ARMOR_DIAMOND_BOOTS,
+            vc.BLOCK.TOOL_FISHING_ROD, vc.BLOCK.ITEM_BONE, vc.BLOCK.ITEM_BONE_MEAL,
+            vc.BLOCK.ITEM_RAW_PORKCHOP, vc.BLOCK.ITEM_COOKED_PORKCHOP, vc.BLOCK.ITEM_RAW_FISH, vc.BLOCK.ITEM_COOKED_FISH, vc.BLOCK.ITEM_GOLDEN_APPLE
+          ];
+          const testCanvas = doc.createElement('canvas');
+          testCanvas.width = 16; testCanvas.height = 16;
+          const ctx = testCanvas.getContext('2d');
+          for (const id of phase2Ids) {
+            assert(vc.BLOCK_DEFS[id] && vc.BLOCK_DEFS[id].name, `El ID ${id} de Fase 2 debe estar registrado en BLOCK_DEFS`);
+            ctx.clearRect(0, 0, 16, 16);
+            vc.drawItemIcon(testCanvas, id);
+            const data = ctx.getImageData(0, 0, 16, 16).data;
+            let nonTransparent = 0;
+            for (let p = 3; p < data.length; p += 4) if (data[p] > 0) nonTransparent++;
+            assert(nonTransparent >= 14, `El icono 16×16 de ${vc.BLOCK_DEFS[id].name} (ID ${id}) debe dibujarse correctamente (${nonTransparent} px visibles)`);
+          }
+          vc.player.health = 10;
         });
       });
 
