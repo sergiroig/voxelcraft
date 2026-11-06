@@ -2541,14 +2541,21 @@
         it('Adapta las precipitaciones al bioma: Tormenta de Arena en Desierto/Meseta, Nieve en biomas helados y Lluvia en templados', () => {
           const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
 
-          // 1) Desierto -> Tormenta de Arena (isSandstorm = true, color ocre 0xeab308)
+          // 1) Desierto -> Tormenta de Arena (isSandstorm = true, color ocre 0xeab308 de día y cielo nocturno oscuro sin teñirse de amarillo de noche)
+          const origTimeSand = vc.getState().timeOfDay;
+          vc.setTimeOfDay(0.0);
           vc.teleportToBiome('Desierto');
           vc.player.y = 30;
           vc.toggleWeather('rain');
           vc.updateWeather(0.016);
           let ws = vc.getWeatherState();
           assert(ws.isSandstorm === true && ws.isSnowing === false, 'En el bioma Desierto el clima activo debe transformarse en Tormenta de Arena (isSandstorm=true)');
-          assert(vc.weatherInstanced.material.color.getHex() === 0xeab308, 'Las partículas de la Tormenta de Arena deben teñirse de color arena dorada (0xeab308)');
+          assert(vc.weatherInstanced.material.color.getHex() === 0xeab308, 'Las partículas de la Tormenta de Arena deben teñirse de color arena dorada (0xeab308) a pleno sol');
+          vc.setTimeOfDay(Math.PI);
+          vc.updateWeather(0.016);
+          vc.updateGPUShaders(0.016);
+          assert(vc.scene.background.r < 0.08 && vc.scene.background.g < 0.08 && vc.weatherInstanced.material.opacity <= 0.05, 'De noche en el Desierto el cielo NO debe verse amarillo y el polvo en suspensión debe atenuarse');
+          vc.setTimeOfDay(origTimeSand);
           vc.player.y = 5; vc.updateWeather(0.016);
           let visibleCaveDrops = 0;
           for (let i = 0; i < 180; i++) if (vc.weatherInstanced.instanceMatrix.array[i * 16 + 13] > -500) visibleCaveDrops++;

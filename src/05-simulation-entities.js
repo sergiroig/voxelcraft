@@ -308,10 +308,10 @@ function updateWeather(dt) {
   isSnowing = (curBiome === 'Taiga Nevada' || curBiome === 'Cumbres Heladas' || player.y >= 42);
   isSandstorm = !isSnowing && (curBiome === 'Desierto' || curBiome === 'Meseta');
   if (gpuShaderUniforms.uWetness) gpuShaderUniforms.uWetness.value = (isSnowing || isSandstorm) ? 0.0 : (weatherMode === 'storm' ? 1.0 : 0.82);
-  const dayBri = Math.max(0.0, typeof sunFactor === 'number' ? sunFactor : 1.0);
-  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0xffffff)).multiplyScalar(isSnowing || isSandstorm ? (0.30 + 0.70 * dayBri) : (0.35 + 0.65 * dayBri));
-  weatherMat.opacity = isSnowing ? (0.20 + 0.28 * dayBri) : (isSandstorm ? (0.18 + 0.22 * dayBri) : (0.035 + 0.115 * dayBri));
-  weatherScaleVec.set(isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.34), isSnowing ? 0.25 : (isSandstorm ? 0.18 : 0.92), isSnowing ? 2.4 : (isSandstorm ? 2.8 : 0.34));
+  const dayK = Math.max(0.0, Math.min(1.0, ((typeof sunFactor === 'number' ? sunFactor : 1.0) - 0.16) / 0.84));
+  weatherMat.color.setHex(isSnowing ? 0xf8fafc : (isSandstorm ? 0xeab308 : 0xffffff)).multiplyScalar(isSnowing || isSandstorm ? (0.16 + 0.84 * dayK) : (0.32 + 0.68 * dayK));
+  weatherMat.opacity = isSnowing ? (0.12 + 0.32 * dayK) : (isSandstorm ? (0.03 + 0.16 * dayK) : (0.035 + 0.115 * dayK));
+  weatherScaleVec.set(isSnowing ? 1.5 : (isSandstorm ? 0.75 : 0.34), isSnowing ? 0.22 : (isSandstorm ? 0.15 : 0.92), isSnowing ? 1.5 : (isSandstorm ? 0.75 : 0.34));
 
   if (weatherMode === 'storm') { stormThunderAccum += dt; if (stormThunderAccum > 9.5) { stormThunderAccum = 0; triggerLightningFlash(); } }
 
