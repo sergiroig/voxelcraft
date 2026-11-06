@@ -672,6 +672,7 @@ function teleportToBiome(targetBiome) {
         getChunkData(cx, cz); rebuildChunkImmediate(cx, cz);
         player.x = wx + 0.5; player.z = wz + 0.5; player.y = findSpawnHeight(player.x, player.z);
         player.vx = 0; player.vy = 0; player.vz = 0; lastPlayerChunkX = null; updateMinimap(0, true);
+        if (typeof updateFarHorizon === 'function') updateFarHorizon(true);
         return { x: player.x, y: player.y, z: player.z, biome: targetBiome };
       }
     }

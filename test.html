@@ -2284,7 +2284,10 @@
             assert(gen.getBiomeAt(vc.player.x, vc.player.z) === bName, `getBiomeAt en la posición destino debe ser "${bName}"`);
             if (bName === 'Meseta') {
               const sInfo = gen.sampleSurfaceAt(vc.player.x, vc.player.z);
-              assert(sInfo.topBlock !== vc.BLOCK.BRICK, 'El suelo del bioma Meseta debe usar Arena Roja o Terracota, nunca ladrillos (BLOCK.BRICK)');
+              assert(
+                sInfo.topBlock !== vc.BLOCK.BRICK && sInfo.topBlock !== vc.BLOCK.YELLOW_TERRACOTTA && sInfo.topBlock !== vc.BLOCK.RED_TERRACOTTA,
+                'El suelo del bioma Meseta debe usar una paleta cálida coherente (Arena Roja, Terracota y Terracota Naranja en capas de 4 bloques), sin ladrillos ni franjas amarillas estridentes'
+              );
             }
           }
 
