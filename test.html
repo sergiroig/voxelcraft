@@ -1567,6 +1567,18 @@
       describe('30. Barcas Navegables 3D (ITEM_BOAT) y Nenúfares Acuáticos (LILY_PAD)', () => {
         it('Permite caminar sobre Nenúfares (BLOCK.LILY_PAD) y navegar en Barcas 3D sobre el agua', () => {
           assert(vc.BLOCK_DEFS[vc.BLOCK.LILY_PAD].solid === true, 'El Nenúfar (LILY_PAD) debe ser sólido para poder caminar sobre él');
+          vc.setVoxelGlobal(6, 52, 6, vc.BLOCK.LILY_PAD);
+          const lilyCh = vc.getChunkData(0, 0);
+          const lilyPos = lilyCh.solidMesh.geometry.attributes.position.array;
+          let foundFlatLily = false, foundTallLily = false;
+          for (let i = 0; i < lilyPos.length; i += 3) {
+            if (lilyPos[i] > 6.0 && lilyPos[i] < 7.0 && lilyPos[i + 2] > 6.0 && lilyPos[i + 2] < 7.0 && lilyPos[i + 1] > 51.8 && lilyPos[i + 1] <= 53.0) {
+              if (lilyPos[i + 1] < 52.05) foundFlatLily = true;
+              if (lilyPos[i + 1] > 52.5) foundTallLily = true;
+            }
+          }
+          vc.setVoxelGlobal(6, 52, 6, vc.BLOCK.AIR);
+          assert(foundFlatLily && !foundTallLily, 'El Nenúfar (LILY_PAD) debe renderizarse plano sobre la superficie del agua y NO como un arbusto vertical de 1m de alto');
           const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z, origYaw = vc.player.yaw;
 
           vc.player.yaw = 0; // Mirando hacia -Z
@@ -2444,6 +2456,17 @@
           vc.setVoxelGlobal(wx, wy + 1, wz, vc.BLOCK.AIR);
           vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.player.health = 10; vc.player.air = 10; vc.player.wasInFluid = false;
+          assert(vc.handGroup.children[0].material.transparent === true, 'handArmMat debe tener transparent=true para renderizarse DESPUÉS de waterMesh (renderOrder 997 > 0)');
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.STONE); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.WATER); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.SAND); vc.setVoxelGlobal(wx, wy + 1, wz - 2, vc.BLOCK.DIRT);
+          vc.player.x = wx + 0.5; vc.player.y = wy + 0.1; vc.player.z = wz + 0.5; vc.player.yaw = 0; vc.player.vy = 0;
+          vc.keys['Space'] = true; vc.keys['KeyW'] = true;
+          for (let s = 0; s < 25; s++) vc.updatePlayerPhysics(0.04);
+          vc.keys['Space'] = false; vc.keys['KeyW'] = false;
+          assert(vc.player.y >= wy + 1.0 && vc.player.z < wz, `El jugador debe poder saltar fuera del agua y subir a la orilla en wy+1 (y=${vc.player.y.toFixed(2)}, z=${vc.player.z.toFixed(2)} vs wy+1=${wy + 1})`);
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 2, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy + 1, wz - 2, vc.BLOCK.AIR);
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ; vc.player.vy = 0; vc.player.wasInFluid = false;
+          vc.setVoxelGlobal(wx, wy - 1, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz, vc.BLOCK.AIR); vc.setVoxelGlobal(wx, wy, wz - 1, vc.BLOCK.AIR);
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           vc.updatePlayerPhysics(0.016);
           vc.updateGPUShaders(0.016);
         });

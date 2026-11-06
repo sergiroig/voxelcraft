@@ -259,7 +259,7 @@ solidMaterial.onBeforeCompile = (shader) => {
       vColor.r = abs(vColor.r);
       float tileIdx = floor(uv.x * ${ATLAS_COLS}.0 + 0.0001);
       vTileIdx = tileIdx;
-      if ((tileIdx >= 21.5 && tileIdx <= 24.5) || (tileIdx >= 33.5 && tileIdx <= 37.5) || (tileIdx >= 38.5 && tileIdx <= 39.5) || (tileIdx >= 46.5 && tileIdx <= 47.5)) {
+      if ((tileIdx >= 21.5 && tileIdx <= 24.5) || (tileIdx >= 33.5 && tileIdx <= 37.5) || (tileIdx >= 38.5 && tileIdx <= 39.5)) {
         float rootMask = clamp(uv.y, 0.0, 1.0);
         float windPhase = uTime * 2.8 + wp.x * 0.75 + wp.z * 0.65;
         transformed.x += sin(windPhase) * 0.12 * rootMask * uWindStrength;
@@ -470,7 +470,7 @@ const handGeo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
 const handIconGeo = new THREE.PlaneGeometry(0.30, 0.30);
 const handArmGeo = shadeBoxGeo(new THREE.BoxGeometry(0.13, 0.13, 0.36), 0xf1c27d);
 const handSleeveGeo = shadeBoxGeo(new THREE.BoxGeometry(0.144, 0.144, 0.18), 0x0284c7);
-const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, depthTest: false, depthWrite: false });
+const handArmMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 1.0, depthTest: false, depthWrite: false });
 const handArmMesh = new THREE.Mesh(handArmGeo, handArmMat);
 handArmMesh.renderOrder = 997;
 const handSleeveMesh = new THREE.Mesh(handSleeveGeo, handArmMat);

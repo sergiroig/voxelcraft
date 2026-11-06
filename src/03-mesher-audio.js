@@ -115,14 +115,17 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           const gL = Math.min(1.0, Math.max(0.08, Math.max(sL * (1.0 - bL * 0.10), bL * 0.92)));
           const blL = Math.min(1.0, Math.max(0.08, Math.max(sL * (1.0 - bL * 0.30), bL * 0.70)));
 
-          const diagQuads = [
+          const diagQuads = blockId === BLOCK.LILY_PAD ? [
+            [[0.05, -0.09, 0.95, u0, 0], [0.95, -0.09, 0.95, u1, 0], [0.95, -0.09, 0.05, u1, 1], [0.05, -0.09, 0.05, u0, 1]],
+            [[0.05, -0.09, 0.05, u0, 1], [0.95, -0.09, 0.05, u1, 1], [0.95, -0.09, 0.95, u1, 0], [0.05, -0.09, 0.95, u0, 0]]
+          ] : [
             [[0.15, 0, 0.15, u0, 0], [0.85, 0, 0.85, u1, 0], [0.85, 1, 0.85, u1, 1], [0.15, 1, 0.15, u0, 1]],
             [[0.85, 0, 0.85, u0, 0], [0.15, 0, 0.15, u1, 0], [0.15, 1, 0.15, u1, 1], [0.85, 1, 0.85, u0, 1]],
             [[0.15, 0, 0.85, u0, 0], [0.85, 0, 0.15, u1, 0], [0.85, 1, 0.15, u1, 1], [0.15, 1, 0.85, u0, 1]],
             [[0.85, 0, 0.15, u0, 0], [0.15, 0, 0.85, u1, 0], [0.15, 1, 0.85, u1, 1], [0.85, 1, 0.15, u0, 1]]
           ];
 
-          for (let q = 0; q < 4; q++) {
+          for (let q = 0; q < diagQuads.length; q++) {
             const baseV = vCount;
             const quad = diagQuads[q];
             for (let c = 0; c < 4; c++) {

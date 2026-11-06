@@ -318,8 +318,8 @@ function createWorldGenerator(seed) {
           for (let y = h + 1; y <= SEA_LEVEL; y++) {
             data[colOffset + y] = (y === SEA_LEVEL && (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas')) ? BLOCK.ICE : BLOCK.WATER;
           }
-          const lilyT = biome === 'Pantano' ? 0.88 : (biome === 'Jungla' ? 0.93 : ((biome === 'Llanura' || biome === 'Bosque') ? 0.962 : 1.0));
-          if (hash3D(wx, SEA_LEVEL, wz) > lilyT) data[colOffset + SEA_LEVEL + 1] = BLOCK.LILY_PAD;
+          const lilyT = biome === 'Pantano' ? 0.955 : (biome === 'Jungla' ? 0.975 : ((biome === 'Llanura' || biome === 'Bosque') ? 0.990 : 1.0));
+          if (lilyT < 1.0 && h >= SEA_LEVEL - 2 && fbm2D(wx * 0.11 + 53, wz * 0.11 + 53, 2, 2.0, 0.5) > 0.22 && hash3D(wx, SEA_LEVEL, wz) > lilyT) data[colOffset + SEA_LEVEL + 1] = BLOCK.LILY_PAD;
         }
       }
     }

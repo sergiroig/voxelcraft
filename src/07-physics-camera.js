@@ -210,7 +210,8 @@ function checkAABBCollision(px, py, pz) {
   for (let y = minY; y <= maxY; y++) {
     for (let z = minZ; z <= maxZ; z++) {
       for (let x = minX; x <= maxX; x++) {
-        if (BLOCK_DEFS[getVoxelGlobal(x, y, z)].solid) return true;
+        const bId = getVoxelGlobal(x, y, z);
+        if (BLOCK_DEFS[bId].solid && (bId !== BLOCK.LILY_PAD || py >= y + 0.5)) return true;
       }
     }
   }
@@ -287,7 +288,9 @@ function updatePlayerPhysics(dt) {
   const len = Math.hypot(moveX, moveZ), moveMag = Math.min(1.0, len);
   if (len > 0) { moveX = (moveX / len) * moveMag; moveZ = (moveZ / len) * moveMag; }
 
-  const inWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
+  const feetInWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.02), Math.floor(player.z)) === BLOCK.WATER || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.WATER;
+  const waistInWater = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.WATER;
+  const inWater = feetInWater || waistInWater;
   const inLava = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LAVA || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.6), Math.floor(player.z)) === BLOCK.LAVA;
   if ((inWater || inLava) !== !!player.wasInFluid) {
     player.wasInFluid = inWater || inLava;
@@ -363,7 +366,7 @@ function updatePlayerPhysics(dt) {
       player.vy -= (inLava ? 6.0 : 9.0) * dt;
       player.vy *= (inLava ? 0.72 : 0.88);
       player.maxFallVel = 0;
-      if (wantJump) player.vy = inLava ? 3.4 : 4.2;
+      if (wantJump) player.vy = inLava ? 4.8 : (waistInWater ? 5.8 : 8.6);
       else if (wantDown) player.vy = inLava ? -2.2 : -3.8;
       if (moveMag > 0.15) {
         player.stepAccum += dt * speed * moveMag;
