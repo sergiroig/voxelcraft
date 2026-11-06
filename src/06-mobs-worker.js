@@ -532,7 +532,7 @@ function updateMobs(dt) {
 
 function applyArraysToMesh(ch, meshData, lodLevel = 0) {
   if (ch.solidMesh) {
-    scene.remove(ch.solidMesh);
+    chunkSolidGroup.remove(ch.solidMesh);
     ch.solidMesh.geometry.dispose();
     ch.solidMesh = null;
   }
@@ -559,7 +559,7 @@ function applyArraysToMesh(ch, meshData, lodLevel = 0) {
 
     const mesh = new THREE.Mesh(geo, solidMaterial);
     mesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE);
-    scene.add(mesh);
+    chunkSolidGroup.add(mesh);
     ch.solidMesh = mesh;
   }
 

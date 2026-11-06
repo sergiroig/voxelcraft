@@ -647,7 +647,7 @@ function updateChunkStreaming() {
     for (const [key, ch] of chunks.entries()) {
       const dx = ch.cx - pcx, dz = ch.cz - pcz;
       if (dx * dx + dz * dz > unloadDistSq) {
-        if (ch.solidMesh) { scene.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
+        if (ch.solidMesh) { chunkSolidGroup.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
         if (ch.waterMesh) { scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); }
         chunks.delete(key);
       }

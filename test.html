@@ -2935,6 +2935,40 @@
         });
       });
 
+      // =========================================================================
+      // SUITE 51: Selector de Sistema de Iluminación (Ultra PC Shadow Map vs Ligero Móvil Shader)
+      // =========================================================================
+      describe('51. Selector de Iluminación: Shadow Map 3D Real (Por defecto en PC) vs Shader Dinámico (Por defecto en Móvil)', () => {
+        it('Detecta por defecto el modo más exigente (shadowmap) en PC y el menos exigente (shader) en Móvil/Tablet', () => {
+          assert(vc.detectDefaultLightingMode(false) === 'shadowmap', `En PC (isMobile=false) debe usar por defecto 'shadowmap' (obtenido: ${vc.detectDefaultLightingMode(false)})`);
+          assert(vc.detectDefaultLightingMode(true) === 'shader', `En Móvil/Tablet (isMobile=true) debe usar por defecto 'shader' (obtenido: ${vc.detectDefaultLightingMode(true)})`);
+        });
+
+        it('Permite elegir el sistema de iluminación desde el menú (#lighting-select) y alterna la pasada de Shadow Map 3D real', () => {
+          const selectEl = doc.getElementById('lighting-select');
+          const lblEl = doc.getElementById('lbl-lighting');
+          assert(selectEl && lblEl, 'Deben existir #lighting-select y #lbl-lighting en el menú de configuración');
+
+          vc.setTimeOfDay(4.2);
+          vc.setLightingMode('shader');
+          assert(vc.getLightingMode() === 'shader', 'getLightingMode() debe devolver shader');
+          assert(vc.gpuShaderUniforms.uUseShadowMap.value === 0.0, 'En modo shader, uUseShadowMap debe ser 0.0');
+          assert(lblEl.textContent.includes('Ligero'), `La etiqueta del menú debe reflejar modo Ligero (${lblEl.textContent})`);
+          assert(vc.updateShadowMapPass(true) === false, 'En modo shader, updateShadowMapPass() no debe ejecutar la pasada extra de sombras');
+
+          selectEl.value = 'shadowmap';
+          selectEl.dispatchEvent(new win.Event('change'));
+          assert(vc.getLightingMode() === 'shadowmap', 'Cambiar #lighting-select a shadowmap debe activar el modo Ultra PC');
+          assert(vc.gpuShaderUniforms.uUseShadowMap.value === 1.0, 'En modo shadowmap, uUseShadowMap debe ser 1.0');
+          assert(lblEl.textContent.includes('Ultra'), `La etiqueta del menú debe reflejar modo Ultra (${lblEl.textContent})`);
+
+          const prevPasses = vc.getShadowPassCount();
+          const rendered = vc.updateShadowMapPass(true);
+          assert(rendered === true && vc.getShadowPassCount() === prevPasses + 1, 'En modo shadowmap, updateShadowMapPass(true) debe renderizar el mapa de profundidad solar en shadowMapTarget');
+          vc.setTimeOfDay(5.82);
+        });
+      });
+
       // Execute all suites
       for (const suite of suites) {
         currentSuite = suite;
@@ -3039,6 +3073,7 @@
         { name: 'Meshing Chunk LOD Superficial Lejano (lodLevel=1)',    ms: bench(() => { vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 1); }, 50) },
         { name: 'Meshing vía Web Worker (Coste en Hilo Principal)',     ms: bench(() => { vc.packChunkPaddedBuffers(0, 0); vc.applyArraysToMesh(ch0, sampleMesh0); }, 40) },
         { name: 'Anillo Horizonte Lejano (+6 Chunks en 1 Draw Call)',   ms: bench(() => { vc.updateFarHorizon(true); }, 15) },
+        { name: 'Pasada Shadow Map 3D Real 1024×1024 (Modo Ultra PC)',  ms: bench(() => { vc.setLightingMode('shadowmap'); vc.updateShadowMapPass(true); }, 25) },
         { name: 'Pistón Mecánico Redstone (Empuje de Bloques en Lote)', ms: bench(() => { ch0.data[(14 * 16 + 14) * 64 + 53] = vc.BLOCK.PISTON; ch0.data[(14 * 16 + 14) * 64 + 54] = vc.BLOCK.STONE; ch0.data[(14 * 16 + 14) * 64 + 55] = vc.BLOCK.AIR; vc.triggerVoxelPiston(14, 53, 14, 13, 53, 14, new Set()); }, 60) }
       ];
 

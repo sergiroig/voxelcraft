@@ -236,6 +236,7 @@ function animate(now) {
 
   updateMining(dt, currentHit); updateParticles(dt); updateItemDrops(dt);
   updateArrows(dt); updateWeather(dt); updateMinimap(dt); updateFrustumCulling();
+  updateShadowMapPass();
   renderer.render(scene, camera);
 
   const frameMs = performance.now() - frameStart;
@@ -712,17 +713,9 @@ const recipeTabsEl = document.getElementById('mc-recipe-tabs'), recipeSearchEl =
 const recipeCraftOnlyEl = document.getElementById('mc-recipe-craftable-only');
 
 if (btnInvCloseEl) btnInvCloseEl.addEventListener('click', (e) => { e.preventDefault(); toggleInventory(false); });
-if (btnRecipeBookEl && recipeDrawerEl) {
-  btnRecipeBookEl.addEventListener('click', (e) => {
-    e.preventDefault(); recipeDrawerEl.classList.toggle('hidden');
-    btnRecipeBookEl.classList.toggle('toggled', !recipeDrawerEl.classList.contains('hidden'));
-  });
-}
+if (btnRecipeBookEl && recipeDrawerEl) btnRecipeBookEl.addEventListener('click', (e) => { e.preventDefault(); recipeDrawerEl.classList.toggle('hidden'); btnRecipeBookEl.classList.toggle('toggled', !recipeDrawerEl.classList.contains('hidden')); });
 if (recipeTabsEl) recipeTabsEl.querySelectorAll('.mc-recipe-tab').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ category: btn.dataset.cat }); }));
-if (recipeSearchEl) {
-  recipeSearchEl.addEventListener('input', () => setRecipeBookFilter({ search: recipeSearchEl.value }));
-  recipeSearchEl.addEventListener('keydown', (e) => e.stopPropagation());
-}
+if (recipeSearchEl) { recipeSearchEl.addEventListener('input', () => setRecipeBookFilter({ search: recipeSearchEl.value })); recipeSearchEl.addEventListener('keydown', (e) => e.stopPropagation()); }
 if (recipeCraftOnlyEl) recipeCraftOnlyEl.addEventListener('click', (e) => { e.preventDefault(); setRecipeBookFilter({ craftableOnly: !recipeBookState.craftableOnly }); });
 
 const toggleQuickMoveBtn = (e) => {
@@ -784,6 +777,7 @@ window.__VOXELCRAFT__ = {
   toggleVoxelLever, propagateRedstoneSignal, minimapCanvas, minimapImgData, updateMinimap, getMinimapUpdatesCount: () => minimapUpdatesCount,
   applyWorldSeed, teleportToBiome, skyGroup, celestialOrbit, sunMesh, moonMesh, sunGlow, moonGlow, starField, cloudMesh, setTimeOfDay,
   getCelestialAngle: () => celestialAngle, getMoonAngle: () => moonAngle, solidMaterial, waterMaterial, gpuShaderUniforms, updateGPUShaders,
+  detectDefaultLightingMode, setLightingMode, getLightingMode: () => lightingMode, updateShadowMapPass, shadowMapTarget, shadowCamera, shadowMatrix, getShadowPassCount: () => shadowPassCount,
   getShaders: () => ({ solidShaderRef, waterShaderRef, isCameraUnderwater }), getChunkData, getVoxelGlobal, setVoxelGlobal, getLightGlobal,
   computeChunkLighting, buildChunkMeshArrays, applyArraysToMesh, rebuildChunkImmediate, packChunkPaddedBuffers, requestChunkMeshWorker, updateDynamicResolution,
   getWorkerState: () => ({ hasWorker: meshWorker !== null, workerJobsInFlight, workerJobsCompleted, lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio }),

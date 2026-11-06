@@ -682,6 +682,11 @@ rngFov.addEventListener('input', (e) => {
   baseFov = parseInt(e.target.value, 10); lblFov.textContent = `${baseFov}°`;
   if (!isZoomed) { camera.fov = baseFov; camera.updateProjectionMatrix(); }
 });
+const lightingSelectEl = document.getElementById('lighting-select');
+if (lightingSelectEl) {
+  setLightingMode(lightingMode);
+  lightingSelectEl.addEventListener('change', (e) => setLightingMode(e.target.value));
+}
 
 function markAllChunksDirtyForRelight() {
   for (const ch of chunks.values()) { ch.dirty = true; ch.queued = false; ch.meshVersion = (ch.meshVersion || 0) + 1; }
@@ -701,7 +706,7 @@ function applyWorldSeed(newSeed) {
   generator = createWorldGenerator(worldSeed);
 
   for (const ch of chunks.values()) {
-    if (ch.solidMesh) { scene.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
+    if (ch.solidMesh) { chunkSolidGroup.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
     if (ch.waterMesh) { scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); }
   }
   chunks.clear(); buildQueue.length = 0; simQueue.clear();
@@ -744,8 +749,7 @@ const EMPTY_MAP_PIXEL = (255 << 24) | (42 << 16) | (23 << 8) | 15;
 let minimapAccum = 0, minimapUpdatesCount = 0;
 
 function updateMinimap(dt, forceRender = false) {
-  minimapAccum += dt;
-  if (!forceRender && minimapAccum < 0.10) return false;
+  minimapAccum += dt; if (!forceRender && minimapAccum < 0.10) return false;
   minimapAccum = 0; minimapUpdatesCount++;
   const px = Math.floor(player.x), pz = Math.floor(player.z), half = MAP_SIZE >> 1;
   for (let mz = 0; mz < MAP_SIZE; mz++) {
@@ -772,12 +776,10 @@ function updateMinimap(dt, forceRender = false) {
   if (gameMode === 'creative') {
     for (let i = 0; i < waypoints.length; i++) {
       const wp = waypoints[i], rx = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.x - player.x)))), rz = Math.max(2, Math.min(MAP_SIZE - 3, Math.round(half + (wp.z - player.z))));
-      minimapCtx.fillStyle = '#0f172a'; minimapCtx.fillRect(rx - 2, rz - 2, 5, 5);
-      minimapCtx.fillStyle = wp.color || '#f43f5e'; minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
+      minimapCtx.fillStyle = '#0f172a'; minimapCtx.fillRect(rx - 2, rz - 2, 5, 5); minimapCtx.fillStyle = wp.color || '#f43f5e'; minimapCtx.fillRect(rx - 1, rz - 1, 3, 3);
     }
   }
-  minimapCtx.strokeStyle = '#38bdf8'; minimapCtx.lineWidth = 1.5;
-  minimapCtx.beginPath(); minimapCtx.moveTo(half, half); minimapCtx.lineTo(half - Math.sin(player.yaw) * 8, half - Math.cos(player.yaw) * 8); minimapCtx.stroke();
+  minimapCtx.strokeStyle = '#38bdf8'; minimapCtx.lineWidth = 1.5; minimapCtx.beginPath(); minimapCtx.moveTo(half, half); minimapCtx.lineTo(half - Math.sin(player.yaw) * 8, half - Math.cos(player.yaw) * 8); minimapCtx.stroke();
   minimapCtx.fillStyle = '#facc15'; minimapCtx.fillRect(half - 1, half - 1, 3, 3);
   return true;
 }

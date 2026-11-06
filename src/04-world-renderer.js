@@ -138,20 +138,11 @@ function rebuildAffectedChunksSet(dirtyChunksSet) {
 
 function setVoxelGlobal(wx, wy, wz, blockId) {
   if (!setVoxelRawNoRebuild(wx, wy, wz, blockId, null)) return false;
-  const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE);
-  const ch = getChunkData(cx, cz);
-  saveWorldData();
+  const cx = Math.floor(wx / CHUNK_SIZE), cz = Math.floor(wz / CHUNK_SIZE), ch = getChunkData(cx, cz);
+  saveWorldData(); computeChunkLighting(ch, getChunkIfLoaded);
+  for (const [dx, dz] of [[-1,0],[1,0],[0,-1],[0,1]]) { const nCh = getChunkIfLoaded(cx + dx, cz + dz); if (nCh) computeChunkLighting(nCh, getChunkIfLoaded); }
   computeChunkLighting(ch, getChunkIfLoaded);
-  for (const [dx, dz] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-    const nCh = getChunkIfLoaded(cx + dx, cz + dz);
-    if (nCh) computeChunkLighting(nCh, getChunkIfLoaded);
-  }
-  computeChunkLighting(ch, getChunkIfLoaded);
-  rebuildChunkImmediate(cx, cz);
-  rebuildChunkImmediate(cx - 1, cz);
-  rebuildChunkImmediate(cx + 1, cz);
-  rebuildChunkImmediate(cx, cz - 1);
-  rebuildChunkImmediate(cx, cz + 1);
+  rebuildChunkImmediate(cx, cz); rebuildChunkImmediate(cx - 1, cz); rebuildChunkImmediate(cx + 1, cz); rebuildChunkImmediate(cx, cz - 1); rebuildChunkImmediate(cx, cz + 1);
   return true;
 }
 
@@ -159,54 +150,44 @@ function setVoxelGlobal(wx, wy, wz, blockId) {
 // 8. THREE.JS SCENE, MATERIALS, INSTANCED PARTICLE POOL & 1ST PERSON HAND
 // ============================================================================
 const canvasEl = document.getElementById('game-canvas');
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvasEl,
-  antialias: false,
-  powerPreference: 'high-performance'
-});
-const maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-const minPixelRatio = 0.65;
-let currentPixelRatio = maxPixelRatio;
-let dynamicResEnabled = true;
-
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(currentPixelRatio);
+const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: false, powerPreference: 'high-performance' });
+const maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5), minPixelRatio = 0.65;
+let currentPixelRatio = maxPixelRatio, dynamicResEnabled = true;
+renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(currentPixelRatio);
 
 function updateDynamicResolution(fpsSample) {
   if (!dynamicResEnabled || typeof fpsSample !== 'number' || fpsSample <= 0) return currentPixelRatio;
   let nextRatio = currentPixelRatio;
-  if (fpsSample < 45 && currentPixelRatio > minPixelRatio) {
-    nextRatio = Math.max(minPixelRatio, +(currentPixelRatio - 0.15).toFixed(2));
-  } else if (fpsSample >= 56 && currentPixelRatio < maxPixelRatio) {
-    nextRatio = Math.min(maxPixelRatio, +(currentPixelRatio + 0.10).toFixed(2));
-  }
-  if (nextRatio !== currentPixelRatio) {
-    currentPixelRatio = nextRatio;
-    renderer.setPixelRatio(currentPixelRatio);
-  }
+  if (fpsSample < 45 && currentPixelRatio > minPixelRatio) nextRatio = Math.max(minPixelRatio, +(currentPixelRatio - 0.15).toFixed(2));
+  else if (fpsSample >= 56 && currentPixelRatio < maxPixelRatio) nextRatio = Math.min(maxPixelRatio, +(currentPixelRatio + 0.10).toFixed(2));
+  if (nextRatio !== currentPixelRatio) { currentPixelRatio = nextRatio; renderer.setPixelRatio(currentPixelRatio); }
   return currentPixelRatio;
 }
 
-const scene = new THREE.Scene();
-const skyColorDay      = new THREE.Color(0x6ec6ff);
-const skyColorGolden   = new THREE.Color(0xf4845f);
-const skyColorTwilight = new THREE.Color(0xb84a39);
-const skyColorNight    = new THREE.Color(0x070b16);
-const currentSkyColor  = skyColorDay.clone();
-const sunColHorizon    = new THREE.Color(0xff5e2b);
-const sunColGolden     = new THREE.Color(0xffe8cc);
-const sunColNoon       = new THREE.Color(0xffffff);
-const cloudColDay      = new THREE.Color(0xf8fafc);
-const cloudColSunset   = new THREE.Color(0xfdba8c);
-const cloudColNight    = new THREE.Color(0x263147);
-scene.background = currentSkyColor.clone();
-scene.fog = new THREE.FogExp2(0x6ec6ff, 0.0055);
-
+const scene = new THREE.Scene(), chunkSolidGroup = new THREE.Scene();
+scene.add(chunkSolidGroup);
+const skyColorDay = new THREE.Color(0x6ec6ff), skyColorGolden = new THREE.Color(0xf4845f), skyColorTwilight = new THREE.Color(0xb84a39), skyColorNight = new THREE.Color(0x070b16);
+const currentSkyColor = skyColorDay.clone(), sunColHorizon = new THREE.Color(0xff5e2b), sunColGolden = new THREE.Color(0xffe8cc), sunColNoon = new THREE.Color(0xffffff);
+const cloudColDay = new THREE.Color(0xf8fafc), cloudColSunset = new THREE.Color(0xfdba8c), cloudColNight = new THREE.Color(0x263147);
+scene.background = currentSkyColor.clone(); scene.fog = new THREE.FogExp2(0x6ec6ff, 0.0055);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 360);
 scene.add(camera);
+const { texture: atlasTexture, canvas: atlasCanvas } = createProceduralAtlas(), crackTextures = createCrackTextures();
 
-const { texture: atlasTexture, canvas: atlasCanvas } = createProceduralAtlas();
-const crackTextures = createCrackTextures();
+function detectDefaultLightingMode(customIsMobile) {
+  const isMob = typeof customIsMobile === 'boolean'
+    ? customIsMobile
+    : (/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test((typeof navigator !== 'undefined' && navigator.userAgent) || '') || (('ontouchstart' in window) && window.innerWidth <= 960));
+  return isMob ? 'shader' : 'shadowmap';
+}
+let lightingMode = detectDefaultLightingMode(), shadowPassCount = 0;
+const SHADOW_MAP_SIZE = 1024;
+const shadowMapTarget = new THREE.WebGLRenderTarget(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat });
+const shadowCamera = new THREE.OrthographicCamera(-44, 44, 44, -44, 2, 160), shadowMatrix = new THREE.Matrix4(), shadowClearCol = new THREE.Color();
+const shadowDepthMaterial = new THREE.MeshBasicMaterial({ map: atlasTexture, alphaTest: 0.15, side: THREE.DoubleSide });
+shadowDepthMaterial.onBeforeCompile = (sh) => {
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#include <packing>').replace('#include <fog_fragment>', 'gl_FragColor = packDepthToRGBA(gl_FragCoord.z);');
+};
 
 // Shared GPU Shader Uniforms (0 CPU overhead per vertex: animated entirely on GPU!)
 const gpuShaderUniforms = {
@@ -216,10 +197,42 @@ const gpuShaderUniforms = {
   uUnderwater:    { value: 0.0 },
   uSunLightColor: { value: new THREE.Vector3(1.0, 1.0, 1.0) },
   uLightDir:      { value: new THREE.Vector3(0.45, 0.85, -0.25).normalize() },
-  uCloudDrift:    { value: 0.0 }
+  uCloudDrift:    { value: 0.0 },
+  uUseShadowMap:  { value: lightingMode === 'shadowmap' ? 1.0 : 0.0 },
+  uShadowMap:     { value: shadowMapTarget.texture },
+  uShadowMatrix:  { value: shadowMatrix }
 };
 let solidShaderRef = null, waterShaderRef = null, isCameraUnderwater = false;
 const waterFogColorDay = new THREE.Color(0x0b4f7c), waterFogColorNight = new THREE.Color(0x052036);
+
+function setLightingMode(mode) {
+  lightingMode = (mode === 'shader') ? 'shader' : 'shadowmap';
+  gpuShaderUniforms.uUseShadowMap.value = lightingMode === 'shadowmap' ? 1.0 : 0.0;
+  const selEl = document.getElementById('lighting-select'), lblEl = document.getElementById('lbl-lighting'), statEl = document.getElementById('stat-worker');
+  if (selEl && selEl.value !== lightingMode) selEl.value = lightingMode;
+  if (lblEl) lblEl.textContent = lightingMode === 'shadowmap' ? 'Ultra PC (Shadow Map 3D)' : 'Ligero Móvil (Shader GPU)';
+  if (statEl) statEl.textContent = lightingMode === 'shadowmap' ? 'SHADOW MAP 3D + SHADERS' : 'BFS LIGHT + GPU SHADERS';
+  if (lightingMode === 'shadowmap') updateShadowMapPass();
+  return lightingMode;
+}
+
+function updateShadowMapPass() {
+  if (lightingMode !== 'shadowmap') return false;
+  if (typeof player === 'undefined' || !player || chunkSolidGroup.children.length === 0) return false;
+  const ld = gpuShaderUniforms.uLightDir.value;
+  const sx = Math.round(player.x * 4) * 0.25, sy = Math.round(player.y * 4) * 0.25, sz = Math.round(player.z * 4) * 0.25;
+  shadowCamera.position.set(sx + ld.x * 68, sy + Math.max(18, ld.y * 68), sz + ld.z * 68);
+  shadowCamera.lookAt(sx, sy, sz);
+  shadowCamera.updateMatrixWorld();
+  shadowMatrix.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse);
+  const prevClearHex = renderer.getClearColor(shadowClearCol).getHex(), prevClearAlpha = renderer.getClearAlpha();
+  chunkSolidGroup.overrideMaterial = shadowDepthMaterial;
+  renderer.setClearColor(0xffffff, 1.0);
+  renderer.setRenderTarget(shadowMapTarget); renderer.clear(); renderer.render(chunkSolidGroup, shadowCamera); renderer.setRenderTarget(null);
+  chunkSolidGroup.overrideMaterial = null; renderer.setClearColor(prevClearHex, prevClearAlpha);
+  shadowPassCount++;
+  return true;
+}
 
 const solidMaterial = new THREE.MeshBasicMaterial({ map: atlasTexture, vertexColors: true, alphaTest: 0.15 });
 
@@ -230,6 +243,9 @@ solidMaterial.onBeforeCompile = (shader) => {
   shader.uniforms.uSunLightColor = gpuShaderUniforms.uSunLightColor;
   shader.uniforms.uLightDir = gpuShaderUniforms.uLightDir;
   shader.uniforms.uCloudDrift = gpuShaderUniforms.uCloudDrift;
+  shader.uniforms.uUseShadowMap = gpuShaderUniforms.uUseShadowMap;
+  shader.uniforms.uShadowMap = gpuShaderUniforms.uShadowMap;
+  shader.uniforms.uShadowMatrix = gpuShaderUniforms.uShadowMatrix;
   solidShaderRef = shader;
 
   shader.vertexShader = shader.vertexShader
@@ -261,7 +277,7 @@ solidMaterial.onBeforeCompile = (shader) => {
     );
 
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
+    .replace('#include <common>', `#include <common>\n#include <packing>\nuniform float uTime;\nuniform float uSunFactor;\nuniform vec3 uSunLightColor;\nuniform vec3 uLightDir;\nuniform float uCloudDrift;\nuniform float uUseShadowMap;\nuniform sampler2D uShadowMap;\nuniform mat4 uShadowMatrix;\nvarying float vTileIdx;\nvarying vec3 vWorldPos;`)
     .replace(
       '#include <fog_fragment>',
       `float isEmissiveTile = ((vTileIdx >= 20.5 && vTileIdx <= 21.5) || (vTileIdx >= 14.5 && vTileIdx <= 15.5) || (vTileIdx >= 27.5 && vTileIdx <= 28.5) || (vTileIdx >= 32.5 && vTileIdx <= 33.5) || (vTileIdx >= 37.5 && vTileIdx <= 39.5) || (vTileIdx >= 48.5 && vTileIdx <= 49.5)) ? 1.0 : 0.0;
@@ -272,11 +288,28 @@ solidMaterial.onBeforeCompile = (shader) => {
       float bakedLuma = max(vColor.r, max(vColor.g, vColor.b));
       float horizonCut = 0.54 + sunLow * 0.28;
       float selfShadow = smoothstep(horizonCut - 0.18, horizonCut + 0.08, bakedLuma + ndotl * 0.22);
+      float realShadow = 1.0;
+      if (uUseShadowMap > 0.5) {
+        vec4 sc = uShadowMatrix * vec4(vWorldPos + faceN * 0.08, 1.0);
+        vec3 sProj = sc.xyz / sc.w * 0.5 + 0.5;
+        if (sProj.x > 0.01 && sProj.x < 0.99 && sProj.y > 0.01 && sProj.y < 0.99 && sProj.z > 0.0 && sProj.z < 0.995) {
+          float bias = max(0.0022, 0.0045 * (1.0 - max(ndotl, 0.0)));
+          float shSum = 0.0;
+          const float texel = 1.0 / 1024.0;
+          shSum += (sProj.z - bias > unpackRGBAToDepth(texture2D(uShadowMap, sProj.xy))) ? 0.30 : 1.0;
+          shSum += (sProj.z - bias > unpackRGBAToDepth(texture2D(uShadowMap, sProj.xy + vec2(texel, 0.0)))) ? 0.30 : 1.0;
+          shSum += (sProj.z - bias > unpackRGBAToDepth(texture2D(uShadowMap, sProj.xy - vec2(texel, 0.0)))) ? 0.30 : 1.0;
+          shSum += (sProj.z - bias > unpackRGBAToDepth(texture2D(uShadowMap, sProj.xy + vec2(0.0, texel)))) ? 0.30 : 1.0;
+          shSum += (sProj.z - bias > unpackRGBAToDepth(texture2D(uShadowMap, sProj.xy - vec2(0.0, texel)))) ? 0.30 : 1.0;
+          float edgeFade = smoothstep(0.48, 0.42, max(abs(sProj.x - 0.5), abs(sProj.y - 0.5)));
+          realShadow = mix(1.0, shSum * 0.2, edgeFade);
+        }
+      }
       vec2 cloudRayXZ = vWorldPos.xz + uLightDir.xz * ((60.0 - vWorldPos.y) / max(0.22, uLightDir.y));
       vec2 cUV = (cloudRayXZ - vec2(uCloudDrift, uTime * 0.35)) * 0.042;
       float cWave = sin(cUV.x) * cos(cUV.y) + 0.5 * sin(cUV.x * 1.9 - cUV.y * 1.6);
       float cloudShadow = 1.0 - smoothstep(0.22, 0.85, cWave) * 0.22 * uSunFactor;
-      float directLit = clamp((ndotl * 0.5 + 0.5) * selfShadow, 0.0, 1.0) * cloudShadow;
+      float directLit = clamp((ndotl * 0.5 + 0.5) * selfShadow * realShadow, 0.0, 1.0) * cloudShadow;
       vec3 shadowAmbient = uSunLightColor * vec3(0.68, 0.76, 0.92);
       vec3 directSunCol = uSunLightColor * (1.16 + 0.16 * sunLow);
       vec3 dynamicShaderLight = mix(shadowAmbient, directSunCol, directLit);
@@ -589,24 +622,16 @@ function updateItemDrops(dt) {
 // ============================================================================
 // 8B. DYNAMIC SKY: INDEPENDENT GLOWING SUN & MOON, SLOW CYCLE, STARS & CLOUDS
 // ============================================================================
-const skyGroup = new THREE.Group();
-scene.add(skyGroup);
-const celestialOrbit = new THREE.Group();
-skyGroup.add(celestialOrbit);
+const skyGroup = new THREE.Group(); scene.add(skyGroup);
+const celestialOrbit = new THREE.Group(); skyGroup.add(celestialOrbit);
 
 const celestialGlowTex = (() => {
-  const cv = document.createElement('canvas');
-  cv.width = 128; cv.height = 128;
-  const ctx = cv.getContext('2d');
-  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0.0, 'rgba(255,255,255,0.95)');
-  g.addColorStop(0.22, 'rgba(255,254,248,0.75)');
-  g.addColorStop(0.36, 'rgba(255,248,230,0.42)');
-  g.addColorStop(0.58, 'rgba(255,240,210,0.14)');
-  g.addColorStop(0.82, 'rgba(255,232,195,0.03)');
-  g.addColorStop(1.0, 'rgba(255,230,190,0.0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 128, 128);
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+  const ctx = cv.getContext('2d'), g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0.0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.22, 'rgba(255,254,248,0.75)');
+  g.addColorStop(0.36, 'rgba(255,248,230,0.42)'); g.addColorStop(0.58, 'rgba(255,240,210,0.14)');
+  g.addColorStop(0.82, 'rgba(255,232,195,0.03)'); g.addColorStop(1.0, 'rgba(255,230,190,0.0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(cv);
 })();
 
@@ -614,67 +639,47 @@ const sunGeo = new THREE.SphereGeometry(10.0, 36, 24);
 (() => {
   const pos = sunGeo.attributes.position, col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    const mu = Math.max(0, Math.abs(pos.getZ(i)) / 10.0);
-    const limb = Math.pow(mu, 0.42);
+    const limb = Math.pow(Math.max(0, Math.abs(pos.getZ(i)) / 10.0), 0.42);
     col[i * 3] = 1.0; col[i * 3 + 1] = 0.90 + 0.10 * limb; col[i * 3 + 2] = 0.78 + 0.22 * limb;
   }
   sunGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 })();
 const sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, depthWrite: false, fog: false }));
 sunMesh.renderOrder = -2;
-const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: celestialGlowTex, color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
-}));
-sunGlow.renderOrder = -1;
-sunGlow.scale.set(50, 50, 1);
-skyGroup.add(sunMesh, sunGlow);
+const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: celestialGlowTex, color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+sunGlow.renderOrder = -1; sunGlow.scale.set(50, 50, 1); skyGroup.add(sunMesh, sunGlow);
 
 const moonGeo = new THREE.SphereGeometry(8.5, 36, 24);
 (() => {
   const pos = moonGeo.attributes.position, col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
     const nx = pos.getX(i), ny = pos.getY(i), nz = pos.getZ(i);
-    const mu = Math.max(0, Math.abs(nz) / 8.5);
     const crater = Math.sin(nx * 0.45 + ny * 0.35) * Math.cos(nx * 0.28 - ny * 0.42);
-    const sphereLit = 0.58 + 0.42 * Math.pow(mu, 0.48);
-    const c = (crater > 0.2 ? 0.82 : (crater < -0.25 ? 0.91 : 1.0)) * sphereLit;
+    const c = (crater > 0.2 ? 0.82 : (crater < -0.25 ? 0.91 : 1.0)) * (0.58 + 0.42 * Math.pow(Math.max(0, Math.abs(nz) / 8.5), 0.48));
     col[i * 3] = c * 0.95; col[i * 3 + 1] = c * 0.98; col[i * 3 + 2] = Math.min(1, c * 1.04);
   }
   moonGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 })();
 const moonMesh = new THREE.Mesh(moonGeo, new THREE.MeshBasicMaterial({ color: 0xf8fafc, vertexColors: true, transparent: true, opacity: 1.0, depthWrite: false, fog: false }));
 moonMesh.renderOrder = -3;
-const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: celestialGlowTex, color: 0xdbeafe, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
-}));
-moonGlow.renderOrder = -2;
-moonGlow.scale.set(32, 32, 1);
-skyGroup.add(moonMesh, moonGlow);
+const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: celestialGlowTex, color: 0xdbeafe, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+moonGlow.renderOrder = -2; moonGlow.scale.set(32, 32, 1); skyGroup.add(moonMesh, moonGlow);
 
 const starPositions = new Float32Array(220 * 3);
 for (let i = 0; i < 220; i++) {
   const theta = Math.random() * Math.PI * 2, phi = Math.acos(2 * Math.random() - 1), r = 165;
-  starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-  starPositions[i * 3 + 1] = r * Math.cos(phi);
-  starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+  starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta); starPositions[i * 3 + 1] = r * Math.cos(phi); starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
 }
-const starGeo = new THREE.BufferGeometry();
-starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+const starGeo = new THREE.BufferGeometry(); starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
 const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.8, fog: false, transparent: true, opacity: 0.0, depthWrite: false });
-const starField = new THREE.Points(starGeo, starMat);
-starField.renderOrder = -4;
-celestialOrbit.add(starField);
+const starField = new THREE.Points(starGeo, starMat); starField.renderOrder = -4; celestialOrbit.add(starField);
 
 // Merged 3D Voxel Clouds (Single BufferGeometry = 1 Draw Call!)
 const cloudMesh = (() => {
-  const boxes = [];
-  let cSeed = 9001;
+  const boxes = [], pos = [], idx = [];
+  let cSeed = 9001, vOff = 0;
   const cRand = () => { cSeed = (cSeed * 1664525 + 1013904223) >>> 0; return (cSeed & 0xffff) / 0x10000; };
-  for (let i = 0; i < 26; i++) {
-    boxes.push({ x: (cRand() - 0.5) * 220, z: (cRand() - 0.5) * 220, w: 8 + Math.floor(cRand() * 14), d: 6 + Math.floor(cRand() * 12) });
-  }
-  const pos = [], idx = [];
-  let vOff = 0;
+  for (let i = 0; i < 26; i++) boxes.push({ x: (cRand() - 0.5) * 220, z: (cRand() - 0.5) * 220, w: 8 + Math.floor(cRand() * 14), d: 6 + Math.floor(cRand() * 12) });
   const pushQuad = (p0, p1, p2, p3) => { pos.push(...p0, ...p1, ...p2, ...p3); idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3); vOff += 4; };
   for (const b of boxes) {
     const x0 = b.x, x1 = b.x + b.w, y0 = 65, y1 = 67.2, z0 = b.z, z1 = b.z + b.d;
@@ -683,30 +688,20 @@ const cloudMesh = (() => {
     pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]); pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]);
   }
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setIndex(idx);
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
   const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.78, depthWrite: false }));
-  scene.add(m);
-  return m;
+  scene.add(m); return m;
 })();
 
-let cloudDrift = 0;
-let celestialAngle = 5.82; // Morning (~10:00 AM); 0 = Noon, PI/2 = Sunset, PI = Midnight, 3*PI/2 = Sunrise
-let moonAngle = 2.15;      // Independent lunar orbit (own inclination, phase & orbital speed)
-const DAY_CYCLE_SPEED = (Math.PI * 2) / 1200; // Full 24h solar cycle every 20 minutes (1200s)
-const MOON_CYCLE_SPEED = DAY_CYCLE_SPEED * 0.915;
+let cloudDrift = 0, celestialAngle = 5.82, moonAngle = 2.15;
+const DAY_CYCLE_SPEED = (Math.PI * 2) / 1200, MOON_CYCLE_SPEED = DAY_CYCLE_SPEED * 0.915;
 
 function setTimeOfDay(angle, customMoonAngle) {
   celestialAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  if (typeof customMoonAngle === 'number') {
-    moonAngle = ((customMoonAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  } else if (Math.cos(celestialAngle) < -0.5) {
-    moonAngle = 0.38; // Visible in the night sky when jumping to night (T), independent of sunset
-  } else {
-    moonAngle = (celestialAngle * 0.915 + 2.15) % (Math.PI * 2);
-  }
-  updateDynamicSky(0);
-  updateGPUShaders(0);
+  if (typeof customMoonAngle === 'number') moonAngle = ((customMoonAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  else if (Math.cos(celestialAngle) < -0.5) moonAngle = 0.38;
+  else moonAngle = (celestialAngle * 0.915 + 2.15) % (Math.PI * 2);
+  updateDynamicSky(0); updateGPUShaders(0);
 }
 
 function updateDynamicSky(dt) {
