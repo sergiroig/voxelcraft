@@ -442,66 +442,73 @@ function createWorldGenerator(seed) {
   }
 
   function placeStructureInChunk(data, surfaceMap, cx, cz, type = 'pyramid') {
-    const baseY = surfaceMap ? surfaceMap[8 * CHUNK_SIZE + 8] : 28, setLocal = (lx, y, lz, bId) => { if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE && y > 1 && y < CHUNK_HEIGHT) data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId; };
+    const setLocal = (lx, y, lz, bId) => { if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE && y > 1 && y < CHUNK_HEIGHT) data[(lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y] = bId; };
+    const prepPad = (x0, z0, w, d) => {
+      let minY = surfaceMap ? 255 : 28, maxY = surfaceMap ? 0 : 28;
+      if (surfaceMap) for (let dz = 0; dz < d; dz++) for (let dx = 0; dx < w; dx++) { const sy = surfaceMap[(z0 + dz) * CHUNK_SIZE + (x0 + dx)]; if (sy < minY) minY = sy; if (sy > maxY) maxY = sy; }
+      for (let dz = -1; dz <= d; dz++) for (let dx = -1; dx <= w; dx++) { const lx = x0 + dx, lz = z0 + dz; if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) { const sy = surfaceMap ? surfaceMap[lz * CHUNK_SIZE + lx] : maxY, isApron = dx < 0 || dx >= w || dz < 0 || dz >= d; if (isApron && sy > maxY) { setLocal(lx, maxY, lz, BLOCK.GRASS); for (let y = maxY + 1; y <= sy + 5; y++) setLocal(lx, y, lz, BLOCK.AIR); } else if (!isApron) { for (let y = maxY + 5; y <= sy + 6; y++) setLocal(lx, y, lz, BLOCK.AIR); } } }
+      return { bY: maxY, fY: Math.max(2, minY - 2) };
+    };
+    const baseY = (type === 'village' || type === 'mineshaft' || type === 'dungeon' || type === 'pyramid') ? (surfaceMap ? surfaceMap[8 * CHUNK_SIZE + 8] : 28) : prepPad(type === 'temple' ? 5 : 6, type === 'temple' ? 5 : 6, type === 'temple' ? 7 : 5, type === 'temple' ? 7 : 5).bY;
 
     if (type === 'village') {
-      // 1) Gravel roads across the chunk (N-S and E-W) + Central Well at (7..8, 7..8)
-      for (let i = 0; i < CHUNK_SIZE; i++) {
-        for (let r = 7; r <= 8; r++) {
-          const ry1 = surfaceMap ? surfaceMap[i * CHUNK_SIZE + r] : baseY, ry2 = surfaceMap ? surfaceMap[r * CHUNK_SIZE + i] : baseY;
-          setLocal(r, ry1, i, BLOCK.GRAVEL); setLocal(r, ry1 + 1, i, BLOCK.AIR);
-          setLocal(i, ry2, r, BLOCK.GRAVEL); setLocal(i, ry2 + 1, r, BLOCK.AIR);
-        }
+      // 1) Gravel roads across the chunk (N-S and E-W) + Central Well at (6..9, 6..9)
+      for (let i = 0; i < CHUNK_SIZE; i++) for (let r = 7; r <= 8; r++) {
+        const ry1 = surfaceMap ? surfaceMap[i * CHUNK_SIZE + r] : baseY, ry2 = surfaceMap ? surfaceMap[r * CHUNK_SIZE + i] : baseY;
+        setLocal(r, ry1, i, BLOCK.GRAVEL); for (let dy = 1; dy <= 5; dy++) setLocal(r, ry1 + dy, i, BLOCK.AIR);
+        setLocal(i, ry2, r, BLOCK.GRAVEL); for (let dy = 1; dy <= 5; dy++) setLocal(i, ry2 + dy, r, BLOCK.AIR);
       }
+      const { bY: wY, fY: wfY } = prepPad(6, 6, 4, 4);
       for (let dz = 6; dz <= 9; dz++) for (let dx = 6; dx <= 9; dx++) {
         const isRim = dx === 6 || dx === 9 || dz === 6 || dz === 9, isCorner = (dx === 6 || dx === 9) && (dz === 6 || dz === 9);
-        setLocal(dx, baseY, dz, isRim ? BLOCK.COBBLE : BLOCK.WATER);
-        setLocal(dx, baseY + 1, dz, isRim ? BLOCK.COBBLE : BLOCK.AIR);
-        if (isCorner) { setLocal(dx, baseY + 2, dz, BLOCK.WOOD); setLocal(dx, baseY + 3, dz, BLOCK.WOOD); }
-        setLocal(dx, baseY + 4, dz, BLOCK.PLANKS);
+        for (let y = wfY; y <= wY; y++) setLocal(dx, y, dz, isRim ? BLOCK.COBBLE : BLOCK.WATER);
+        for (let dy = 1; dy <= 3; dy++) setLocal(dx, wY + dy, dz, dy === 1 && isRim ? BLOCK.COBBLE : (isCorner ? BLOCK.WOOD : BLOCK.AIR));
+        setLocal(dx, wY + 4, dz, BLOCK.PLANKS);
       }
-      setLocal(6, baseY + 2, 6, BLOCK.TORCH); setLocal(9, baseY + 2, 9, BLOCK.TORCH);
+      setLocal(6, wY + 2, 6, BLOCK.TORCH); setLocal(9, wY + 2, 9, BLOCK.TORCH);
 
       // 2) Villager House 1 (NW: lx 1..5, lz 1..5) & House 2 (SW: lx 1..5, lz 10..14)
       for (const z0 of [1, 10]) {
+        const { bY: hY, fY: hfY } = prepPad(1, z0, 5, 5);
         for (let dz = 0; dz <= 4; dz++) for (let dx = 0; dx <= 4; dx++) {
           const lx = 1 + dx, lz = z0 + dz, isCorner = (dx === 0 || dx === 4) && (dz === 0 || dz === 4), isWall = dx === 0 || dx === 4 || dz === 0 || dz === 4;
-          for (let y = baseY - 2; y <= baseY; y++) setLocal(lx, y, lz, BLOCK.COBBLE);
+          for (let y = hfY; y <= hY; y++) setLocal(lx, y, lz, BLOCK.COBBLE);
           for (let dy = 1; dy <= 3; dy++) {
-            if (dx === 4 && dz === 2 && dy <= 2) setLocal(lx, baseY + dy, lz, BLOCK.AIR);
-            else if (isCorner) setLocal(lx, baseY + dy, lz, BLOCK.WOOD);
-            else if (isWall) setLocal(lx, baseY + dy, lz, (dy === 2 && (dx === 2 || dz === 2)) ? BLOCK.GLASS : BLOCK.PLANKS);
-            else setLocal(lx, baseY + dy, lz, BLOCK.AIR);
+            if (dx === 4 && dz === 2 && dy <= 2) setLocal(lx, hY + dy, lz, BLOCK.AIR);
+            else if (isCorner) setLocal(lx, hY + dy, lz, BLOCK.WOOD);
+            else if (isWall) setLocal(lx, hY + dy, lz, (dy === 2 && (dx === 2 || dz === 2)) ? BLOCK.GLASS : BLOCK.PLANKS);
+            else setLocal(lx, hY + dy, lz, BLOCK.AIR);
           }
-          setLocal(lx, baseY + 4, lz, BLOCK.WOOD);
+          setLocal(lx, hY + 4, lz, BLOCK.WOOD);
         }
-        setLocal(2, baseY + 1, z0 + 1, BLOCK.BED); setLocal(2, baseY + 1, z0 + 3, z0 === 1 ? BLOCK.BOOKSHELF : BLOCK.CHEST);
-        setLocal(4, baseY + 1, z0 + 1, BLOCK.CRAFTING_TABLE); setLocal(3, baseY + 2, z0 + 2, BLOCK.TORCH);
+        for (let y = hfY; y <= hY; y++) setLocal(6, y, z0 + 2, BLOCK.GRAVEL); for (let dy = 1; dy <= 4; dy++) setLocal(6, hY + dy, z0 + 2, BLOCK.AIR);
+        setLocal(2, hY + 1, z0 + 1, BLOCK.BED); setLocal(2, hY + 1, z0 + 3, z0 === 1 ? BLOCK.BOOKSHELF : BLOCK.CHEST);
+        setLocal(4, hY + 1, z0 + 1, BLOCK.CRAFTING_TABLE); setLocal(3, hY + 2, z0 + 2, BLOCK.TORCH);
       }
 
       // 3) Blacksmith Forge (NE: lx 10..14, lz 1..5)
+      const { bY: bY3, fY: bfY } = prepPad(10, 1, 5, 5);
       for (let dz = 0; dz <= 4; dz++) for (let dx = 0; dx <= 4; dx++) {
         const lx = 10 + dx, lz = 1 + dz, isWall = dx === 0 || dx === 4 || dz === 0 || dz === 4;
-        for (let y = baseY - 2; y <= baseY; y++) setLocal(lx, y, lz, BLOCK.COBBLE);
-        for (let dy = 1; dy <= 3; dy++) {
-          if (dx === 0 && dz === 2 && dy <= 2) setLocal(lx, baseY + dy, lz, BLOCK.AIR);
-          else setLocal(lx, baseY + dy, lz, isWall ? BLOCK.BRICK : BLOCK.AIR);
-        }
-        setLocal(lx, baseY + 4, lz, BLOCK.COBBLE);
+        for (let y = bfY; y <= bY3; y++) setLocal(lx, y, lz, BLOCK.COBBLE);
+        for (let dy = 1; dy <= 3; dy++) setLocal(lx, bY3 + dy, lz, (dx === 0 && dz === 2 && dy <= 2) ? BLOCK.AIR : (isWall ? BLOCK.BRICK : BLOCK.AIR));
+        setLocal(lx, bY3 + 4, lz, BLOCK.COBBLE);
       }
-      setLocal(13, baseY + 1, 2, BLOCK.FURNACE); setLocal(13, baseY + 1, 3, BLOCK.LAVA);
-      setLocal(11, baseY + 1, 2, BLOCK.ANVIL); setLocal(12, baseY + 1, 4, BLOCK.CHEST); setLocal(12, baseY + 2, 2, BLOCK.TORCH);
+      for (let y = bfY; y <= bY3; y++) setLocal(9, y, 3, BLOCK.GRAVEL); for (let dy = 1; dy <= 4; dy++) setLocal(9, bY3 + dy, 3, BLOCK.AIR);
+      setLocal(13, bY3 + 1, 2, BLOCK.FURNACE); setLocal(13, bY3 + 1, 3, BLOCK.LAVA);
+      setLocal(11, bY3 + 1, 2, BLOCK.ANVIL); setLocal(12, bY3 + 1, 4, BLOCK.CHEST); setLocal(12, bY3 + 2, 2, BLOCK.TORCH);
 
       // 4) Irrigated Wheat Farm (SE: lx 10..14, lz 10..14)
+      const { bY: fmY, fY: fmfY } = prepPad(10, 10, 5, 5);
       for (let dz = 0; dz <= 4; dz++) for (let dx = 0; dx <= 4; dx++) {
         const lx = 10 + dx, lz = 10 + dz, isBorder = dx === 0 || dx === 4 || dz === 0 || dz === 4;
-        for (let y = baseY - 2; y < baseY; y++) setLocal(lx, y, lz, BLOCK.DIRT);
-        for (let dy = 1; dy <= 4; dy++) setLocal(lx, baseY + dy, lz, BLOCK.AIR);
-        if (isBorder) setLocal(lx, baseY, lz, BLOCK.WOOD);
-        else if (dx === 2) setLocal(lx, baseY, lz, BLOCK.WATER);
-        else { setLocal(lx, baseY, lz, BLOCK.DIRT); setLocal(lx, baseY + 1, lz, ((dx + dz) & 1) ? BLOCK.WHEAT_3 : BLOCK.WHEAT_2); }
+        for (let y = fmfY; y < fmY; y++) setLocal(lx, y, lz, BLOCK.DIRT);
+        for (let dy = 1; dy <= 4; dy++) setLocal(lx, fmY + dy, lz, BLOCK.AIR);
+        if (isBorder) setLocal(lx, fmY, lz, BLOCK.WOOD);
+        else if (dx === 2) setLocal(lx, fmY, lz, BLOCK.WATER);
+        else { setLocal(lx, fmY, lz, BLOCK.DIRT); setLocal(lx, fmY + 1, lz, ((dx + dz) & 1) ? BLOCK.WHEAT_3 : BLOCK.WHEAT_2); }
       }
-      return { type: 'village', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
+      return { type: 'village', x: cx * CHUNK_SIZE + 8, y: wY + 1, z: cz * CHUNK_SIZE + 8 };
     }
     if (type === 'mineshaft') {
       const my = 14;

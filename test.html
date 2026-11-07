@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=97"></iframe>
+    <iframe id="game-frame" src="./index.html?v=98"></iframe>
   </div>
 
   <script>
@@ -467,7 +467,7 @@
           assert(vc.sunMesh && vc.moonMesh && vc.sunGlow && vc.moonGlow && vc.cloudMesh && vc.skyDomeMesh && vc.skyDomeMesh.material.fragmentShader.includes('zenithCol') && vc.skyDomeMesh.material.fragmentShader.includes('sunAz'), 'Faltan mallas celestes o la cúpula atmosférica con gradiente cenit-horizonte y resplandor solar direccional');
           assert(vc.sunMesh.geometry.type === 'SphereGeometry' && vc.moonMesh.geometry.type === 'SphereGeometry', 'El Sol y la Luna deben ser redondos (SphereGeometry)');
           assert(vc.sunGlow.isSprite && vc.moonGlow.isSprite && vc.sunMesh.geometry.attributes.color && vc.moonMesh.geometry.attributes.color, 'El Sol y la Luna deben tener corona/halo brillante y sombreado esférico 3D');
-          assert(vc.sunMesh.material.depthWrite === false && vc.sunGlow.renderOrder > vc.sunMesh.renderOrder, 'El halo del Sol debe renderizarse sobre el Sol sin quedar ocluido detrás en el depth buffer'); vc.cloudMesh.geometry.computeBoundingBox(); const cBox = vc.cloudMesh.geometry.boundingBox; assert(cBox.max.x - cBox.min.x >= 1400 && cBox.max.z - cBox.min.z >= 1400 && vc.cloudMesh.frustumCulled === false && vc.camera.far >= 850, 'Las nubes 3D (cloudMesh) deben cubrir el cielo completo (>=1400x1400m en cuadrícula 3x3 periódica) sin quedar localizadas en una sola esquina');
+          assert(vc.sunMesh.material.depthWrite === false && vc.sunGlow.renderOrder > vc.sunMesh.renderOrder, 'El halo del Sol debe renderizarse sobre el Sol sin quedar ocluido detrás en el depth buffer'); vc.cloudMesh.geometry.computeBoundingBox(); const cBox = vc.cloudMesh.geometry.boundingBox; assert(cBox.max.x - cBox.min.x >= 3200 && cBox.max.z - cBox.min.z >= 3200 && vc.cloudMesh.frustumCulled === false && vc.camera.far >= 2400 && typeof vc.cloudMesh.material.onBeforeCompile === 'function', 'Las nubes 3D (cloudMesh) deben cubrir el horizonte completo (>=3200x3200m en cuadrícula 7x7 centrada con desvanecimiento suave en el horizonte)');
           const angle0 = vc.getCelestialAngle(), moon0 = vc.getMoonAngle();
           vc.updateDynamicSky(10.0);
           const dSun = (vc.getCelestialAngle() - angle0 + Math.PI * 2) % (Math.PI * 2);
@@ -2813,6 +2813,7 @@
           assert(dVil[idx(2, 29, 2)] === vc.BLOCK.BED && dVil[idx(2, 29, 4)] === vc.BLOCK.BOOKSHELF && dVil[idx(4, 29, 2)] === vc.BLOCK.CRAFTING_TABLE, 'Las casas del Pueblo deben incluir Cama, Estantería y Mesa de Crafteo');
           assert(dVil[idx(13, 29, 2)] === vc.BLOCK.FURNACE && dVil[idx(11, 29, 2)] === vc.BLOCK.ANVIL && dVil[idx(12, 29, 4)] === vc.BLOCK.CHEST, 'La Herrería del Pueblo debe incluir Horno, Yunque, Lava y Cofre');
           assert(dVil[idx(12, 28, 12)] === vc.BLOCK.WATER && (dVil[idx(11, 29, 12)] === vc.BLOCK.WHEAT_2 || dVil[idx(11, 29, 12)] === vc.BLOCK.WHEAT_3), 'El Huerto del Pueblo debe tener canal de riego con Agua y cultivos de Trigo');
+          const dSlope = new Uint8Array(vc.CHUNK_VOLUME), surfSlope = new Uint8Array(256).fill(63); for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) { const sy = (x <= 6 && z <= 6) ? (x === 0 ? 68 : 67) : 63; surfSlope[z * 16 + x] = sy; for (let y = 1; y <= sy; y++) dSlope[idx(x, y, z)] = vc.BLOCK.DIRT; } gen.placeStructureInChunk(dSlope, surfSlope, 6, 6, 'village'); assert(dSlope[idx(2, 68, 2)] === vc.BLOCK.BED && dSlope[idx(6, 68, 3)] === vc.BLOCK.AIR && dSlope[idx(0, 68, 3)] === vc.BLOCK.AIR, 'Las casas del Pueblo en laderas deben asentarse sobre la cota local de su huella y nivelar su perímetro sin quedar enterradas');
         });
       });
 
