@@ -222,10 +222,11 @@ function animate(now) {
   const dt = Math.min(0.05, realDt);
   lastTime = now;
 
+  let simMs = 0;
   if (!menuOpen) {
     if (isGameActive()) {
       updateMinecarts(dt); updateBoats(dt); updatePlayerPhysics(dt);
-      updateVoxelSimulation(dt); updateMobs(dt);
+      const tSim0 = performance.now(); updateVoxelSimulation(dt); simMs = performance.now() - tSim0; updateMobs(dt);
     }
     updateDynamicSky(dt); updateGPUShaders(dt); updateAmbientAudio(dt);
     rayDir.set(0, 0, -1).applyEuler(camera.rotation);
@@ -235,22 +236,20 @@ function animate(now) {
     updateMining(dt, currentHit); updateParticles(dt); updateItemDrops(dt);
     updateArrows(dt); updateWeather(dt); updateMinimap(dt);
   }
-  updateChunkStreaming(); updateFrustumCulling();
-  updateShadowMapPass();
-  renderer.render(scene, camera);
+  const tStr0 = performance.now(); updateChunkStreaming(); updateFrustumCulling(); const streamMs = performance.now() - tStr0;
+  const tShd0 = performance.now(); updateShadowMapPass(); const shadowMs = performance.now() - tShd0;
+  const tRen0 = performance.now(); renderer.render(scene, camera); const renderMs = performance.now() - tRen0;
 
-  const frameMs = performance.now() - frameStart;
+  const frameMs = performance.now() - frameStart, wd = updatePerfWatchdog(dt, simMs, streamMs, shadowMs, renderMs, frameMs);
   frames++; fpsAccum += realDt; frameDurationSum += frameMs;
 
   if (fpsAccum >= 0.35) {
-    const fps = Math.round(frames / fpsAccum);
+    const fps = Math.round(frames / fpsAccum), avgMsNum = frameDurationSum / frames, avgMs = avgMsNum.toFixed(2);
     updateDynamicResolution(fps);
-    const avgMsNum = frameDurationSum / frames, avgMs = avgMsNum.toFixed(2);
-    const fpsCost60 = ((avgMsNum / 16.667) * 60).toFixed(2);
-    const biome = generator.getBiomeAt(player.x, player.z);
+    const fpsCost60 = ((avgMsNum / 16.667) * 60).toFixed(2), biome = generator.getBiomeAt(player.x, player.z);
     const pLight = getLightGlobal(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z));
 
-    elFps.textContent = `${fps} FPS (${avgMs} ms | usa ${fpsCost60}/60 FPS)`;
+    elFps.textContent = `${fps} FPS (${avgMs} ms | usa ${fpsCost60}/60 FPS)${wd.healthy ? '' : ` ⚠️[${wd.anomalies[0]}]`}`;
     elDraws.textContent = renderer.info.render.calls;
     elTris.textContent = renderer.info.render.triangles.toLocaleString();
     elChunks.textContent = `${visibleChunksCount}/${chunks.size} | Mobs: ${mobs.length}`;
@@ -770,7 +769,7 @@ window.__VOXELCRAFT__ = {
   BREWING_RECIPES, activeStatusEffects, addStatusEffect, brewPotionAt, drinkPotion, renderStatusEffectsHUD, placedPaintings, placePaintingAt, mcParticleAtlasCanvas, mcParticleSprites, getCurrentDimension, switchDimension,
   VILLAGER_TRADES, tradeWithVillager, tameAndRideHorse, trySummonSnowGolem, updateBossBarHUD, isItem, isAxeItem, isShovelItem, isHoeItem, isPotionItem,
   player, playerAvatar, toggleCameraMode, toggleZoom, getCameraState: () => ({ thirdPersonMode, isZoomed, baseFov, fov: camera.fov }),
-  updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }),
+  updateFrustumCulling, getCullingStats: () => ({ visibleChunksCount, culledChunksCount }), updatePerfWatchdog, getPerfWatchdogReport,
   chunks, chunkDataCache, buildQueue, simQueue, leafDecayQueue, hasNearbyWood, enqueueLeafDecayAround, mobs, mobAtlasCanvas, mobAtlasTexture, mobGeos, activeTNTs,
   particles, particleInstanced, itemDrops, dropInstanced, arrows, arrowInstanced, shootArrow, shootGrappleHook, grapplePullPlayerTo, updateArrows,
   eatHeldApple, FOOD_HUNGER_MAP, FOOD_SATURATION_MAP, growTreeAt, toggleVoxelDoor, toggleVoxelTrapdoor, triggerVoxelPiston, portals, registerPortalAt, activateObsidianPortal, useVoxelPortal,

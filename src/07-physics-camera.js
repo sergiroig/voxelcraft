@@ -680,3 +680,40 @@ function updateChunkStreaming() {
     }
   }
 }
+
+const perfWatchdog = {
+  simMs: 0, streamMs: 0, shadowMs: 0, renderMs: 0, frameMs: 0,
+  simActiveSec: 0, workerStallSec: 0, lastCompletedJobs: 0,
+  orphanSolidMeshes: 0, simQueueSize: 0, cacheSize: 0, bufferPoolSize: 0,
+  dominantSubsystem: 'render', healthy: true, anomalies: []
+};
+
+function updatePerfWatchdog(dt, simMs, streamMs, shadowMs, renderMs, frameMs) {
+  perfWatchdog.simMs = simMs; perfWatchdog.streamMs = streamMs;
+  perfWatchdog.shadowMs = shadowMs; perfWatchdog.renderMs = renderMs; perfWatchdog.frameMs = frameMs;
+  perfWatchdog.orphanSolidMeshes = Math.max(0, chunkSolidGroup.children.length - chunks.size);
+  perfWatchdog.simQueueSize = simQueue.size;
+  perfWatchdog.cacheSize = typeof chunkDataCache !== 'undefined' ? chunkDataCache.size : 0;
+  perfWatchdog.bufferPoolSize = typeof paddedBufferPool !== 'undefined' ? paddedBufferPool.length : 0;
+
+  if (simQueue.size > 0) perfWatchdog.simActiveSec += dt; else perfWatchdog.simActiveSec = 0;
+  if (workerJobsInFlight > 0 && workerJobsCompleted === perfWatchdog.lastCompletedJobs) perfWatchdog.workerStallSec += dt;
+  else { perfWatchdog.workerStallSec = 0; perfWatchdog.lastCompletedJobs = workerJobsCompleted; }
+
+  const subs = [['sim', simMs], ['stream', streamMs], ['shadow', shadowMs], ['render', renderMs]];
+  subs.sort((a, b) => b[1] - a[1]);
+  perfWatchdog.dominantSubsystem = subs[0][0];
+
+  const anom = [];
+  if (perfWatchdog.orphanSolidMeshes > 0) anom.push(`orphanMeshes:${perfWatchdog.orphanSolidMeshes}`);
+  if (simQueue.size > 600 || perfWatchdog.simActiveSec > 5.0) anom.push(`simRunaway:${simQueue.size}`);
+  if (perfWatchdog.cacheSize > 1024) anom.push(`cacheOverflow:${perfWatchdog.cacheSize}`);
+  if (perfWatchdog.bufferPoolSize > 64) anom.push(`bufferPoolOverflow:${perfWatchdog.bufferPoolSize}`);
+  if (perfWatchdog.workerStallSec > 4.0) anom.push(`workerStall:${workerJobsInFlight}`);
+  if (simMs > 8.0) anom.push(`simSpike:${simMs.toFixed(1)}ms`);
+  perfWatchdog.anomalies = anom;
+  perfWatchdog.healthy = anom.length === 0;
+  return perfWatchdog;
+}
+
+function getPerfWatchdogReport() { return perfWatchdog; }

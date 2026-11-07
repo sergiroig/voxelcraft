@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=103"></iframe>
+    <iframe id="game-frame" src="./index.html?v=104"></iframe>
   </div>
 
   <script>
@@ -608,6 +608,35 @@
           vc.rebuildChunkImmediate(0, 0);
           const elapsed = performance.now() - t0;
           assert(elapsed < 25, `Rebuild de chunk tardó demasiado: ${elapsed.toFixed(2)} ms`);
+        });
+
+        it('PerfWatchdog detecta regresiones y verifica 0 degradación tras travesía rápida por múltiples chunks', async () => {
+          const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
+          for (let step = 1; step <= 8; step++) {
+            vc.player.x = origX + step * 16;
+            vc.updateChunkStreaming();
+            vc.updateVoxelSimulation(0.16);
+          }
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
+          for (let idle = 0; idle < 10; idle++) {
+            const t0 = performance.now();
+            vc.updateChunkStreaming();
+            const tSim0 = performance.now(); vc.updateVoxelSimulation(0.16); const simMs = performance.now() - tSim0;
+            vc.updateFrustumCulling();
+            const frameMs = performance.now() - t0;
+            vc.updatePerfWatchdog(0.16, simMs, frameMs - simMs, 0, 0, frameMs);
+          }
+          for (let w = 0; w < 30 && vc.getWorkerState().workerJobsInFlight > 0; w++) {
+            await new Promise(r => setTimeout(r, 15));
+          }
+          const rep = vc.getPerfWatchdogReport();
+          assert(rep.healthy === true && rep.anomalies.length === 0, `PerfWatchdog detectó anomalías tras travesía rápida: ${rep.anomalies.join(', ')}`);
+          assert(rep.orphanSolidMeshes === 0, `Se detectaron ${rep.orphanSolidMeshes} mallas huérfanas en GPU`);
+          assert(rep.simQueueSize === 0, `simQueue no se vació en reposo (size=${rep.simQueueSize})`);
+          assert(rep.cacheSize <= 1024 && rep.bufferPoolSize <= 64, 'Los pools de RAM deben mantenerse dentro de sus límites');
+          const spikeRep = vc.updatePerfWatchdog(0.016, 15.0, 0.5, 0.5, 0.5, 16.5);
+          assert(spikeRep.healthy === false && spikeRep.anomalies.includes('simSpike:15.0ms') && spikeRep.dominantSubsystem === 'sim', 'PerfWatchdog debe detectar y aislar un pico en sim');
+          vc.updatePerfWatchdog(0.016, 0.05, 0.1, 0.1, 0.2, 0.45);
         });
       });
 
