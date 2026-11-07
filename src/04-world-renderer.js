@@ -330,9 +330,6 @@ solidMaterial.onBeforeCompile = (shader) => {
       } else if (vTileIdx >= 48.5 && vTileIdx <= 49.5) {
         float vortex = 0.92 + 0.18 * sin(uTime * 5.2 + vWorldPos.x * 3.2 + vWorldPos.y * 3.2 + vWorldPos.z * 3.2);
         gl_FragColor.rgb *= vec3(vortex * 1.12, vortex * 0.82, vortex * 1.24);
-      } else if (vTileIdx >= 49.5 && vTileIdx <= 50.5) {
-        float frostGlint = max(0.0, sin(uTime * 2.6 + vWorldPos.x * 3.0 + vWorldPos.z * 3.0));
-        gl_FragColor.rgb += vec3(0.08, 0.12, 0.16) * pow(frostGlint, 5.0);
       }
       #include <fog_fragment>`
     );

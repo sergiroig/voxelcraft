@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=98"></iframe>
+    <iframe id="game-frame" src="./index.html?v=99"></iframe>
   </div>
 
   <script>
@@ -1688,7 +1688,7 @@
         it('Emite luz violeta BFS 12, anima su vórtice en el Fragment Shader y teletransporta entre portales enlazados', () => {
           assert(vc.BLOCK_DEFS[vc.BLOCK.PORTAL].light === 12, 'El Portal de Obsidiana debe emitir luz BFS de nivel 12');
           const shaders = vc.getShaders();
-          assert(shaders.solidShaderRef.fragmentShader.includes('vTileIdx >= 48.5'), 'El Fragment Shader debe incluir el vórtice dimensional para BLOCK.PORTAL (tile 49)');
+          assert(shaders.solidShaderRef.fragmentShader.includes('vTileIdx >= 48.5') && !shaders.solidShaderRef.fragmentShader.includes('frostGlint'), 'El Fragment Shader debe incluir el vórtice dimensional para BLOCK.PORTAL (tile 49) y NO animar bandas de brillo artificiales sobre BLOCK.ICE (tile 50)');
 
           const origX = vc.player.x, origY = vc.player.y, origZ = vc.player.z;
           vc.portals.length = 0;
