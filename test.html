@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=95"></iframe>
+    <iframe id="game-frame" src="./index.html?v=96"></iframe>
   </div>
 
   <script>
@@ -467,7 +467,7 @@
           assert(vc.sunMesh && vc.moonMesh && vc.sunGlow && vc.moonGlow && vc.cloudMesh && vc.skyDomeMesh && vc.skyDomeMesh.material.fragmentShader.includes('zenithCol') && vc.skyDomeMesh.material.fragmentShader.includes('sunAz'), 'Faltan mallas celestes o la cúpula atmosférica con gradiente cenit-horizonte y resplandor solar direccional');
           assert(vc.sunMesh.geometry.type === 'SphereGeometry' && vc.moonMesh.geometry.type === 'SphereGeometry', 'El Sol y la Luna deben ser redondos (SphereGeometry)');
           assert(vc.sunGlow.isSprite && vc.moonGlow.isSprite && vc.sunMesh.geometry.attributes.color && vc.moonMesh.geometry.attributes.color, 'El Sol y la Luna deben tener corona/halo brillante y sombreado esférico 3D');
-          assert(vc.sunMesh.material.depthWrite === false && vc.sunGlow.renderOrder > vc.sunMesh.renderOrder, 'El halo del Sol debe renderizarse sobre el Sol sin quedar ocluido detrás en el depth buffer');
+          assert(vc.sunMesh.material.depthWrite === false && vc.sunGlow.renderOrder > vc.sunMesh.renderOrder, 'El halo del Sol debe renderizarse sobre el Sol sin quedar ocluido detrás en el depth buffer'); vc.cloudMesh.geometry.computeBoundingBox(); const cBox = vc.cloudMesh.geometry.boundingBox; assert(cBox.max.x - cBox.min.x >= 1400 && cBox.max.z - cBox.min.z >= 1400 && vc.cloudMesh.frustumCulled === false && vc.camera.far >= 850, 'Las nubes 3D (cloudMesh) deben cubrir el cielo completo (>=1400x1400m en cuadrícula 3x3 periódica) sin quedar localizadas en una sola esquina');
           const angle0 = vc.getCelestialAngle(), moon0 = vc.getMoonAngle();
           vc.updateDynamicSky(10.0);
           const dSun = (vc.getCelestialAngle() - angle0 + Math.PI * 2) % (Math.PI * 2);

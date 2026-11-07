@@ -170,7 +170,7 @@ const fogColorDay = new THREE.Color(0x9ecff8), fogColorTwilight = new THREE.Colo
 const currentSkyColor = skyColorDay.clone(), sunColHorizon = new THREE.Color(0xff5e2b), sunColGolden = new THREE.Color(0xffe8cc), sunColNoon = new THREE.Color(0xffffff);
 const cloudColDay = new THREE.Color(0xf8fafc), cloudColSunset = new THREE.Color(0xfdba8c), cloudColNight = new THREE.Color(0x263147);
 scene.background = currentSkyColor.clone(); scene.fog = new THREE.FogExp2(0x6ec6ff, 0.0055);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 360);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 850);
 scene.add(camera);
 const { texture: atlasTexture, canvas: atlasCanvas } = createProceduralAtlas(), crackTextures = createCrackTextures();
 
@@ -670,20 +670,20 @@ const starField = new THREE.Points(starGeo, starMat); starField.renderOrder = -4
 
 // Merged 3D Voxel Clouds (Single BufferGeometry = 1 Draw Call!)
 const cloudMesh = (() => {
-  const boxes = [], pos = [], idx = [];
+  const TILE = 480, boxes = [], pos = [], col = [], idx = [];
   let cSeed = 9001, vOff = 0;
   const cRand = () => { cSeed = (cSeed * 1664525 + 1013904223) >>> 0; return (cSeed & 0xffff) / 0x10000; };
-  for (let i = 0; i < 26; i++) boxes.push({ x: (cRand() - 0.5) * 220, z: (cRand() - 0.5) * 220, w: 8 + Math.floor(cRand() * 14), d: 6 + Math.floor(cRand() * 12) });
-  const pushQuad = (p0, p1, p2, p3) => { pos.push(...p0, ...p1, ...p2, ...p3); idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3); vOff += 4; };
-  for (const b of boxes) {
-    const x0 = b.x, x1 = b.x + b.w, y0 = 192, y1 = 195.2, z0 = b.z, z1 = b.z + b.d;
-    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]); pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]);
-    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]); pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]);
-    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]); pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]);
+  for (let i = 0; i < 42; i++) { const cx = cRand() * TILE, cz = cRand() * TILE, lobes = 1 + ((cRand() * 3) | 0); for (let l = 0; l < lobes; l++) boxes.push({ x: ((cx + (l ? (cRand() - 0.5) * 26 : 0)) % TILE + TILE) % TILE, z: ((cz + (l ? (cRand() - 0.5) * 22 : 0)) % TILE + TILE) % TILE, w: 14 + Math.floor(cRand() * 24), d: 12 + Math.floor(cRand() * 20) }); }
+  const pushQuad = (p0, p1, p2, p3, sh) => { pos.push(...p0, ...p1, ...p2, ...p3); col.push(sh,sh,sh, sh,sh,sh, sh,sh,sh, sh,sh,sh); idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3); vOff += 4; };
+  for (let tz = -1; tz <= 1; tz++) for (let tx = -1; tx <= 1; tx++) for (const b of boxes) {
+    const x0 = tx * TILE + b.x, x1 = x0 + b.w, y0 = 192, y1 = 195.5, z0 = tz * TILE + b.z, z1 = z0 + b.d;
+    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0], 1.00); pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1], 0.78);
+    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1], 0.90); pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0], 0.90);
+    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1], 0.84); pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0], 0.84);
   }
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
-  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.78, depthWrite: false }));
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.82, depthWrite: false, fog: false })); m.frustumCulled = false;
   scene.add(m); return m;
 })();
 
@@ -768,8 +768,8 @@ function updateDynamicSky(dt) {
   if (!isCameraUnderwater) { scene.background.copy(currentSkyColor); scene.fog.color.copy(currentFogColor); }
 
   starMat.opacity = THREE.MathUtils.clamp((0.14 - sunElev) * 3.8, 0, 0.88);
-  cloudDrift = (cloudDrift + dt * 1.6) % 220;
+  cloudDrift = (cloudDrift + dt * 1.6) % 480;
   gpuShaderUniforms.uCloudDrift.value = cloudDrift;
-  const snapX = Math.floor(player.x / 220) * 220, snapZ = Math.floor(player.z / 220) * 220;
-  cloudMesh.position.set(snapX + cloudDrift - 110, 0, snapZ);
+  const snapX = Math.floor((player.x - cloudDrift) / 480) * 480 + cloudDrift, snapZ = Math.floor(player.z / 480) * 480;
+  cloudMesh.position.set(snapX, 0, snapZ);
 }

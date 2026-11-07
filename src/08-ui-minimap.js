@@ -545,7 +545,7 @@ function applyUserSettingsToUI() {
   if (rngDist) rngDist.value = `${renderDistance}`;
   if (lblDist) lblDist.textContent = `${renderDistance} chunks`;
   scene.fog.density = 0.042 / (renderDistance + 1.8);
-  camera.far = Math.max(320, (renderDistance + 4) * CHUNK_SIZE * 1.45);
+  camera.far = Math.max(850, (renderDistance + 8) * CHUNK_SIZE * 2.1);
   baseFov = userSettings.fov;
   if (rngFov) rngFov.value = `${baseFov}`;
   if (lblFov) lblFov.textContent = `${baseFov}°`;
