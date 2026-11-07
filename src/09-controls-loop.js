@@ -255,7 +255,7 @@ function animate(now) {
     elChunks.textContent = `${visibleChunksCount}/${chunks.size} | Mobs: ${mobs.length}`;
     elPos.textContent = `${player.x.toFixed(0)}, ${player.y.toFixed(0)}, ${player.z.toFixed(0)} (${biome})`;
     elLight.textContent = `Sol ${pLight >> 4} | Bloque ${pLight & 15}`;
-    elMode.textContent = `${gameMode === 'creative' ? 'Creativo' : 'Supervivencia'}${player.flying ? ' (Vuelo)' : ''} | ${isNight ? 'Noche' : 'Día'}`;
+    elMode.textContent = `${gameMode === 'creative' ? 'Creativo' : 'Supervivencia'}${player.flying ? ' (Vuelo)' : (player.sneaking ? ' (Sigilo)' : '')} | ${isNight ? 'Noche' : 'Día'}`;
     frames = 0; fpsAccum = 0; frameDurationSum = 0;
   }
 }
@@ -787,7 +787,7 @@ window.__VOXELCRAFT__ = {
   computeChunkLighting, buildChunkMeshArrays, applyArraysToMesh, rebuildChunkImmediate, packChunkPaddedBuffers, requestChunkMeshWorker, updateDynamicResolution,
   getWorkerState: () => ({ hasWorker: meshWorker !== null, workerPoolSize: typeof meshWorkers !== 'undefined' ? meshWorkers.length : 1, paddedBufferPoolSize: typeof paddedBufferPool !== 'undefined' ? paddedBufferPool.length : 0, workerJobsInFlight, workerJobsCompleted, lastWorkerMainThreadMs, currentPixelRatio, minPixelRatio, maxPixelRatio }),
   raycastVoxel, raycastMob, igniteTNT, explodeAt, updateVoxelSimulation, spawnMob, damageMob, removeMobAt, updateMobs, tameWolf, teleportEnderman, isHostileMob, MOB_HP_MAP, MOB_LOOT_MAP,
-  updatePlayerPhysics, checkAABBCollision, damagePlayer, renderHeartsUI, addHungerExhaustion, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
+  updatePlayerPhysics, checkAABBCollision, hasGroundSupportAt, damagePlayer, renderHeartsUI, addHungerExhaustion, updateMining, updateParticles, spawnItemDrop, updateItemDrops, getDropItemForBlock, addInventoryItem,
   canCraftRecipe, craftRecipe, toggleGameMode, refreshInventoryCountsUI, sfx, C418_SCALE_HZ, C418_CHORDS, toggleMusic, toggleSfx, updateAmbientAudio, updateDynamicSky,
   getGenerator: () => generator, farHorizonMesh, updateFarHorizon, updateChunkStreaming, toggleDayNight, toggleFlyingMode, toggleInventory, togglePauseMenu,
   updateHotbarSelection, placeBlockAtCurrentTarget, triggerPrimaryAttackOrMine, startGameplay, isGameActive, keys,

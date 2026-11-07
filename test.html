@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=106"></iframe>
+    <iframe id="game-frame" src="./index.html?v=107"></iframe>
   </div>
 
   <script>
@@ -2690,6 +2690,20 @@
           vc.keys['KeyW'] = false; vc.keys['ShiftLeft'] = false;
           const speedHungry = Math.hypot(vc.player.vx, vc.player.vz);
           assert(speedHungry < 5.2, `Con hunger=3 no debe permitir esprintar a 7.2 m/s (speed=${speedHungry.toFixed(2)})`);
+          const origPx = vc.player.x, origPy = vc.player.y, origPz = vc.player.z;
+          const bxS = 14, byS = 110, bzS = 14;
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { vc.setVoxelGlobal(bxS + dx, byS, bzS + dz, dx === 0 && dz === 0 ? vc.BLOCK.STONE : vc.BLOCK.AIR); vc.setVoxelGlobal(bxS + dx, byS + 1, bzS + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(bxS + dx, byS + 2, bzS + dz, vc.BLOCK.AIR); }
+          vc.player.x = bxS + 0.5; vc.player.y = byS + 1.0; vc.player.z = bzS + 0.5; vc.player.vy = 0; vc.player.onGround = true; vc.player.yaw = -Math.PI / 2;
+          vc.keys['KeyW'] = true; vc.keys['ShiftLeft'] = true;
+          for (let i = 0; i < 40; i++) vc.updatePlayerPhysics(0.02);
+          assert(vc.player.sneaking === true && Math.abs(vc.player.eyeHeight - 1.38) < 0.01, 'Mantener Shift en el suelo debe activar player.sneaking y bajar eyeHeight a 1.38');
+          assert(vc.player.onGround === true && Math.abs(vc.player.y - (byS + 1.0)) < 0.01 && vc.player.x > bxS + 1.15 && vc.player.x <= bxS + 1.29, `Mantener Shift debe frenar en el borde del bloque sin caer (x=${vc.player.x.toFixed(2)}, y=${vc.player.y.toFixed(2)}, onGround=${vc.player.onGround})`);
+          vc.keys['ShiftLeft'] = false;
+          for (let i = 0; i < 15; i++) vc.updatePlayerPhysics(0.02);
+          vc.keys['KeyW'] = false;
+          assert(vc.player.y < byS + 0.9, 'Al soltar Shift y seguir avanzando sí debe caer del borde del bloque');
+          vc.setVoxelGlobal(bxS, byS, bzS, vc.BLOCK.AIR);
+          vc.player.x = origPx; vc.player.y = origPy; vc.player.z = origPz; vc.player.vy = 0; vc.player.onGround = true; vc.player.eyeHeight = 1.62; vc.player.sneaking = false;
           assert(vc.player.health === 6, 'Con hunger=3 (<8) no debe regenerar salud pasivamente aunque regenTimer supere 4.0s');
 
           // 2) Con hunger === 0 sufre 1❤ de daño por inanición tras 4.0s

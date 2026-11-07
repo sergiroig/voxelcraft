@@ -220,6 +220,13 @@ function checkAABBCollision(px, py, pz) {
   return false;
 }
 
+function hasGroundSupportAt(px, py, pz) {
+  const gy = Math.floor(py - 0.15), r = player.radius - 0.02;
+  const minX = Math.floor(px - r), maxX = Math.floor(px + r), minZ = Math.floor(pz - r), maxZ = Math.floor(pz + r);
+  for (let z = minZ; z <= maxZ; z++) for (let x = minX; x <= maxX; x++) if (BLOCK_DEFS[getVoxelGlobal(x, gy, z)].solid) return true;
+  return false;
+}
+
 // ============================================================================
 // 10B. SMART FRUSTUM CULLING (PUNTO 11) + 3RD-PERSON AVATAR & ZOOM (PUNTO 15)
 // ============================================================================
@@ -300,15 +307,20 @@ function updatePlayerPhysics(dt) {
     spawnBlockParticles(player.x, player.y + 0.5, player.z, inLava ? BLOCK.LAVA : BLOCK.WATER, 10);
   }
   const wantJump = keys['Space'] || touchJump, wantDown = keys['ShiftLeft'] || keys['ShiftRight'] || touchDown;
-  const canSprint = gameMode === 'creative' || player.flying || (player.hunger === undefined || player.hunger > 3);
-  const sprint = canSprint && (keys['ShiftLeft'] || keys['ShiftRight'] || joySprint);
-  if (moveMag > 0.15) addHungerExhaustion(dt * (sprint ? 0.25 : (inWater ? 0.15 : 0.06)));
+  const onLadder =
+    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LADDER ||
+    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 1.05), Math.floor(player.z)) === BLOCK.LADDER;
+  player.sneaking = !player.flying && !inWater && !inLava && !onLadder && !ridingCart && !ridingBoat && !!wantDown;
+  player.eyeHeight = player.sneaking ? 1.38 : 1.62;
+  const canSprint = (gameMode === 'creative' || player.flying || (player.hunger === undefined || player.hunger > 3)) && !player.sneaking;
+  const sprint = canSprint && (keys['ControlLeft'] || keys['ControlRight'] || joySprint);
+  if (moveMag > 0.15) addHungerExhaustion(dt * (sprint ? 0.25 : (inWater ? 0.15 : (player.sneaking ? 0.02 : 0.06))));
 
   const groundBlock = getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z));
   const onIce = !player.flying && !inWater && !inLava && (groundBlock === BLOCK.ICE || getVoxelGlobal(Math.floor(player.x), Math.floor(player.y - 0.55), Math.floor(player.z)) === BLOCK.ICE);
 
-  const baseSpeed = player.flying ? (sprint ? 22 : 12) : (inLava ? 2.4 : (inWater ? (sprint ? 5.1 : 3.8) : (sprint ? 7.2 : 4.7)));
-  const speed = baseSpeed * (onIce ? 1.45 : 1.0) * (isShieldBlocking ? 0.65 : 1.0);
+  const baseSpeed = player.flying ? (sprint ? 22 : 12) : (inLava ? 2.4 : (inWater ? (sprint ? 5.1 : 3.8) : (player.sneaking ? 1.95 : (sprint ? 7.2 : 4.7))));
+  const speed = baseSpeed * (onIce && !player.sneaking ? 1.45 : 1.0) * (isShieldBlocking ? 0.65 : 1.0);
 
   if (onIce) {
     if (moveMag > 0.05) {
@@ -328,10 +340,6 @@ function updatePlayerPhysics(dt) {
     player.vx = moveX * speed;
     player.vz = moveZ * speed;
   }
-
-  const onLadder =
-    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 0.15), Math.floor(player.z)) === BLOCK.LADDER ||
-    getVoxelGlobal(Math.floor(player.x), Math.floor(player.y + 1.05), Math.floor(player.z)) === BLOCK.LADDER;
 
   if (ridingCart) {
     if (wantDown) toggleRideMinecart();
@@ -389,9 +397,11 @@ function updatePlayerPhysics(dt) {
       }
     }
 
-    const nextX = player.x + player.vx * dt;
+    let nextX = player.x + player.vx * dt;
+    if (player.sneaking && player.onGround && !hasGroundSupportAt(nextX, player.y, player.z)) { nextX = player.x; player.vx = 0; player.iceVx = 0; }
     if (!checkAABBCollision(nextX, player.y, player.z)) player.x = nextX;
-    const nextZ = player.z + player.vz * dt;
+    let nextZ = player.z + player.vz * dt;
+    if (player.sneaking && player.onGround && !hasGroundSupportAt(player.x, player.y, nextZ)) { nextZ = player.z; player.vz = 0; player.iceVz = 0; }
     if (!checkAABBCollision(player.x, player.y, nextZ)) player.z = nextZ;
     const nextY = player.y + player.vy * dt;
     if (!checkAABBCollision(player.x, nextY, player.z)) {
@@ -454,6 +464,9 @@ function updatePlayerPhysics(dt) {
   const av = playerAvatar.userData, limbSwing = moveMag > 0.08 ? Math.sin(player.bobTime * 1.2) * (inWater ? 0.95 : 0.65) : 0;
   av.leftLeg.rotation.x  =  limbSwing; av.rightLeg.rotation.x = -limbSwing;
   av.leftArm.rotation.x  = -limbSwing * 0.8; av.rightArm.rotation.x = limbSwing * 0.8 - swingAngle * 1.25;
+  av.torso.rotation.x    =  player.sneaking ? 0.35 : 0;
+  av.torso.position.y    =  player.sneaking ? 0.82 : 0.90;
+  av.head.position.y     =  player.sneaking ? 1.36 : 1.46;
   av.head.rotation.x     =  player.pitch * 0.65;
 
   const eyeX = player.x, eyeY = player.y + player.eyeHeight, eyeZ = player.z;
