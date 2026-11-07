@@ -117,44 +117,44 @@ function makeMobBox(w, h, d, fFront, fSide, fTop = fSide, fBot = fSide, extra = 
 
 // Shared detailed geometries across all mobs (zero per-mob geometry allocation & zero extra draw calls!)
 const mobGeos = {
-  headZombie:  makeMobBox(0.46, 0.46, 0.46, 0, 1, 3, 2),
-  bodyZombie:  makeMobBox(0.50, 0.72, 0.28, 4, 4, 4, 4),
-  armZombie:   makeMobBox(0.20, 0.20, 0.64, 2, 2, 2, 2),
-  legZombie:   makeMobBox(0.22, 0.68, 0.22, 5, 5, 5, 5),
-  headSkel:    makeMobBox(0.46, 0.46, 0.46, 6, 8, 8, 8),
-  bodySkel:    makeMobBox(0.46, 0.72, 0.24, 7, 7, 8, 8),
-  armSkelL:    makeMobBox(0.16, 0.16, 0.64, 8, 8, 8, 8),
-  armSkelR:    makeMobBox(0.16, 0.16, 0.64, 8, 8, 8, 8, [0.07, 0.50, 0.10, 0, 0, 0.34, 9, 9]),
-  legSkel:     makeMobBox(0.16, 0.68, 0.16, 8, 8, 8, 8),
-  headCreeper: makeMobBox(0.46, 0.46, 0.46, 10, 11, 11, 11),
-  bodyCreeper: makeMobBox(0.46, 0.82, 0.28, 11, 11, 11, 11),
-  legCreeper:  makeMobBox(0.22, 0.36, 0.22, 12, 12, 11, 12),
-  headGolem:   makeMobBox(0.46, 0.50, 0.46, 13, 15, 15, 15, [0.12, 0.22, 0.09, 0, -0.09, 0.25, 15, 15]),
-  bodyGolem:   makeMobBox(0.82, 0.94, 0.46, 14, 15, 15, 15),
-  armGolem:    makeMobBox(0.24, 1.12, 0.24, 14, 15, 15, 15),
-  legGolem:    makeMobBox(0.24, 0.68, 0.24, 15, 15, 15, 15),
-  headSheep:   makeMobBox(0.44, 0.44, 0.46, 16, 17, 17, 17),
-  bodySheep:   makeMobBox(0.64, 0.54, 0.92, 17, 17, 17, 17),
-  legSheep:    makeMobBox(0.20, 0.42, 0.20, 18, 18, 17, 18),
-  headPig:      makeMobBox(0.46, 0.46, 0.46, 19, 21, 21, 21, [0.22, 0.15, 0.09, 0, -0.07, 0.25, 20, 21]),
-  bodyPig:      makeMobBox(0.62, 0.52, 0.92, 21, 21, 21, 21),
-  legPig:       makeMobBox(0.20, 0.42, 0.20, 22, 22, 21, 22),
-  headCow:      makeMobBox(0.46, 0.46, 0.46, 23, 24, 24, 24, [0.58, 0.14, 0.08, 0, 0.14, -0.06, 8, 8]),
-  bodyCow:      makeMobBox(0.68, 0.58, 0.98, 24, 24, 24, 24),
-  legCow:       makeMobBox(0.20, 0.48, 0.20, 25, 25, 24, 25),
-  headChicken:  makeMobBox(0.28, 0.34, 0.28, 26, 27, 27, 27, [0.16, 0.10, 0.12, 0, -0.02, 0.18, 26, 26]),
-  bodyChicken:  makeMobBox(0.38, 0.34, 0.48, 27, 27, 27, 27),
-  legChicken:   makeMobBox(0.08, 0.26, 0.08, 27, 27, 27, 27),
-  headSpider:   makeMobBox(0.42, 0.36, 0.42, 28, 29, 29, 29),
-  bodySpider:   makeMobBox(0.64, 0.40, 0.86, 29, 29, 29, 29),
-  legSpider:    makeMobBox(0.52, 0.10, 0.10, 29, 29, 29, 29),
-  headEnderman: makeMobBox(0.44, 0.44, 0.44, 30, 31, 31, 31),
-  bodyEnderman: makeMobBox(0.42, 0.84, 0.22, 31, 31, 31, 31),
-  limbEnderman: makeMobBox(0.12, 1.25, 0.12, 31, 31, 31, 31),
-  headWolf:     makeMobBox(0.38, 0.38, 0.40, 32, 33, 33, 33, [0.18, 0.14, 0.16, 0, -0.06, 0.24, 32, 33]),
-  bodyWolf:     makeMobBox(0.46, 0.42, 0.82, 33, 33, 33, 33),
-  legWolf:      makeMobBox(0.14, 0.36, 0.14, 33, 33, 33, 33),
-  bodySlime:    makeMobBox(0.76, 0.76, 0.76, 34, 34, 34, 34)
+  headZombie:  makeMobBox(0.50, 0.50, 0.50, 0, 1, 3, 2),
+  bodyZombie:  makeMobBox(0.50, 0.75, 0.26, 4, 4, 4, 4),
+  armZombie:   makeMobBox(0.24, 0.24, 0.75, 2, 2, 2, 2),
+  legZombie:   makeMobBox(0.25, 0.75, 0.25, 5, 5, 5, 5),
+  headSkel:    makeMobBox(0.50, 0.50, 0.50, 6, 8, 8, 8),
+  bodySkel:    makeMobBox(0.50, 0.75, 0.24, 7, 7, 8, 8),
+  armSkelL:    makeMobBox(0.16, 0.16, 0.75, 8, 8, 8, 8),
+  armSkelR:    makeMobBox(0.16, 0.16, 0.75, 8, 8, 8, 8, [0.08, 0.54, 0.10, 0, 0, 0.40, 9, 9]),
+  legSkel:     makeMobBox(0.16, 0.75, 0.16, 8, 8, 8, 8),
+  headCreeper: makeMobBox(0.50, 0.50, 0.50, 10, 11, 11, 11),
+  bodyCreeper: makeMobBox(0.50, 0.78, 0.26, 11, 11, 11, 11),
+  legCreeper:  makeMobBox(0.25, 0.42, 0.25, 12, 12, 11, 12),
+  headGolem:   makeMobBox(0.52, 0.62, 0.52, 13, 15, 15, 15, [0.14, 0.26, 0.10, 0, -0.10, 0.28, 15, 15]),
+  bodyGolem:   makeMobBox(1.12, 1.12, 0.56, 14, 15, 15, 15),
+  armGolem:    makeMobBox(0.28, 1.62, 0.32, 14, 15, 15, 15),
+  legGolem:    makeMobBox(0.36, 0.95, 0.32, 15, 15, 15, 15),
+  headSheep:   makeMobBox(0.48, 0.48, 0.50, 16, 17, 17, 17),
+  bodySheep:   makeMobBox(0.76, 0.62, 1.06, 17, 17, 17, 17),
+  legSheep:    makeMobBox(0.25, 0.68, 0.25, 18, 18, 17, 18),
+  headPig:      makeMobBox(0.50, 0.50, 0.50, 19, 21, 21, 21, [0.24, 0.18, 0.10, 0, -0.08, 0.28, 20, 21]),
+  bodyPig:      makeMobBox(0.68, 0.54, 1.02, 21, 21, 21, 21),
+  legPig:       makeMobBox(0.24, 0.38, 0.24, 22, 22, 21, 22),
+  headCow:      makeMobBox(0.52, 0.52, 0.48, 23, 24, 24, 24, [0.64, 0.16, 0.10, 0, 0.16, -0.06, 8, 8]),
+  bodyCow:      makeMobBox(0.78, 0.66, 1.14, 24, 24, 24, 24),
+  legCow:       makeMobBox(0.26, 0.75, 0.26, 25, 25, 24, 25),
+  headChicken:  makeMobBox(0.30, 0.38, 0.30, 26, 27, 27, 27, [0.16, 0.10, 0.12, 0, -0.02, 0.20, 26, 26]),
+  bodyChicken:  makeMobBox(0.42, 0.38, 0.52, 27, 27, 27, 27),
+  legChicken:   makeMobBox(0.10, 0.32, 0.10, 27, 27, 27, 27),
+  headSpider:   makeMobBox(0.50, 0.44, 0.50, 28, 29, 29, 29),
+  bodySpider:   makeMobBox(0.78, 0.52, 1.00, 29, 29, 29, 29),
+  legSpider:    makeMobBox(0.68, 0.14, 0.14, 29, 29, 29, 29),
+  headEnderman: makeMobBox(0.50, 0.50, 0.50, 30, 31, 31, 31),
+  bodyEnderman: makeMobBox(0.50, 0.76, 0.26, 31, 31, 31, 31),
+  limbEnderman: makeMobBox(0.14, 1.64, 0.14, 31, 31, 31, 31),
+  headWolf:     makeMobBox(0.42, 0.42, 0.44, 32, 33, 33, 33, [0.20, 0.16, 0.18, 0, -0.06, 0.26, 32, 33]),
+  bodyWolf:     makeMobBox(0.50, 0.46, 0.88, 33, 33, 33, 33),
+  legWolf:      makeMobBox(0.16, 0.46, 0.16, 33, 33, 33, 33),
+  bodySlime:    makeMobBox(1.02, 1.02, 1.02, 34, 34, 34, 34)
 };
 
 function createMobMesh(type) {
@@ -165,54 +165,55 @@ function createMobMesh(type) {
 
   if (type === 'zombie' || type === 'skeleton') {
     const isSkel = type === 'skeleton';
-    addPart(isSkel ? mobGeos.bodySkel : mobGeos.bodyZombie, 0, 0.98, 0);
-    const head = addPart(isSkel ? mobGeos.headSkel : mobGeos.headZombie, 0, 1.56, 0);
-    addPart(isSkel ? mobGeos.armSkelL : mobGeos.armZombie, -0.36, 1.22, 0.26);
-    addPart(isSkel ? mobGeos.armSkelR : mobGeos.armZombie, 0.36, 1.22, 0.26);
+    addPart(isSkel ? mobGeos.bodySkel : mobGeos.bodyZombie, 0, 1.125, 0);
+    const head = addPart(isSkel ? mobGeos.headSkel : mobGeos.headZombie, 0, 1.75, 0);
+    addPart(isSkel ? mobGeos.armSkelL : mobGeos.armZombie, -0.36, 1.375, 0.30);
+    addPart(isSkel ? mobGeos.armSkelR : mobGeos.armZombie, 0.36, 1.375, 0.30);
     const legGeo = isSkel ? mobGeos.legSkel : mobGeos.legZombie;
-    return { root, head, legs: [addPart(legGeo, -0.14, 0.34, 0), addPart(legGeo, 0.14, 0.34, 0)], mats, height: 1.8, radius: 0.35 };
+    return { root, head, legs: [addPart(legGeo, -0.13, 0.375, 0), addPart(legGeo, 0.13, 0.375, 0)], mats, height: 1.95, radius: 0.38 };
   } else if (type === 'enderman') {
-    addPart(mobGeos.bodyEnderman, 0, 1.58, 0);
-    const head = addPart(mobGeos.headEnderman, 0, 2.22, 0);
-    const armL = addPart(mobGeos.limbEnderman, -0.28, 1.38, 0), armR = addPart(mobGeos.limbEnderman, 0.28, 1.38, 0);
-    const legL = addPart(mobGeos.limbEnderman, -0.12, 0.62, 0), legR = addPart(mobGeos.limbEnderman, 0.12, 0.62, 0);
-    return { root, head, legs: [legL, legR, armL, armR], mats, height: 2.5, radius: 0.35 };
+    addPart(mobGeos.bodyEnderman, 0, 2.02, 0);
+    const head = addPart(mobGeos.headEnderman, 0, 2.65, 0);
+    const armL = addPart(mobGeos.limbEnderman, -0.32, 1.58, 0), armR = addPart(mobGeos.limbEnderman, 0.32, 1.58, 0);
+    const legL = addPart(mobGeos.limbEnderman, -0.13, 0.82, 0), legR = addPart(mobGeos.limbEnderman, 0.13, 0.82, 0);
+    return { root, head, legs: [legL, legR, armL, armR], mats, height: 2.9, radius: 0.38 };
   } else if (type === 'creeper') {
-    addPart(mobGeos.bodyCreeper, 0, 0.77, 0);
-    const head = addPart(mobGeos.headCreeper, 0, 1.41, 0);
-    const legs = [[-0.15, 0.18, 0.22], [0.15, 0.18, 0.22], [-0.15, 0.18, -0.22], [0.15, 0.18, -0.22]].map(([lx, ly, lz]) => addPart(mobGeos.legCreeper, lx, ly, lz));
-    return { root, head, legs, mats, height: 1.7, radius: 0.35 };
+    addPart(mobGeos.bodyCreeper, 0, 0.81, 0);
+    const head = addPart(mobGeos.headCreeper, 0, 1.45, 0);
+    const legs = [[-0.16, 0.21, 0.24], [0.16, 0.21, 0.24], [-0.16, 0.21, -0.24], [0.16, 0.21, -0.24]].map(([lx, ly, lz]) => addPart(mobGeos.legCreeper, lx, ly, lz));
+    return { root, head, legs, mats, height: 1.7, radius: 0.38 };
   } else if (type === 'golem') {
-    addPart(mobGeos.bodyGolem, 0, 1.15, 0);
-    const head = addPart(mobGeos.headGolem, 0, 1.86, 0.08);
-    const armL = addPart(mobGeos.armGolem, -0.55, 1.10, 0), armR = addPart(mobGeos.armGolem, 0.55, 1.10, 0);
-    const legL = addPart(mobGeos.legGolem, -0.22, 0.34, 0), legR = addPart(mobGeos.legGolem, 0.22, 0.34, 0);
-    return { root, head, legs: [legL, legR, armL, armR], mats, height: 2.2, radius: 0.45 };
+    addPart(mobGeos.bodyGolem, 0, 1.51, 0);
+    const head = addPart(mobGeos.headGolem, 0, 2.38, 0.12);
+    const armL = addPart(mobGeos.armGolem, -0.72, 1.32, 0), armR = addPart(mobGeos.armGolem, 0.72, 1.32, 0);
+    const legL = addPart(mobGeos.legGolem, -0.26, 0.475, 0), legR = addPart(mobGeos.legGolem, 0.26, 0.475, 0);
+    return { root, head, legs: [legL, legR, armL, armR], mats, height: 2.7, radius: 0.65 };
   } else if (type === 'spider') {
-    addPart(mobGeos.bodySpider, 0, 0.36, -0.14);
-    const head = addPart(mobGeos.headSpider, 0, 0.38, 0.42);
-    const legs = [[-0.46, 0.22, 0.22], [0.46, 0.22, 0.22], [-0.46, 0.22, -0.22], [0.46, 0.22, -0.22]].map(([lx, ly, lz]) => addPart(mobGeos.legSpider, lx, ly, lz));
-    return { root, head, legs, mats, height: 0.85, radius: 0.48 };
+    addPart(mobGeos.bodySpider, 0, 0.46, -0.16);
+    const head = addPart(mobGeos.headSpider, 0, 0.48, 0.48);
+    const legs = [[-0.54, 0.26, 0.26], [0.54, 0.26, 0.26], [-0.54, 0.26, -0.26], [0.54, 0.26, -0.26]].map(([lx, ly, lz]) => addPart(mobGeos.legSpider, lx, ly, lz));
+    return { root, head, legs, mats, height: 0.90, radius: 0.62 };
   } else if (type === 'chicken') {
-    addPart(mobGeos.bodyChicken, 0, 0.38, 0);
-    const head = addPart(mobGeos.headChicken, 0, 0.62, 0.22);
-    const legs = [addPart(mobGeos.legChicken, -0.10, 0.13, 0), addPart(mobGeos.legChicken, 0.10, 0.13, 0)];
-    return { root, head, legs, mats, height: 0.78, radius: 0.28 };
+    addPart(mobGeos.bodyChicken, 0, 0.50, 0);
+    const head = addPart(mobGeos.headChicken, 0, 0.76, 0.24);
+    const legs = [addPart(mobGeos.legChicken, -0.10, 0.16, 0), addPart(mobGeos.legChicken, 0.10, 0.16, 0)];
+    return { root, head, legs, mats, height: 0.85, radius: 0.30 };
   } else if (type === 'slime') {
-    const head = addPart(mobGeos.bodySlime, 0, 0.38, 0);
-    return { root, head, legs: [], mats, height: 0.82, radius: 0.40 };
+    const head = addPart(mobGeos.bodySlime, 0, 0.51, 0);
+    return { root, head, legs: [], mats, height: 1.05, radius: 0.52 };
   } else if (type === 'wolf') {
-    addPart(mobGeos.bodyWolf, 0, 0.52, 0);
-    const head = addPart(mobGeos.headWolf, 0, 0.68, 0.44);
-    const legs = [[-0.14, 0.18, 0.28], [0.14, 0.18, 0.28], [-0.14, 0.18, -0.28], [0.14, 0.18, -0.28]].map(([lx, ly, lz]) => addPart(mobGeos.legWolf, lx, ly, lz));
-    return { root, head, legs, mats, height: 0.95, radius: 0.35 };
+    addPart(mobGeos.bodyWolf, 0, 0.68, 0);
+    const head = addPart(mobGeos.headWolf, 0, 0.84, 0.52);
+    const legs = [[-0.15, 0.23, 0.32], [0.15, 0.23, 0.32], [-0.15, 0.23, -0.32], [0.15, 0.23, -0.32]].map(([lx, ly, lz]) => addPart(mobGeos.legWolf, lx, ly, lz));
+    return { root, head, legs, mats, height: 0.98, radius: 0.38 };
   } else {
     const isSheep = type === 'sheep', isCow = type === 'cow';
-    addPart(isCow ? mobGeos.bodyCow : (isSheep ? mobGeos.bodySheep : mobGeos.bodyPig), 0, isCow ? 0.70 : 0.64, 0);
-    const head = addPart(isCow ? mobGeos.headCow : (isSheep ? mobGeos.headSheep : mobGeos.headPig), 0, isCow ? 0.96 : 0.88, 0.52);
+    addPart(isCow ? mobGeos.bodyCow : (isSheep ? mobGeos.bodySheep : mobGeos.bodyPig), 0, isCow ? 1.08 : (isSheep ? 0.99 : 0.65), 0);
+    const head = addPart(isCow ? mobGeos.headCow : (isSheep ? mobGeos.headSheep : mobGeos.headPig), 0, isCow ? 1.28 : (isSheep ? 1.18 : 0.76), isCow ? 0.70 : (isSheep ? 0.64 : 0.62));
     const legGeo = isCow ? mobGeos.legCow : (isSheep ? mobGeos.legSheep : mobGeos.legPig);
-    const legs = [[-0.18, 0.21, 0.30], [0.18, 0.21, 0.30], [-0.18, 0.21, -0.30], [0.18, 0.21, -0.30]].map(([lx, ly, lz]) => addPart(legGeo, lx, ly, lz));
-    return { root, head, legs, mats, height: isCow ? 1.25 : 1.15, radius: 0.4 };
+    const ly = isCow ? 0.375 : (isSheep ? 0.34 : 0.19), lx = isCow ? 0.24 : (isSheep ? 0.22 : 0.20), lz = isCow ? 0.40 : (isSheep ? 0.36 : 0.34);
+    const legs = [[-lx, ly, lz], [lx, ly, lz], [-lx, ly, -lz], [lx, ly, -lz]].map(([px, py, pz]) => addPart(legGeo, px, py, pz));
+    return { root, head, legs, mats, height: isCow ? 1.45 : (isSheep ? 1.35 : 0.95), radius: isCow ? 0.48 : 0.45 };
   }
 }
 

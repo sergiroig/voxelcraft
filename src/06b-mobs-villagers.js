@@ -42,49 +42,56 @@ const MC_EXTRA_MOB_TILE_CROPS = [
 ];
 
 const EXTRA_MOB_SPECS = [
-  ['villager',         35, 10, BLOCK.ITEM_EMERALD,          'geoVillager',         0.50, 0.90, 0.42, false],
-  ['wandering_trader', 36, 10, BLOCK.ITEM_EMERALD,          'geoWanderingTrader',  0.50, 0.90, 0.42, false],
-  ['horse',            37, 12, BLOCK.ITEM_SADDLE,           'geoHorse',            0.70, 0.95, 1.10, false],
-  ['bee',              38,  4, BLOCK.ITEM_SUGAR,            'geoBee',              0.38, 0.36, 0.44, false],
-  ['fox',              39,  5, BLOCK.ITEM_SWEET_BERRIES,    'geoFox',              0.42, 0.42, 0.72, false],
-  ['polarbear',        40, 14, BLOCK.ITEM_RAW_FISH,         'geoPolarbear',        0.82, 0.86, 1.15, false],
-  ['rabbit',           41,  3, BLOCK.ITEM_CARROT,           'geoRabbit',           0.32, 0.34, 0.42, false],
-  ['snow_golem',       42,  8, BLOCK.SNOW,                  'geoSnowGolem',        0.52, 0.92, 0.52, false],
-  ['panda',            43, 12, BLOCK.BAMBOO,                'geoPanda',            0.78, 0.78, 1.05, false],
-  ['parrot',           44,  3, BLOCK.ITEM_COOKIE,           'geoParrot',           0.28, 0.42, 0.28, false],
-  ['ocelot',           45,  5, BLOCK.ITEM_RAW_FISH,         'geoOcelot',           0.38, 0.40, 0.76, false],
-  ['frog',             46,  4, BLOCK.SLIME,                 'geoFrog',             0.38, 0.32, 0.42, false],
-  ['axolotl',          47,  6, BLOCK.LILY_PAD,              'geoAxolotl',          0.42, 0.30, 0.68, false],
-  ['squid',            48,  6, BLOCK.ITEM_RAW_FISH,         'geoSquid',            0.48, 0.68, 0.48, false],
-  ['cod',              49,  3, BLOCK.ITEM_RAW_FISH,         'geoCod',              0.28, 0.28, 0.52, false],
-  ['salmon',           50,  3, BLOCK.ITEM_RAW_FISH,         'geoSalmon',           0.30, 0.30, 0.58, false],
-  ['dolphin',          51,  8, BLOCK.ITEM_RAW_FISH,         'geoDolphin',          0.52, 0.46, 0.95, false],
-  ['turtle',           52, 10, BLOCK.ARMOR_TURTLE_HELMET,   'geoTurtle',           0.68, 0.36, 0.78, false],
-  ['camel',            53, 14, BLOCK.CACTUS,                'geoCamel',            0.76, 1.12, 1.18, false],
-  ['witch',            54, 10, BLOCK.ITEM_POTION_REGEN,     'geoWitch',            0.50, 0.95, 0.44, true],
-  ['pillager',         55, 10, BLOCK.TOOL_CROSSBOW,         'geoPillager',         0.50, 0.92, 0.44, true],
-  ['drowned',          56,  8, BLOCK.TOOL_TRIDENT,          'geoDrowned',          0.48, 0.90, 0.42, true],
-  ['husk',             57,  8, BLOCK.SAND,                  'geoHusk',             0.48, 0.90, 0.42, true],
-  ['stray',            58,  7, BLOCK.ITEM_BONE,             'geoStray',            0.46, 0.90, 0.40, true],
-  ['blaze',            59, 10, BLOCK.ITEM_BLAZE_POWDER,     'geoBlaze',            0.52, 0.92, 0.52, true],
-  ['ghast',            60, 12, BLOCK.ITEM_GHAST_TEAR,       'geoGhast',            1.15, 1.15, 1.15, true],
-  ['piglin',           61,  9, BLOCK.ITEM_GOLD_INGOT,       'geoPiglin',           0.50, 0.90, 0.44, true],
-  ['magmacube',        62,  8, BLOCK.ITEM_MAGMA_CREAM,      'geoMagmacube',        0.78, 0.78, 0.78, true],
-  ['warden',           63, 40, BLOCK.DEEPSLATE,             'geoWarden',           0.95, 1.45, 0.65, true],
-  ['wither',           64, 50, BLOCK.ITEM_TOTEM_OF_UNDYING, 'geoWither',           1.10, 1.35, 0.65, true],
-  ['enderdragon',      65, 60, BLOCK.ITEM_ELYTRA,           'geoEnderdragon',      1.45, 1.10, 1.65, true],
-  ['shulker',          66, 12, BLOCK.PURPUR_BLOCK,          'geoShulker',          0.68, 0.68, 0.68, true],
-  ['wither_skeleton',  67, 10, BLOCK.ITEM_COAL,             'geoWitherSkeleton',   0.50, 1.10, 0.42, true],
-  ['strider',          68, 10, BLOCK.CRIMSON_STEM,          'geoStrider',          0.68, 0.85, 0.68, false]
+  ['villager',         35, 10, BLOCK.ITEM_EMERALD,          'geoVillager',         0.50, 0.78, 0.34, false],
+  ['wandering_trader', 36, 10, BLOCK.ITEM_EMERALD,          'geoWanderingTrader',  0.50, 0.78, 0.34, false],
+  ['horse',            37, 12, BLOCK.ITEM_SADDLE,           'geoHorse',            0.74, 0.68, 1.32, false],
+  ['bee',              38,  4, BLOCK.ITEM_SUGAR,            'geoBee',              0.44, 0.42, 0.52, false],
+  ['fox',              39,  5, BLOCK.ITEM_SWEET_BERRIES,    'geoFox',              0.46, 0.44, 0.84, false],
+  ['polarbear',        40, 14, BLOCK.ITEM_RAW_FISH,         'geoPolarbear',        0.92, 0.78, 1.38, false],
+  ['rabbit',           41,  3, BLOCK.ITEM_CARROT,           'geoRabbit',           0.36, 0.36, 0.48, false],
+  ['snow_golem',       42,  8, BLOCK.SNOW,                  'geoSnowGolem',        0.54, 0.80, 0.54, false],
+  ['panda',            43, 12, BLOCK.BAMBOO,                'geoPanda',            0.88, 0.74, 1.24, false],
+  ['parrot',           44,  3, BLOCK.ITEM_COOKIE,           'geoParrot',           0.30, 0.48, 0.30, false],
+  ['ocelot',           45,  5, BLOCK.ITEM_RAW_FISH,         'geoOcelot',           0.40, 0.42, 0.86, false],
+  ['frog',             46,  4, BLOCK.SLIME,                 'geoFrog',             0.46, 0.38, 0.50, false],
+  ['axolotl',          47,  6, BLOCK.LILY_PAD,              'geoAxolotl',          0.46, 0.34, 0.78, false],
+  ['squid',            48,  6, BLOCK.ITEM_RAW_FISH,         'geoSquid',            0.58, 0.82, 0.58, false],
+  ['cod',              49,  3, BLOCK.ITEM_RAW_FISH,         'geoCod',              0.30, 0.32, 0.58, false],
+  ['salmon',           50,  3, BLOCK.ITEM_RAW_FISH,         'geoSalmon',           0.34, 0.36, 0.68, false],
+  ['dolphin',          51,  8, BLOCK.ITEM_RAW_FISH,         'geoDolphin',          0.58, 0.52, 1.12, false],
+  ['turtle',           52, 10, BLOCK.ARMOR_TURTLE_HELMET,   'geoTurtle',           0.78, 0.40, 0.90, false],
+  ['camel',            53, 14, BLOCK.CACTUS,                'geoCamel',            0.84, 0.78, 1.48, false],
+  ['witch',            54, 10, BLOCK.ITEM_POTION_REGEN,     'geoWitch',            0.50, 0.78, 0.34, true],
+  ['pillager',         55, 10, BLOCK.TOOL_CROSSBOW,         'geoPillager',         0.50, 0.78, 0.34, true],
+  ['drowned',          56,  8, BLOCK.TOOL_TRIDENT,          'geoDrowned',          0.50, 0.75, 0.28, true],
+  ['husk',             57,  8, BLOCK.SAND,                  'geoHusk',             0.52, 0.78, 0.28, true],
+  ['stray',            58,  7, BLOCK.ITEM_BONE,             'geoStray',            0.50, 0.75, 0.26, true],
+  ['blaze',            59, 10, BLOCK.ITEM_BLAZE_POWDER,     'geoBlaze',            0.52, 0.82, 0.52, true],
+  ['ghast',            60, 12, BLOCK.ITEM_GHAST_TEAR,       'geoGhast',            2.20, 2.20, 2.20, true],
+  ['piglin',           61,  9, BLOCK.ITEM_GOLD_INGOT,       'geoPiglin',           0.52, 0.75, 0.30, true],
+  ['magmacube',        62,  8, BLOCK.ITEM_MAGMA_CREAM,      'geoMagmacube',        1.04, 1.04, 1.04, true],
+  ['warden',           63, 40, BLOCK.DEEPSLATE,             'geoWarden',           0.96, 1.24, 0.56, true],
+  ['wither',           64, 50, BLOCK.ITEM_TOTEM_OF_UNDYING, 'geoWither',           1.40, 1.65, 0.70, true],
+  ['enderdragon',      65, 60, BLOCK.ITEM_ELYTRA,           'geoEnderdragon',      2.40, 1.35, 2.80, true],
+  ['shulker',          66, 12, BLOCK.PURPUR_BLOCK,          'geoShulker',          0.96, 0.96, 0.96, true],
+  ['wither_skeleton',  67, 10, BLOCK.ITEM_COAL,             'geoWitherSkeleton',   0.56, 0.92, 0.28, true],
+  ['strider',          68, 10, BLOCK.CRIMSON_STEM,          'geoStrider',          0.84, 0.84, 0.84, false]
 ];
 
 const EXTRA_MOB_MAP = {};
+const HUMANOID_EXTRA = new Set(['villager', 'wandering_trader', 'witch', 'pillager', 'drowned', 'husk', 'stray', 'piglin', 'snow_golem', 'blaze', 'wither_skeleton', 'warden']);
+const QUADRUPED_EXTRA = new Set(['horse', 'camel', 'polarbear', 'panda', 'fox', 'ocelot', 'rabbit', 'turtle']);
 for (const [mType, tile, hp, loot, geoName, w, h, d, hostile] of EXTRA_MOB_SPECS) {
   MOB_HP_MAP[mType] = hp;
   MOB_LOOT_MAP[mType] = loot;
   mobGeos[geoName] = makeMobBox(w, h, d, tile, tile, tile, tile);
-  const legGeo = makeMobBox(0.18, 0.36, 0.18, tile, tile, tile, tile);
-  EXTRA_MOB_MAP[mType] = { tile, hp, loot, geoName, legGeo, w, h, d, hostile };
+  const isHum = HUMANOID_EXTRA.has(mType), isQuad = QUADRUPED_EXTRA.has(mType);
+  const legH = mType === 'camel' ? 1.02 : (mType === 'horse' ? 0.82 : (mType === 'warden' ? 0.96 : (mType === 'wither_skeleton' ? 0.90 : (isHum ? 0.75 : (mType === 'polarbear' ? 0.68 : (mType === 'panda' || mType === 'strider' ? 0.58 : 0.34))))));
+  const legW = (mType === 'warden' || mType === 'polarbear' || mType === 'panda') ? 0.28 : (isHum || mType === 'horse' || mType === 'camel' ? 0.24 : 0.16);
+  const legGeo = makeMobBox(legW, legH, legW, tile, tile, tile, tile);
+  const headS = mType === 'warden' ? 0.68 : (mType === 'wither_skeleton' ? 0.56 : (isHum || mType === 'horse' || mType === 'camel' || mType === 'polarbear' || mType === 'panda' ? 0.50 : Math.max(0.28, w * 0.75)));
+  const headGeo = makeMobBox(headS, headS, headS, tile, tile, tile, tile);
+  EXTRA_MOB_MAP[mType] = { tile, hp, loot, geoName, legGeo, headGeo, legH, headS, isHum, isQuad, w, h, d, hostile };
 }
 
 const _origCreateMobMesh = createMobMesh;
@@ -94,14 +101,24 @@ createMobMesh = function(type) {
   const root = new THREE.Group();
   const mat = new THREE.MeshBasicMaterial({ map: mobAtlasTexture, vertexColors: true, color: 0xffffff });
   const mats = [{ mat, baseHex: 0xffffff }];
-  const head = new THREE.Mesh(mobGeos[spec.geoName], mat);
-  head.position.set(0, spec.h * 0.65, 0);
-  root.add(head);
-  const legGeo = spec.legGeo || mobGeos.legSheep;
-  const l1 = new THREE.Mesh(legGeo, mat), l2 = new THREE.Mesh(legGeo, mat);
-  l1.position.set(-spec.w * 0.25, 0.21, 0); l2.position.set(spec.w * 0.25, 0.21, 0);
-  root.add(l1, l2);
-  return { root, head, legs: [l1, l2], mats, height: spec.h + 0.35, radius: Math.max(0.32, spec.w * 0.5) };
+  const addP = (geo, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); root.add(m); return m; };
+  if (spec.isHum) {
+    addP(mobGeos[spec.geoName], 0, spec.legH + spec.h * 0.5, 0);
+    const head = addP(spec.headGeo, 0, spec.legH + spec.h + spec.headS * 0.5, 0);
+    const armL = addP(spec.legGeo, -(spec.w * 0.5 + 0.12), spec.legH + spec.h * 0.55, 0.10), armR = addP(spec.legGeo, spec.w * 0.5 + 0.12, spec.legH + spec.h * 0.55, 0.10);
+    const l1 = addP(spec.legGeo, -spec.w * 0.25, spec.legH * 0.5, 0), l2 = addP(spec.legGeo, spec.w * 0.25, spec.legH * 0.5, 0);
+    return { root, head, legs: [l1, l2, armL, armR], mats, height: spec.legH + spec.h + spec.headS, radius: Math.max(0.38, spec.w * 0.55) };
+  }
+  if (spec.isQuad) {
+    addP(mobGeos[spec.geoName], 0, spec.legH + spec.h * 0.5, 0);
+    const head = addP(spec.headGeo, 0, spec.legH + spec.h * 0.85, spec.d * 0.54);
+    const lx = spec.w * 0.30, ly = spec.legH * 0.5, lz = spec.d * 0.34;
+    const legs = [[-lx, ly, lz], [lx, ly, lz], [-lx, ly, -lz], [lx, ly, -lz]].map(([px, py, pz]) => addP(spec.legGeo, px, py, pz));
+    return { root, head, legs, mats, height: spec.legH + spec.h + spec.headS * 0.6, radius: Math.max(0.42, spec.w * 0.55) };
+  }
+  const head = addP(mobGeos[spec.geoName], 0, spec.legH + spec.h * 0.5, 0);
+  const l1 = addP(spec.legGeo, -spec.w * 0.25, spec.legH * 0.5, 0), l2 = addP(spec.legGeo, spec.w * 0.25, spec.legH * 0.5, 0);
+  return { root, head, legs: [l1, l2], mats, height: spec.legH + spec.h, radius: Math.max(0.35, spec.w * 0.5) };
 };
 
 const _origSpawnMob = spawnMob;

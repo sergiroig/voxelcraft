@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=99"></iframe>
+    <iframe id="game-frame" src="./index.html?v=100"></iframe>
   </div>
 
   <script>
@@ -3539,7 +3539,7 @@
           for (const legTile of [16, 18, 22, 25]) {
             const c0 = mPx(legTile, 0, 0);
             assert(c0[0] + c0[1] + c0[2] > 60, `El tile ${legTile} no debe tener una esquina negra (RGB=${c0[0]},${c0[1]},${c0[2]})`);
-          } if (false) { {
+          } const cowM = vc.spawnMob('cow', 8, 65, 8), vilM = vc.spawnMob('villager', 10, 65, 8), hrsM = vc.spawnMob('horse', 12, 65, 8), golM = vc.spawnMob('golem', 14, 65, 8); assert(cowM.height >= 1.40 && cowM.head.position.y >= 1.25 && vilM.height >= 1.95 && vilM.legs.length === 4 && hrsM.height >= 1.75 && hrsM.legs.length === 4 && golM.height >= 2.65, 'Los mobs deben tener el tamaño y proporciones 3D reales de Minecraft (Vaca >=1.4m, Aldeano >=1.95m, Caballo >=1.75m, Gólem >=2.65m)'); vc.removeMobAt(vc.mobs.indexOf(golM)); vc.removeMobAt(vc.mobs.indexOf(hrsM)); vc.removeMobAt(vc.mobs.indexOf(vilM)); vc.removeMobAt(vc.mobs.indexOf(cowM)); if (false) { {
             }
           }
         });
