@@ -623,8 +623,8 @@ function packChunkPaddedBuffers(cx, cz, lodLevel = 0) {
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     const srcOff = lz * CHUNK_SIZE * CHUNK_HEIGHT;
     const dstOff = ((lz + 1) * PADDED_SIZE + 1) * CHUNK_HEIGHT;
-    paddedVoxels.set(centerCh.data.subarray(srcOff, srcOff + 1024), dstOff);
-    paddedLight.set(centerCh.light.subarray(srcOff, srcOff + 1024), dstOff);
+    paddedVoxels.set(centerCh.data.subarray(srcOff, srcOff + CHUNK_SIZE * CHUNK_HEIGHT), dstOff);
+    paddedLight.set(centerCh.light.subarray(srcOff, srcOff + CHUNK_SIZE * CHUNK_HEIGHT), dstOff);
   }
 
   const copyBorderCol = (plx, plz) => {
@@ -687,7 +687,7 @@ try {
     ${buildChunkMeshArrays.toString()}
 
     self.onmessage = function(e) {
-      const { jobId, cx, cz, sunFactor, lodLevel, paddedVoxels, paddedLight } = e.data;
+      const { jobId, cx, cz, sunFactor, lodLevel, maxY, paddedVoxels, paddedLight } = e.data;
       const wx0 = cx * CHUNK_SIZE;
       const wz0 = cz * CHUNK_SIZE;
 
@@ -707,7 +707,7 @@ try {
         return paddedLight[(plz * PADDED_SIZE + plx) * CHUNK_HEIGHT + wy];
       };
 
-      const meshData = buildChunkMeshArrays(cx, cz, getVoxelLocal, getLightLocal, sunFactor, lodLevel || 0);
+      const meshData = buildChunkMeshArrays(cx, cz, getVoxelLocal, getLightLocal, sunFactor, lodLevel || 0, maxY);
       self.postMessage(
         { jobId, cx, cz, lodLevel: lodLevel || 0, solid: meshData.solid, water: meshData.water },
         [
@@ -772,7 +772,7 @@ function requestChunkMeshWorker(cx, cz, lodLevel = 0) {
   return new Promise((resolve) => {
     pendingWorkerJobs.set(jobId, { ch, cx, cz, version, packMs, resolve });
     meshWorker.postMessage(
-      { jobId, cx, cz, sunFactor: 1.0, lodLevel, paddedVoxels, paddedLight },
+      { jobId, cx, cz, sunFactor: 1.0, lodLevel, maxY: ch.maxY, paddedVoxels, paddedLight },
       [paddedVoxels.buffer, paddedLight.buffer]
     );
   });

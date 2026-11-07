@@ -237,32 +237,18 @@ function createWorldGenerator(seed) {
     return (structHash % 480 === 0);
   }
 
-  // Pre-allocated 5x17x5 coarse 3D noise grid for 4x4x4 trilinear interpolation
-  const coarseCave = new Float32Array(5 * 17 * 5);
-  const cIdx = (gx, gy, gz) => (gz * 5 + gx) * 17 + gy;
+  const CAVE_GY_MAX = (CHUNK_HEIGHT >> 2) + 1;
+  const coarseCave = new Float32Array(5 * CAVE_GY_MAX * 5);
+  const cIdx = (gx, gy, gz) => (gz * 5 + gx) * CAVE_GY_MAX + gy;
 
   function generateChunkVoxels(cx, cz, deltaList) {
     const data = new Uint8Array(CHUNK_VOLUME);
     const wx0 = cx * CHUNK_SIZE, wz0 = cz * CHUNK_SIZE;
     const notOriginChunk = (cx !== 0 || cz !== 0);
-
-    // Step 1: Sample 3D cave noise on 4x4x4 coarse grid (only 425 evaluations!)
-    for (let gz = 0; gz <= 4; gz++) {
-      const wz = wz0 + gz * 4;
-      for (let gx = 0; gx <= 4; gx++) {
-        const wx = wx0 + gx * 4;
-        for (let gy = 0; gy <= 16; gy++) {
-          const wy = gy * 4;
-          const n1 = noise3D(wx * 0.045, wy * 0.055, wz * 0.045);
-          const n2 = noise3D(wx * 0.09 + 77, wy * 0.09 + 77, wz * 0.09 + 77);
-          coarseCave[cIdx(gx, gy, gz)] = Math.abs(n1) + Math.abs(n2) * 0.5;
-        }
-      }
-    }
-
     const surfaceMap = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+    let maxSurfY = SEA_LEVEL;
 
-    // Step 2: Heightmap, 9 Biomes, Winding Rivers, Riverbeds (Clay/Gravel) & Strata
+    // Step 1: Heightmap, 9 Biomes, Winding Rivers, Riverbeds (Clay/Gravel) & Strata
     for (let lz = 0; lz < CHUNK_SIZE; lz++) {
       const wz = wz0 + lz;
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
@@ -270,6 +256,7 @@ function createWorldGenerator(seed) {
         const continental = fbm2D(wx * 0.006, wz * 0.006, 3, 2.0, 0.5), detail = fbm2D(wx * 0.024, wz * 0.024, 2, 2.0, 0.5);
         const h = computeColumnHeight(wx, wz, notOriginChunk, continental, detail);
         surfaceMap[lz * CHUNK_SIZE + lx] = h;
+        if (h > maxSurfY) maxSurfY = h;
 
         const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, rCol = hash3D(wx, h, wz), sBiome = biome;
         data[colOffset] = BLOCK.BEDROCK;
@@ -279,10 +266,10 @@ function createWorldGenerator(seed) {
             if (h < SEA_LEVEL) {
               data[colOffset + y] = (sBiome === 'Pantano' || detail > 0.28) ? BLOCK.CLAY : BLOCK.SAND;
             } else if (sBiome === 'Cumbres Heladas') {
-              data[colOffset + y] = (h >= 34 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
-            } else if (sBiome === 'Taiga Nevada' || (h >= 49 + Math.floor(detail * 4) && sBiome !== 'Desierto' && sBiome !== 'Meseta' && sBiome !== 'Sabana' && sBiome !== 'Jungla')) {
+              data[colOffset + y] = (h >= SEA_LEVEL + 14 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
+            } else if (sBiome === 'Taiga Nevada' || (h >= SEA_LEVEL + 58 + Math.floor(detail * 8) && sBiome !== 'Desierto' && sBiome !== 'Meseta' && sBiome !== 'Sabana' && sBiome !== 'Jungla')) {
               data[colOffset + y] = BLOCK.SNOW;
-            } else if (h >= 39 && sBiome !== 'Meseta' && sBiome !== 'Desierto' && (detail < 0.08 || h >= 45)) {
+            } else if (h >= SEA_LEVEL + 34 && sBiome !== 'Meseta' && sBiome !== 'Desierto' && (detail < 0.08 || h >= SEA_LEVEL + 48)) {
               data[colOffset + y] = BLOCK.STONE;
             } else if (sBiome === 'Desierto') {
               data[colOffset + y] = BLOCK.SAND;
@@ -293,7 +280,7 @@ function createWorldGenerator(seed) {
             }
           } else if (y >= h - 3) {
             if (sBiome === 'Meseta') data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
-            else if (h >= 39 && sBiome !== 'Desierto' && (detail < 0.08 || h >= 45)) data[colOffset + y] = BLOCK.STONE;
+            else if (h >= SEA_LEVEL + 34 && sBiome !== 'Desierto' && (detail < 0.08 || h >= SEA_LEVEL + 48)) data[colOffset + y] = BLOCK.STONE;
             else data[colOffset + y] = (sBiome === 'Desierto' || h < SEA_LEVEL) ? BLOCK.SAND : BLOCK.DIRT;
           } else {
             data[colOffset + y] = (sBiome === 'Meseta' && y >= h - 8 && rCol > 0.92) ? BLOCK.GOLD_ORE : BLOCK.STONE;
@@ -310,10 +297,25 @@ function createWorldGenerator(seed) {
       }
     }
 
+    // Step 2: Sample 3D cave noise on 4x4x4 coarse grid only up to maxCaveGy
+    const maxCaveGy = Math.min((CHUNK_HEIGHT >> 2) - 1, (maxSurfY >> 2) + 1);
+    for (let gz = 0; gz <= 4; gz++) {
+      const wz = wz0 + gz * 4;
+      for (let gx = 0; gx <= 4; gx++) {
+        const wx = wx0 + gx * 4;
+        for (let gy = 0; gy <= maxCaveGy; gy++) {
+          const wy = gy * 4;
+          const n1 = noise3D(wx * 0.045, wy * 0.055, wz * 0.045);
+          const n2 = noise3D(wx * 0.09 + 77, wy * 0.09 + 77, wz * 0.09 + 77);
+          coarseCave[cIdx(gx, gy, gz)] = Math.abs(n1) + Math.abs(n2) * 0.5;
+        }
+      }
+    }
+
     // Step 3: Carve 3D Caves, 3D Mountain Overhangs/Arches, Tectonic Ravines + Place Ores (including Emerald)
     for (let gz = 0; gz < 4; gz++) {
       for (let gx = 0; gx < 4; gx++) {
-        for (let gy = 0; gy < 15; gy++) {
+        for (let gy = 0; gy < maxCaveGy; gy++) {
           const v000 = coarseCave[cIdx(gx, gy, gz)], v100 = coarseCave[cIdx(gx + 1, gy, gz)];
           const v010 = coarseCave[cIdx(gx, gy + 1, gz)], v110 = coarseCave[cIdx(gx + 1, gy + 1, gz)];
           const v001 = coarseCave[cIdx(gx, gy, gz + 1)], v101 = coarseCave[cIdx(gx + 1, gy, gz + 1)];
@@ -340,16 +342,16 @@ function createWorldGenerator(seed) {
 
                 if (caveVal < 0.165 || isOverhang) {
                   if (y <= 4) data[colOffset + y] = BLOCK.LAVA;
-                  else if (y <= 22 && data[colOffset + y - 1] === BLOCK.STONE && hash3D(wx0 + lx, y, wz0 + lz) > 0.968) data[colOffset + y] = BLOCK.GLOW_MUSHROOM;
+                  else if (y <= SEA_LEVEL - 6 && data[colOffset + y - 1] === BLOCK.STONE && hash3D(wx0 + lx, y, wz0 + lz) > 0.968) data[colOffset + y] = BLOCK.GLOW_MUSHROOM;
                   else data[colOffset + y] = BLOCK.AIR;
                 } else if (data[colOffset + y] === BLOCK.STONE) {
                   const r = hash3D(wx0 + lx, y, wz0 + lz);
-                  if (caveVal < 0.192 && y >= 5 && y <= 20 && r > 0.945) data[colOffset + y] = BLOCK.AMETHYST;
-                  else if (surfY >= 31 && y < 24 && r > 0.9945) data[colOffset + y] = BLOCK.EMERALD_BLOCK;
-                  else if (y < 14 && r > 0.992) data[colOffset + y] = BLOCK.DIAMOND_ORE;
-                  else if (y < 24 && r > 0.988) data[colOffset + y] = BLOCK.GOLD_ORE;
-                  else if (y < 40 && r > 0.978) data[colOffset + y] = BLOCK.IRON_ORE;
-                  else if (y < 52 && r > 0.965) data[colOffset + y] = BLOCK.COAL_ORE;
+                  if (caveVal < 0.192 && y >= 5 && y <= 42 && r > 0.945) data[colOffset + y] = BLOCK.AMETHYST;
+                  else if (surfY >= SEA_LEVEL + 15 && y < 36 && r > 0.9945) data[colOffset + y] = BLOCK.EMERALD_BLOCK;
+                  else if (y < 16 && r > 0.992) data[colOffset + y] = BLOCK.DIAMOND_ORE;
+                  else if (y < 36 && r > 0.988) data[colOffset + y] = BLOCK.GOLD_ORE;
+                  else if (y < SEA_LEVEL + 16 && r > 0.978) data[colOffset + y] = BLOCK.IRON_ORE;
+                  else if (y < SEA_LEVEL + 65 && r > 0.965) data[colOffset + y] = BLOCK.COAL_ORE;
                 }
               }
             }
@@ -430,7 +432,7 @@ function createWorldGenerator(seed) {
         for (let y = 2; y <= SEA_LEVEL; y++) {
           const b = data[colOffset + y];
           if (b === BLOCK.AIR || (BLOCK_DEFS[b].shape === 'cross' && b !== BLOCK.LADDER)) {
-            const wN = (lx > 0 && data[colOffset - CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lx < 15 && data[colOffset + CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lz > 0 && data[colOffset - 1024 + y] === BLOCK.WATER ? 1 : 0) + (lz < 15 && data[colOffset + 1024 + y] === BLOCK.WATER ? 1 : 0);
+            const wN = (lx > 0 && data[colOffset - CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lx < 15 && data[colOffset + CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lz > 0 && data[colOffset - CHUNK_SIZE * CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lz < 15 && data[colOffset + CHUNK_SIZE * CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0);
             if ((b !== BLOCK.AIR && wN >= 1) || (b === BLOCK.AIR && (wN >= 3 || (wN >= 1 && data[colOffset + y - 1] === BLOCK.WATER)))) data[colOffset + y] = BLOCK.WATER;
           }
         }
@@ -636,20 +638,20 @@ function createWorldGenerator(seed) {
     const tempC = fbm2D(wx * 0.0024 + 500.37, wz * 0.0024 + 500.37, 2, 2.0, 0.5), moistC = fbm2D(wx * 0.0024 - 500.73, wz * 0.0024 - 500.73, 2, 2.0, 0.5);
     const swampFlat = Math.max(0, Math.min(1, (moistC - 0.04) * 5.0)) * Math.max(0, 1 - Math.abs(tempC) * 6.0);
     const originMask = notOrig ? Math.min(1.0, ((wx - 8) * (wx - 8) + (wz - 8) * (wz - 8)) / 1200.0) : 0.0;
-    const alpineBoost = Math.max(0, (-tempC - 0.06) * 38.0) * (0.3 + 0.7 * mNorm);
-    const mesaBoost = (tempC > 0.11 && moistC < -0.05) ? Math.floor(Math.max(0, (mRaw - 0.20) * 2.6)) * 4 : 0;
-    const mPeak = mNorm * (mNorm * 18.5 + r1 * r1 * 17.5 + r2 * 8.5 + crag * 4.0);
-    let rawH = SEA_LEVEL + (4.5 + (continental * 28.0 + detail * 12.0) * originMask + (mPeak + alpineBoost + mesaBoost) * originMask) * (1 - swampFlat * 0.65);
-    if (rawH > 45.0) {
-      const over = rawH - 45.0;
-      rawH = 45.0 + (over * 15.5) / (over + 15.5) + (r1 * r2 - 0.2) * 4.5 + crag * 2.2;
+    const alpineBoost = Math.max(0, (-tempC - 0.06) * 85.0) * (0.3 + 0.7 * mNorm);
+    const mesaBoost = (tempC > 0.11 && moistC < -0.05) ? Math.floor(Math.max(0, (mRaw - 0.20) * 4.2)) * 4 : 0;
+    const mPeak = mNorm * (mNorm * 48.0 + r1 * r1 * 42.0 + r2 * 18.0 + crag * 7.5);
+    let rawH = SEA_LEVEL + (5.0 + (continental * 34.0 + detail * 14.0) * originMask + (mPeak + alpineBoost + mesaBoost) * originMask) * (1 - swampFlat * 0.65);
+    if (rawH > 135.0) {
+      const over = rawH - 135.0;
+      rawH = 135.0 + (over * 65.0) / (over + 65.0) + (r1 * r2 - 0.2) * 8.0 + crag * 4.0;
     }
     let h = Math.floor(rawH);
-    if (notOrig && h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 16) {
+    if (notOrig && h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 18) {
       const rf = getRiverFactorAt(wx, wz);
-      if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 3) * rf);
+      if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 4) * rf);
     }
-    return Math.max(5, Math.min(CHUNK_HEIGHT - 3, h));
+    return Math.max(5, Math.min(CHUNK_HEIGHT - 4, h));
   }
 
   function sampleSurfaceAt(wx, wz) {
@@ -659,9 +661,9 @@ function createWorldGenerator(seed) {
     const biome = getBiomeAt(wx, wz);
     let topBlock = BLOCK.GRASS;
     if (h < SEA_LEVEL) topBlock = (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas') ? BLOCK.ICE : BLOCK.WATER;
-    else if (biome === 'Cumbres Heladas') topBlock = (h >= 34 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
-    else if (biome === 'Taiga Nevada' || (h >= 49 + Math.floor(detail * 4) && biome !== 'Desierto' && biome !== 'Meseta' && biome !== 'Sabana' && biome !== 'Jungla')) topBlock = BLOCK.SNOW;
-    else if (h >= 39 && biome !== 'Meseta' && biome !== 'Desierto' && (detail < 0.08 || h >= 45)) topBlock = BLOCK.STONE;
+    else if (biome === 'Cumbres Heladas') topBlock = (h >= SEA_LEVEL + 14 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
+    else if (biome === 'Taiga Nevada' || (h >= SEA_LEVEL + 58 + Math.floor(detail * 8) && biome !== 'Desierto' && biome !== 'Meseta' && biome !== 'Sabana' && biome !== 'Jungla')) topBlock = BLOCK.SNOW;
+    else if (h >= SEA_LEVEL + 34 && biome !== 'Meseta' && biome !== 'Desierto' && (detail < 0.08 || h >= SEA_LEVEL + 48)) topBlock = BLOCK.STONE;
     else if (biome === 'Desierto') topBlock = BLOCK.SAND;
     else if (biome === 'Meseta') topBlock = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((h >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
     const surfY = Math.max(h, SEA_LEVEL);
@@ -680,9 +682,9 @@ const bfsQueue = new Int32Array(CHUNK_VOLUME * 2);
 function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
   const light = ch.light, data = ch.data;
   light.fill(0);
-  let qHead = 0, qTail = 0;
+  let qHead = 0, qTail = 0, chunkMaxY = SEA_LEVEL;
 
-  // 1. Cast vertical sunlight rays from top (y = 63 -> 0) + seed block light emitters + cache 2D minimap surface colors
+  // 1. Cast vertical sunlight rays from top (y = 255 -> 0) + seed block light emitters + cache 2D minimap surface colors
   if (!ch.mapColors) ch.mapColors = new Uint32Array(CHUNK_SIZE * CHUNK_SIZE);
   const mapColors = ch.mapColors;
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
@@ -690,46 +692,47 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
       const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
       let sun = 15, topFound = false;
       for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
-        const idx = colOffset + y, b = data[idx], def = BLOCK_DEFS[b];
-        if (!topFound && b !== BLOCK.AIR) {
+        const idx = colOffset + y, b = data[idx];
+        if (!topFound) {
+          if (b === BLOCK.AIR) { light[idx] = 0xF0; continue; }
           topFound = true;
-          const hex = def.color || 0x58a83a;
-          const hShade = Math.min(1.28, Math.max(0.62, 0.72 + (y - SEA_LEVEL) * 0.018));
+          if (y > chunkMaxY) chunkMaxY = y;
+          const def0 = BLOCK_DEFS[b], hex = def0.color || 0x58a83a;
+          const hShade = Math.min(1.28, Math.max(0.62, 0.72 + (y - SEA_LEVEL) * 0.012));
           const r = Math.min(255, ((hex >> 16) & 255) * hShade) | 0;
           const g = Math.min(255, ((hex >> 8) & 255) * hShade) | 0;
           const bl = Math.min(255, (hex & 255) * hShade) | 0;
           mapColors[lz * CHUNK_SIZE + lx] = (255 << 24) | (bl << 16) | (g << 8) | r;
+          if (!surfaceOnly) {
+            const topSeed = Math.min(CHUNK_HEIGHT - 1, y + 10);
+            for (let sy = topSeed; sy > y; sy--) bfsQueue[qTail++] = colOffset + sy;
+          }
         }
+        const def = BLOCK_DEFS[b];
         if (def.opaque) sun = surfaceOnly ? (y >= SEA_LEVEL - 4 ? 12 : 0) : 0;
         else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(surfaceOnly ? 12 : 0, sun - 2);
         const emit = def.light;
         light[idx] = (sun << 4) | emit;
         if (!surfaceOnly && (sun > 0 || emit > 0)) bfsQueue[qTail++] = idx;
-        else if (surfaceOnly && topFound && sun === 0 && emit === 0) break;
+        else if (surfaceOnly && sun === 0 && emit === 0) break;
       }
     }
   }
+  ch.maxY = chunkMaxY;
   if (surfaceOnly) { ch.lightReady = 'surface'; return; }
 
   // 2. Seed border light from the 4 adjacent chunks so torches/sun cross chunk seams!
-  const nDirs = [
-    [-1, 0, 0, 15],
-    [ 1, 0, 15, 0],
-    [ 0,-1, 0, 15],
-    [ 0, 1, 15, 0]
-  ];
+  const nDirs = [[-1, 0, 0, 15], [1, 0, 15, 0], [0, -1, 0, 15], [0, 1, 15, 0]];
   for (let d = 0; d < 4; d++) {
     const [dcx, dcz, myEdge, nEdge] = nDirs[d];
     const nCh = getChunkAt(ch.cx + dcx, ch.cz + dcz);
     if (!nCh || !nCh.lightReady) continue;
+    const maxBorderY = Math.min(CHUNK_HEIGHT - 1, Math.max(chunkMaxY, nCh.maxY || chunkMaxY) + 12);
     for (let i = 0; i < CHUNK_SIZE; i++) {
-      const lx = dcx !== 0 ? myEdge : i;
-      const lz = dcz !== 0 ? myEdge : i;
-      const nlx = dcx !== 0 ? nEdge : i;
-      const nlz = dcz !== 0 ? nEdge : i;
-      const myCol = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-      const nCol  = (nlz * CHUNK_SIZE + nlx) * CHUNK_HEIGHT;
-      for (let y = 1; y < CHUNK_HEIGHT - 1; y++) {
+      const lx = dcx !== 0 ? myEdge : i, lz = dcz !== 0 ? myEdge : i;
+      const nlx = dcx !== 0 ? nEdge : i, nlz = dcz !== 0 ? nEdge : i;
+      const myCol = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, nCol = (nlz * CHUNK_SIZE + nlx) * CHUNK_HEIGHT;
+      for (let y = 1; y < maxBorderY; y++) {
         const myIdx = myCol + y;
         if (BLOCK_DEFS[data[myIdx]].opaque) continue;
         const nVal = nCh.light[nCol + y];

@@ -81,7 +81,7 @@ const scratchWUV  = new Float32Array(12000 * 2);
 const scratchWCol = new Float32Array(12000 * 3);
 const scratchWIdx = new Uint32Array((12000 / 4) * 6);
 
-function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor, lodLevel = 0) {
+function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor, lodLevel = 0, maxY) {
   let vCount = 0, iCount = 0;
   let wvCount = 0, wiCount = 0;
 
@@ -90,12 +90,14 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
   const uvStep = 1.0 / ATLAS_COLS;
   const uvPad = 0.0015 / ATLAS_COLS;
   const yStart = lodLevel > 0 ? Math.max(0, SEA_LEVEL - 4) : 0;
+  if (maxY === undefined && typeof chunks !== 'undefined') { const c = chunks.get(`${cx},${cz}`); if (c && c.maxY) maxY = c.maxY; }
+  const yEnd = Math.min(CHUNK_HEIGHT, (maxY || CHUNK_HEIGHT - 1) + 2);
 
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     const wz = wz0 + lz;
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const wx = wx0 + lx;
-      for (let y = yStart; y < CHUNK_HEIGHT; y++) {
+      for (let y = yStart; y < yEnd; y++) {
         const blockId = getVoxelGlobal(wx, y, wz);
         if (blockId === BLOCK.AIR) continue;
 
@@ -745,7 +747,7 @@ function updateAmbientAudio(dt) {
 
   const px = Math.floor(player.x), py = Math.floor(player.y + 1), pz = Math.floor(player.z);
   const sunL = getLightGlobal(px, py, pz) >> 4;
-  sfx.envMode = isCameraUnderwater ? 'underwater' : ((py < 28 && sunL <= 2) ? 'cave' : 'surface');
+  sfx.envMode = isCameraUnderwater ? 'underwater' : ((py < SEA_LEVEL && sunL <= 2) ? 'cave' : 'surface');
 
   if (sfx.ctx && sfx.musicEnabled && sfx.windFilter && sfx.windGain) {
     const now = sfx.ctx.currentTime, mv = sfx.musicVolume;
@@ -755,7 +757,7 @@ function updateAmbientAudio(dt) {
       sfx.windFilter.type = 'lowpass'; sfx.windFilter.frequency.setTargetAtTime(110, now, 0.25); sfx.windGain.gain.setTargetAtTime(0.065 * mv, now, 0.25);
       if (Math.random() < 0.18) sfx.playCaveEcho();
     } else {
-      sfx.windFilter.type = 'bandpass'; sfx.windFilter.frequency.setTargetAtTime(240 + Math.min(260, Math.max(0, (player.y - 20) * 6)), now, 0.3); sfx.windGain.gain.setTargetAtTime(0.045 * mv, now, 0.3);
+      sfx.windFilter.type = 'bandpass'; sfx.windFilter.frequency.setTargetAtTime(240 + Math.min(260, Math.max(0, (player.y - SEA_LEVEL) * 3)), now, 0.3); sfx.windGain.gain.setTargetAtTime(0.045 * mv, now, 0.3);
     }
   }
   if (sfx.ctx && sfx.musicEnabled && sfx.musicVolume > 0) {

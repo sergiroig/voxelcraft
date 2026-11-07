@@ -94,6 +94,7 @@ function setVoxelRawNoRebuild(wx, wy, wz, blockId, dirtyChunksSet) {
   const prevId = ch.data[idx];
   if (prevId === blockId) return false;
   ch.data[idx] = blockId;
+  if (blockId !== BLOCK.AIR && (!ch.maxY || wy > ch.maxY)) ch.maxY = wy;
 
   if (!worldDeltas[key]) worldDeltas[key] = [];
   const dArr = worldDeltas[key];
@@ -675,7 +676,7 @@ const cloudMesh = (() => {
   for (let i = 0; i < 26; i++) boxes.push({ x: (cRand() - 0.5) * 220, z: (cRand() - 0.5) * 220, w: 8 + Math.floor(cRand() * 14), d: 6 + Math.floor(cRand() * 12) });
   const pushQuad = (p0, p1, p2, p3) => { pos.push(...p0, ...p1, ...p2, ...p3); idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3); vOff += 4; };
   for (const b of boxes) {
-    const x0 = b.x, x1 = b.x + b.w, y0 = 65, y1 = 67.2, z0 = b.z, z1 = b.z + b.d;
+    const x0 = b.x, x1 = b.x + b.w, y0 = 192, y1 = 195.2, z0 = b.z, z1 = b.z + b.d;
     pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]); pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]);
     pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]); pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]);
     pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]); pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]);

@@ -5,9 +5,9 @@
 // 1. CONSTANTS, BLOCKS, ORES, FLORA & TOOLS
 // ============================================================================
 const CHUNK_SIZE = 16;
-const CHUNK_HEIGHT = 64;
+const CHUNK_HEIGHT = 256;
 const CHUNK_VOLUME = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE; // 16,384 bytes
-const SEA_LEVEL = 20;
+const SEA_LEVEL = 62;
 
 const BLOCK = {
   AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, WOOD: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, BRICK: 9,

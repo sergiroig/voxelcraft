@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=50"></iframe>
+    <iframe id="game-frame" src="./index.html?v=94"></iframe>
   </div>
 
   <script>
@@ -207,7 +207,7 @@
         it('Genera chunks de 16x64x16 en memoria tipada Uint8Array (16,384 bytes)', () => {
           const ch = vc.getChunkData(0, 0);
           assert(ch && ch.data instanceof win.Uint8Array, 'El chunk debe usar Uint8Array');
-          assert(ch.data.byteLength === 16384, 'El tamaño del chunk debe ser exactamente 16,384 bytes');
+          assert(vc.CHUNK_HEIGHT === 256 && vc.SEA_LEVEL === 62 && ch.data.byteLength === vc.CHUNK_VOLUME, 'El tamaño del chunk debe ser exactamente 65,536 bytes (16x256x16, SEA_LEVEL=62)');
         });
 
         it('Coloca Roca Madre (Bedrock) en toda la capa Y=0', () => {
@@ -226,8 +226,8 @@
               const ch = vc.getChunkData(cx, cz);
               for (let lx = 0; lx < 16; lx++) {
                 for (let lz = 0; lz < 16; lz++) {
-                  for (let y = 3; y < 18; y++) {
-                    const b = ch.data[(lz * 16 + lx) * 64 + y];
+                  for (let y = 3; y < 38; y++) {
+                    const b = ch.data[(lz * 16 + lx) * vc.CHUNK_HEIGHT + y];
                     if (b === vc.BLOCK.AIR) airUnderground++;
                     if (b >= vc.BLOCK.COAL_ORE && b <= vc.BLOCK.DIAMOND_ORE) oresFound++;
                   }
@@ -249,8 +249,8 @@
           const ch = vc.getChunkData(0, 0);
           assert(ch.solidMesh && ch.solidMesh.geometry, 'El chunk (0,0) debe tener solidMesh');
           const triCount = ch.solidMesh.geometry.index.count / 3;
-          const unculledMaxTris = 16384 * 12; // 196,608 triángulos sin culling
-          assert(triCount > 100 && triCount < unculledMaxTris * 0.1, `Culling ineficiente: ${triCount} triángulos`);
+          const unculledMaxTris = vc.CHUNK_VOLUME * 12;
+          assert(triCount > 100 && triCount < unculledMaxTris * 0.1, `Culling ineficiente: ${triCount} triángulos`); for (let wx = 0; wx <= 31; wx++) for (let wz = 0; wz <= 31; wz++) { const c = vc.getChunkData(wx >> 4, wz >> 4), col = ((wz & 15) * 16 + (wx & 15)) * vc.CHUNK_HEIGHT, border = wx === 0 || wx === 31 || wz === 0 || wz === 31; c.data[col + 41] = border ? vc.BLOCK.STONE : vc.BLOCK.GRASS; for (let wy = 42; wy <= 85; wy++) c.data[col + wy] = (border && wy <= 72) ? vc.BLOCK.STONE : vc.BLOCK.AIR; } vc.simQueue.clear(); vc.rebuildChunkImmediate(0, 0); vc.rebuildChunkImmediate(1, 0); vc.rebuildChunkImmediate(0, 1); vc.rebuildChunkImmediate(1, 1);
         });
 
         it('Genera geometría cruzada (X-Mesh, 16 vértices) al colocar una Antorcha o Flor', () => {
@@ -894,15 +894,15 @@
           const pyr = vc.getGenerator().placeStructureInChunk(testData, surf, 2, 2, 'pyramid');
           assert(pyr && pyr.type === 'pyramid', 'placeStructureInChunk debe generar una pirámide');
 
-          const idxGold = (8 * 16 + 7) * 64 + (pyr.chamberY + 1);
-          const idxDiam = (8 * 16 + 9) * 64 + (pyr.chamberY + 1);
+          const idxGold = (8 * 16 + 7) * vc.CHUNK_HEIGHT + (pyr.chamberY + 1);
+          const idxDiam = (8 * 16 + 9) * vc.CHUNK_HEIGHT + (pyr.chamberY + 1);
           assert(testData[idxGold] === vc.BLOCK.GOLD_ORE, 'La cámara secreta de la pirámide debe contener Mena de Oro');
           assert(testData[idxDiam] === vc.BLOCK.DIAMOND_ORE, 'La cámara secreta de la pirámide debe contener Mena de Diamante');
 
           const cabData = new Uint8Array(vc.CHUNK_VOLUME);
           const cab = vc.getGenerator().placeStructureInChunk(cabData, surf, 3, 3, 'cabin');
           assert(cab && cab.type === 'cabin', 'placeStructureInChunk debe generar una cabaña');
-          const idxTorch = (8 * 16 + 8) * 64 + 29;
+          const idxTorch = (8 * 16 + 8) * vc.CHUNK_HEIGHT + 29;
           assert(cabData[idxTorch] === vc.BLOCK.TORCH, 'La cabaña debe incluir una antorcha interior en su centro');
         });
 
@@ -919,7 +919,7 @@
             `El contacto Agua + Lava debe transformar la Lava en Obsidiana (obtuvo ID=${vc.getVoxelGlobal(10, 50, 14)})`
           );
 
-          vc.setVoxelGlobal(10, 51, 14, vc.BLOCK.AIR);
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { vc.setVoxelGlobal(10 + dx, 50, 14 + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(10 + dx, 51, 14 + dz, vc.BLOCK.AIR); } vc.simQueue.clear();
           vc.setVoxelGlobal(10, 50, 14, vc.BLOCK.AIR);
         });
       });
@@ -2320,18 +2320,18 @@
               let cobbleAboveSurface = 0;
               for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
                 const sy = gen.sampleSurfaceAt(Math.floor(vc.player.x / 16) * 16 + x, Math.floor(vc.player.z / 16) * 16 + z).groundY;
-                if (chData[(z * 16 + x) * 64 + sy + 2] === vc.BLOCK.COBBLE) cobbleAboveSurface++;
+                if (chData[(z * 16 + x) * vc.CHUNK_HEIGHT + sy + 2] === vc.BLOCK.COBBLE) cobbleAboveSurface++;
               }
               assert(cobbleAboveSurface === 0, 'El terreno natural no debe sembrarse con grupitos artificiales de adoquín (boulder) sobre la superficie');
               let peakMax = 0, peakX = 0, peakZ = 0, clampedAt57 = 0;
               for (let z = -200; z <= 200; z += 4) for (let x = -200; x <= 200; x += 4) {
                 const gy = gen.sampleSurfaceAt(x, z).groundY;
-                if (gy === 57) clampedAt57++;
+                if (gy >= vc.CHUNK_HEIGHT - 4) clampedAt57++;
                 if (gy > peakMax) { peakMax = gy; peakX = x; peakZ = z; }
               }
               let sameAtSummit = 0;
               for (let dx = -12; dx <= 12; dx++) if (gen.sampleSurfaceAt(peakX + dx, peakZ).groundY === peakMax) sameAtSummit++;
-              assert(peakMax >= 48 && clampedAt57 <= 10 && sameAtSummit <= 5, `Las montañas deben alcanzar cumbres altas (peakMax=${peakMax}) con crestas naturales (sameAtSummit=${sameAtSummit}) sin truncarse en un plano horizontal en Y=57 (clampedAt57=${clampedAt57})`);
+              assert(peakMax >= 110 && clampedAt57 === 0 && sameAtSummit <= 5, `Las montañas deben alcanzar cumbres altas (peakMax=${peakMax}) con crestas naturales (sameAtSummit=${sameAtSummit}) sin truncarse en un plano horizontal (clamped=${clampedAt57})`);
             }
           }
 
@@ -2340,7 +2340,7 @@
 
         it('Construye las 5 especies de árboles 3D (Roble, Abeto con Nieve, Jungla con Lianas, Acacia Inclinada y Sauce de Pantano) y formaciones del entorno', () => {
           const gen = vc.getGenerator();
-          const idx = (x, y, z) => (z * 16 + x) * 64 + y;
+          const idx = (x, y, z) => (z * 16 + x) * vc.CHUNK_HEIGHT + y;
 
           // 1) Abeto Boreal ('pine'): tronco alto + copa cónica coronada con hojas (sin bloque de tierra nevada encima)
           const dPine = new Uint8Array(vc.CHUNK_VOLUME);
@@ -2390,7 +2390,7 @@
       // =========================================================================
       describe('42. Expansión Horizontal de Agua/Lava en Altura, Charcas Volcánicas y Daño por Lava', () => {
         it('Expande horizontalmente el Agua y la Lava vertidas sobre suelo sólido en altura (wy > SEA_LEVEL) formando un charco acotado sin inundación infinita', () => {
-          const cx = 10, cy = 54, cz = 10;
+          const cx = 10, cy = 68, cz = 10;
           for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
             vc.setVoxelGlobal(cx + dx, cy - 1, cz + dz, vc.BLOCK.STONE);
             vc.setVoxelGlobal(cx + dx, cy, cz + dz, vc.BLOCK.AIR);
@@ -2426,7 +2426,7 @@
         });
 
         it('Genera charcas volcánicas de Lava (lava_pool) y manantiales (water_spring) en superficie, y aplica daño térmico al tocar Lava en Supervivencia', () => {
-          const gen = vc.getGenerator(), idx = (x, y, z) => (z * 16 + x) * 64 + y;
+          const gen = vc.getGenerator(), idx = (x, y, z) => (z * 16 + x) * vc.CHUNK_HEIGHT + y;
           const dPool = new Uint8Array(vc.CHUNK_VOLUME);
           gen.placeEnvFeatureInChunk(dPool, 5, 28, 5, 'lava_pool');
           gen.placeEnvFeatureInChunk(dPool, 11, 28, 11, 'water_spring');
@@ -2771,7 +2771,7 @@
 
         it('Construye Minas Abandonadas con raíles (mineshaft), Mazmorras subterráneas (dungeon), Torres de Vigía (watchtower) y Portales en Ruinas (ruined_portal)', () => {
           const gen = vc.getGenerator();
-          const idx = (x, y, z) => (z * 16 + x) * 64 + y;
+          const idx = (x, y, z) => (z * 16 + x) * vc.CHUNK_HEIGHT + y;
           const surf = new Uint8Array(256).fill(28);
 
           // 1) Mina Abandonada ('mineshaft') en y=14 con vía continua BLOCK.RAIL, arcos de madera y Cofre
@@ -2824,7 +2824,7 @@
           const testCh = vc.getChunkData(2, 2);
           vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), true);
           assert(testCh.lightReady === 'surface', `computeChunkLighting(..., true) debe marcar lightReady='surface' sin ejecutar la cola BFS 3D subterránea (obtuvo ${testCh.lightReady})`);
-          assert((testCh.light[(8 * 16 + 8) * 64 + vc.SEA_LEVEL] >> 4) >= 12, 'En modo surfaceOnly (LOD lejano), los bloques de superficie y troncos no deben quedar negros (sun >= 12)');
+          assert((testCh.light[(8 * 16 + 8) * vc.CHUNK_HEIGHT + vc.SEA_LEVEL] >> 4) >= 12, 'En modo surfaceOnly (LOD lejano), los bloques de superficie y troncos no deben quedar negros (sun >= 12)');
           vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), false);
           assert(testCh.lightReady === true, 'computeChunkLighting(..., false) debe completar el BFS 3D y marcar lightReady=true');
 
@@ -3026,7 +3026,7 @@
           for (const treeType of ['oak', 'pine', 'jungle', 'acacia', 'swamp']) {
             for (let x = 2; x <= 13; x++) {
               for (let z = 2; z <= 13; z++) {
-                for (let y = 38; y <= 62; y++) ch.data[(z * 16 + x) * 64 + y] = vc.BLOCK.AIR;
+                for (let y = 38; y <= 62; y++) ch.data[(z * 16 + x) * vc.CHUNK_HEIGHT + y] = vc.BLOCK.AIR;
               }
             }
             vc.getGenerator().placeTreeInChunk(ch.data, 8, 42, 8, treeType, 0.5);
@@ -4024,7 +4024,7 @@
         { name: 'Meshing vía Web Worker (Coste en Hilo Principal)',     ms: bench(() => { vc.packChunkPaddedBuffers(0, 0); vc.applyArraysToMesh(ch0, sampleMesh0); }, 40) },
         { name: 'Anillo Horizonte Lejano (+6 Chunks en 1 Draw Call)',   ms: bench(() => { vc.updateFarHorizon(true); }, 15) },
         { name: 'Pasada Shadow Map 3D Real 1024×1024 (Modo Ultra PC)',  ms: bench(() => { vc.setLightingMode('shadowmap'); vc.updateShadowMapPass(true); }, 25) },
-        { name: 'Pistón Mecánico Redstone (Empuje de Bloques en Lote)', ms: bench(() => { ch0.data[(14 * 16 + 14) * 64 + 53] = vc.BLOCK.PISTON; ch0.data[(14 * 16 + 14) * 64 + 54] = vc.BLOCK.STONE; ch0.data[(14 * 16 + 14) * 64 + 55] = vc.BLOCK.AIR; vc.triggerVoxelPiston(14, 53, 14, 13, 53, 14, new Set()); }, 60) }
+        { name: 'Pistón Mecánico Redstone (Empuje de Bloques en Lote)', ms: bench(() => { ch0.data[(14 * 16 + 14) * vc.CHUNK_HEIGHT + 53] = vc.BLOCK.PISTON; ch0.data[(14 * 16 + 14) * vc.CHUNK_HEIGHT + 54] = vc.BLOCK.STONE; ch0.data[(14 * 16 + 14) * vc.CHUNK_HEIGHT + 55] = vc.BLOCK.AIR; vc.triggerVoxelPiston(14, 53, 14, 13, 53, 14, new Set()); }, 60) }
       ];
 
       const totalFrameMs = perFrameFeatures.reduce((acc, f) => acc + f.ms, 0);

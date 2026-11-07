@@ -36,12 +36,12 @@ function raycastVoxel(ox, oy, oz, dx, dy, dz, maxDist) {
 // 10. PLAYER PHYSICS, SHIELD BLOCK (PUNTO 25), SLIPPERY ICE (PUNTO 26) & BOATS/PORTALS
 // ============================================================================
 const player = {
-  x: 8.5, y: 42, z: 8.5, vx: 0, vy: 0, vz: 0, iceVx: 0, iceVz: 0,
+  x: 8.5, y: 84, z: 8.5, vx: 0, vy: 0, vz: 0, iceVx: 0, iceVz: 0,
   yaw: 0, pitch: -0.15, radius: 0.3, height: 1.75, eyeHeight: 1.58,
   onGround: false, flying: false, stepAccum: 0, bobTime: 0, swingTime: 0,
   health: 10, maxHealth: 10, regenTimer: 0, hunger: 10, maxHunger: 10, saturation: 5.0, exhaustion: 0, starveTimer: 0,
   air: 10, maxAir: 10, airTimer: 0, wasInFluid: false, maxFallVel: 0, portalCooldown: 0,
-  spawnX: 8.5, spawnY: 42, spawnZ: 8.5, hasBedSpawn: false
+  spawnX: 8.5, spawnY: 84, spawnZ: 8.5, hasBedSpawn: false
 };
 
 const heartsRowEl = document.getElementById('hearts-row');

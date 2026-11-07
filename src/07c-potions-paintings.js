@@ -356,7 +356,7 @@ function getCurrentDimension() { return currentDimension; }
 function switchDimension(targetDim) {
   const nextDim = targetDim || (currentDimension === 'overworld' ? 'nether' : (currentDimension === 'nether' ? 'end' : 'overworld'));
   currentDimension = nextDim;
-  const bx = Math.floor(player.x), by = Math.max(12, Math.min(48, Math.floor(player.y))), bz = Math.floor(player.z);
+  const bx = Math.floor(player.x), by = Math.max(12, Math.min(CHUNK_HEIGHT - 16, Math.floor(player.y))), bz = Math.floor(player.z);
   const affected = new Set();
   if (nextDim === 'nether') {
     scene.background.setHex(0x3b0a0a);

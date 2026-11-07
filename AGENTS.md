@@ -252,7 +252,7 @@ Dado que el navegador limita el refresco visual a **60 FPS (VSync = `16.67 ms` p
 - **CPU:** `AMD Ryzen 7 5800X 8-Core Processor` / `Intel Core Ultra (22 hilos CPU)`
 - **GPU (WebGL):** `ANGLE (Intel, Mesa Intel(R) Graphics (MTL), OpenGL ES 3.2)` / `NVIDIA GeForce RTX 3080`
 - **Escena estándar:** Distancia de render 5 + 6 chunks de Horizonte Lejano (`11 chunks` / `176m` de visión, ampliable hasta `12 + 6 = 18 chunks` / `288m`, `~50% descartados por Frustum Culling`)
-- *(A continuación se registran de forma homogénea los 16 subsistemas por frame y 9 operaciones bajo demanda de los **Puntos 1–45** medidos en `test.html` con **113/113 tests exitosos en 53 suites** y un coste total por frame de **`0.226–0.378 ms`** / **`60 FPS clavados`**).*
+- *(A continuación se registran de forma homogénea los 16 subsistemas por frame y 9 operaciones bajo demanda de los **Puntos 1–46** con altura vertical estilo Minecraft `16×256×16` (`Y = 0..255`, `SEA_LEVEL = 62`, `65,536` bytes/chunk) medidos en `test.html` con **113/113 tests exitosos en 53 suites** y un coste total por frame de **`0.332 ms`** (`1.19 / 60 FPS`, `~3,014 FPS sin VSync`) / **`60 FPS clavados`**).*
 
 ### A. Coste por Frame (Subsistemas que se ejecutan cada frame a 60 Hz)
 
