@@ -534,11 +534,11 @@ function updateMobs(dt) {
 }
 
 function applyArraysToMesh(ch, meshData, lodLevel = 0) {
-  const topY = Math.min(CHUNK_HEIGHT, (ch.maxY || 44) + 3);
+  const minY = lodLevel > 0 ? Math.max(0, SEA_LEVEL - 8) : 0, topY = Math.min(CHUNK_HEIGHT, (ch.maxY || 44) + 2);
   if (!ch.worldBox) {
-    ch.worldBox = new THREE.Box3(new THREE.Vector3(ch.cx * CHUNK_SIZE - 1, 0, ch.cz * CHUNK_SIZE - 1), new THREE.Vector3((ch.cx + 1) * CHUNK_SIZE + 1, topY, (ch.cz + 1) * CHUNK_SIZE + 1));
+    ch.worldBox = new THREE.Box3(new THREE.Vector3(ch.cx * CHUNK_SIZE, minY, ch.cz * CHUNK_SIZE), new THREE.Vector3((ch.cx + 1) * CHUNK_SIZE, topY, (ch.cz + 1) * CHUNK_SIZE));
   } else {
-    ch.worldBox.max.y = topY;
+    ch.worldBox.min.y = minY; ch.worldBox.max.y = topY;
   }
 
   if (meshData.solid.idx.length > 0) {
@@ -549,7 +549,7 @@ function applyArraysToMesh(ch, meshData, lodLevel = 0) {
     geo.setIndex(new THREE.BufferAttribute(meshData.solid.idx, 1));
     geo.computeBoundingSphere();
     if (ch.solidMesh) { ch.solidMesh.geometry.dispose(); ch.solidMesh.geometry = geo; }
-    else { const mesh = new THREE.Mesh(geo, solidMaterial); mesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE); chunkSolidGroup.add(mesh); ch.solidMesh = mesh; }
+    else { const mesh = new THREE.Mesh(geo, solidMaterial); mesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE); mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.frustumCulled = false; chunkSolidGroup.add(mesh); ch.solidMesh = mesh; }
   } else if (ch.solidMesh) {
     chunkSolidGroup.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); ch.solidMesh = null;
   }
@@ -562,10 +562,11 @@ function applyArraysToMesh(ch, meshData, lodLevel = 0) {
     wGeo.setIndex(new THREE.BufferAttribute(meshData.water.idx, 1));
     wGeo.computeBoundingSphere();
     if (ch.waterMesh) { ch.waterMesh.geometry.dispose(); ch.waterMesh.geometry = wGeo; }
-    else { const wMesh = new THREE.Mesh(wGeo, waterMaterial); wMesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE); wMesh.renderOrder = 1; scene.add(wMesh); ch.waterMesh = wMesh; }
+    else { const wMesh = new THREE.Mesh(wGeo, waterMaterial); wMesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE); wMesh.matrixAutoUpdate = false; wMesh.updateMatrix(); wMesh.frustumCulled = false; wMesh.renderOrder = 1; scene.add(wMesh); ch.waterMesh = wMesh; }
   } else if (ch.waterMesh) {
     scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); ch.waterMesh = null;
   }
+  if (!lodLevel && typeof shadowDirty !== 'undefined') shadowDirty = true;
 
   ch.lodLevel = lodLevel || 0; ch.dirty = false; ch.queued = false;
 }

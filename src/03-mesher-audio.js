@@ -106,7 +106,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
 
         // Cross-Quad Geometry (Torches, Tall Grass, Flowers, Lily Pads, Vines)
         if (def.shape === 'cross') {
-          if (lodLevel > 0 && blockId !== BLOCK.TORCH && blockId !== BLOCK.VINE) continue;
+          if (lodLevel > 0 && blockId !== BLOCK.TORCH) continue;
           const tileIdx = def.tiles[0];
           const u0 = tileIdx * uvStep + uvPad;
           const u1 = (tileIdx + 1) * uvStep - uvPad;
@@ -187,6 +187,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           const u1 = (tileIdx + 1) * uvStep - uvPad;
 
           const rawL = isGlow ? 0xFF : getLightGlobal(nx, ny, nz);
+          if (lodLevel > 0 && rawL === 0 && !nDef.opaque) continue;
           const packedL = (rawL === 0 && nDef.opaque) ? (getLightGlobal(nx, Math.max(0, ny - 1), nz) || 0x90) : rawL;
           const sunLevel = ((packedL >> 4) / 15) * sunFactor;
           const blkLevel = (packedL & 15) / 15;

@@ -697,7 +697,7 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-      let sun = 15, topFound = false;
+      let sun = 15, topFound = false, solidDepth = 0;
       for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
         const idx = colOffset + y, b = data[idx];
         if (!topFound) {
@@ -715,11 +715,11 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
             for (let sy = topSeed; sy > y; sy--) bfsQueue[qTail++] = colOffset + sy;
           }
         }
-        const def = BLOCK_DEFS[b];
-        if (def.opaque) sun = surfaceOnly ? (y >= SEA_LEVEL - 16 ? 12 : 0) : 0;
-        else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(surfaceOnly ? 12 : 0, sun - 2);
+        const def = BLOCK_DEFS[b], isFoliage = b === BLOCK.LEAVES || b === BLOCK.SNOW_LEAVES || b === BLOCK.WOOD;
+        if (def.opaque) { if (!isFoliage) solidDepth++; sun = surfaceOnly ? (y >= SEA_LEVEL - 16 ? 12 : 0) : 0; }
+        else if (b === BLOCK.WATER || isFoliage) sun = Math.max(surfaceOnly ? 12 : 0, sun - 2);
         const emit = def.light;
-        light[idx] = (sun << 4) | emit;
+        light[idx] = (surfaceOnly && b === BLOCK.AIR && solidDepth >= 3) ? emit : ((sun << 4) | emit);
         if (!surfaceOnly && (sun > 0 || emit > 0)) bfsQueue[qTail++] = idx;
         else if (surfaceOnly && sun === 0 && emit === 0) break;
       }

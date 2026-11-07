@@ -191,7 +191,7 @@ function detectDefaultLightingMode(customIsMobile) {
     : (/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test((typeof navigator !== 'undefined' && navigator.userAgent) || '') || (('ontouchstart' in window) && window.innerWidth <= 960));
   return isMob ? 'shader' : 'shadowmap';
 }
-let lightingMode = detectDefaultLightingMode(), shadowPassCount = 0;
+let lightingMode = detectDefaultLightingMode(), shadowPassCount = 0, shadowDirty = true, lastShX = 1e9, lastShY = 1e9, lastShZ = 1e9, lastShLx = 1e9, lastShLy = 1e9;
 const SHADOW_MAP_SIZE = 1024;
 const shadowMapTarget = new THREE.WebGLRenderTarget(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat });
 const shadowCamera = new THREE.OrthographicCamera(-44, 44, 44, -44, 2, 160), shadowMatrix = new THREE.Matrix4(), shadowClearCol = new THREE.Color();
@@ -220,22 +220,24 @@ function setLightingMode(mode) {
   return lightingMode;
 }
 
-function updateShadowMapPass() {
+function updateShadowMapPass(force = false) {
   if (lightingMode !== 'shadowmap') return false;
   if (typeof player === 'undefined' || !player || chunkSolidGroup.children.length === 0) return false;
   const ld = gpuShaderUniforms.uLightDir.value;
   const sx = Math.round(player.x * 4) * 0.25, sy = Math.round(player.y * 4) * 0.25, sz = Math.round(player.z * 4) * 0.25;
+  if (!force && !shadowDirty && sx === lastShX && sy === lastShY && sz === lastShZ && Math.abs(ld.x - lastShLx) + Math.abs(ld.y - lastShLy) < 0.003) return false;
+  shadowDirty = false; lastShX = sx; lastShY = sy; lastShZ = sz; lastShLx = ld.x; lastShLy = ld.y;
   shadowCamera.position.set(sx + ld.x * 68, sy + Math.max(18, ld.y * 68), sz + ld.z * 68);
   shadowCamera.lookAt(sx, sy, sz);
   shadowCamera.updateMatrixWorld();
   shadowMatrix.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse);
-  const prevClearHex = renderer.getClearColor(shadowClearCol).getHex(), prevClearAlpha = renderer.getClearAlpha(), pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE), hiddenForShadow = [];
-  for (const ch of chunks.values()) if (ch.solidMesh && ch.solidMesh.visible && ((ch.cx - pcx) ** 2 + (ch.cz - pcz) ** 2 > 25)) { ch.solidMesh.visible = false; hiddenForShadow.push(ch.solidMesh); }
+  const prevClearHex = renderer.getClearColor(shadowClearCol).getHex(), prevClearAlpha = renderer.getClearAlpha(), pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE), changedVis = [];
+  for (const ch of chunks.values()) if (ch.solidMesh) { const wantVis = ((ch.cx - pcx) ** 2 + (ch.cz - pcz) ** 2 <= 10); if (ch.solidMesh.visible !== wantVis) { changedVis.push(ch.solidMesh, ch.solidMesh.visible); ch.solidMesh.visible = wantVis; } }
   chunkSolidGroup.overrideMaterial = shadowDepthMaterial;
   renderer.setClearColor(0xffffff, 1.0);
   renderer.setRenderTarget(shadowMapTarget); renderer.clear(); renderer.render(chunkSolidGroup, shadowCamera); renderer.setRenderTarget(null);
   chunkSolidGroup.overrideMaterial = null; renderer.setClearColor(prevClearHex, prevClearAlpha);
-  for (let i = 0; i < hiddenForShadow.length; i++) hiddenForShadow[i].visible = true;
+  for (let i = 0; i < changedVis.length; i += 2) changedVis[i].visible = changedVis[i + 1];
   shadowPassCount++;
   return true;
 }
