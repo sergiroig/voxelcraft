@@ -103,7 +103,7 @@ function scanNearbyFloatingLeaves() {
     for (let dx = -24; dx <= 24; dx++) {
       const lx = px + dx, cx = Math.floor(lx / CHUNK_SIZE);
       const dArr = worldDeltas[`${cx},${cz}`];
-      const hasDelta = dArr && dArr.length > 0; if (!hasDelta) continue; const isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER), isSideNeedW = (nx, ny, nz, sBelow) => { const nb = getVoxelGlobal(nx, ny, nz); return (BLOCK_DEFS[nb].shape === 'cross' && nb !== BLOCK.LADDER) || (nb === BLOCK.AIR && (getVoxelGlobal(nx, ny - 1, nz) === BLOCK.WATER || (sBelow && isWRep(getVoxelGlobal(nx, ny - 1, nz))))); };
+      const hasDelta = dArr && dArr.length > 0; if (!hasDelta) continue; const isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER), isSideNeedW = (nx, ny, nz) => { const nb = getVoxelGlobal(nx, ny, nz); return (BLOCK_DEFS[nb].shape === 'cross' && nb !== BLOCK.LADDER) || (nb === BLOCK.AIR && getVoxelGlobal(nx, ny - 1, nz) === BLOCK.WATER); };
       for (let dy = -14; dy <= 8; dy++) {
         const ly = py + dy;
         if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
@@ -181,22 +181,22 @@ function updateVoxelSimulation(dt) {
         }
       }
     } else if (b === BLOCK.WATER) {
-      const below = getVoxelGlobal(wx, wy - 1, wz), isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER);
+      const below = getVoxelGlobal(wx, wy - 1, wz), isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER), nearP = Math.hypot(wx - player.x, wy - player.y, wz - player.z) < 24;
       if (below === BLOCK.LAVA) {
-        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx, wy - 1, wz, BLOCK.OBSIDIAN, 10);
+        setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.OBSIDIAN, dirtySet); if (nearP) sfx.play('hiss'); spawnBlockParticles(wx, wy - 1, wz, BLOCK.OBSIDIAN, 10);
       } else if (isWRep(below) && wy - 1 > 1) {
         setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
       } else {
-        const isSource = (wy === SEA_LEVEL) || getVoxelGlobal(wx, wy + 1, wz) === BLOCK.WATER || (getVoxelGlobal(wx + 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx - 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz + 1) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz - 1) !== BLOCK.WATER);
+        const isSource = (wy === SEA_LEVEL) || (BLOCK_DEFS[below].solid && (getVoxelGlobal(wx, wy + 1, wz) === BLOCK.WATER || (getVoxelGlobal(wx + 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx - 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz + 1) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz - 1) !== BLOCK.WATER)));
         for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
           const sideB = getVoxelGlobal(wx + dx, wy, wz + dz);
           if (sideB === BLOCK.LAVA) {
-            setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
+            setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, dirtySet); if (nearP) sfx.play('hiss'); spawnBlockParticles(wx + dx, wy, wz + dz, BLOCK.OBSIDIAN, 10);
           } else if (isSource && isWRep(sideB)) {
             const underSide = getVoxelGlobal(wx + dx, wy - 1, wz + dz);
-            if (!isWRep(underSide) || BLOCK_DEFS[below].solid) { if (isWRep(underSide)) { setVoxelRawNoRebuild(wx + dx, wy - 1, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy - 1},${wz + dz}`); }
-              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`); simQueue.add(`${wx},${wy + 1},${wz}`);
-              for (let ty = wy + 1; ty <= SEA_LEVEL && getVoxelGlobal(wx, ty, wz) === BLOCK.WATER && isWRep(getVoxelGlobal(wx + dx, ty, wz + dz)); ty++) setVoxelRawNoRebuild(wx + dx, ty, wz + dz, BLOCK.WATER, dirtySet);
+            if (BLOCK_DEFS[underSide].solid || (wy === SEA_LEVEL && underSide === BLOCK.WATER)) {
+              setVoxelRawNoRebuild(wx + dx, wy, wz + dz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx + dx},${wy},${wz + dz}`);
+              if (sideB !== BLOCK.AIR && getVoxelGlobal(wx, wy + 1, wz) === BLOCK.WATER && isWRep(getVoxelGlobal(wx + dx, wy + 1, wz + dz))) setVoxelRawNoRebuild(wx + dx, wy + 1, wz + dz, BLOCK.WATER, dirtySet);
             }
           }
         }
@@ -205,7 +205,7 @@ function updateVoxelSimulation(dt) {
       let turnedToObsidian = false;
       for (const [dx, dy, dz] of [[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]]) {
         if (getVoxelGlobal(wx + dx, wy + dy, wz + dz) === BLOCK.WATER) {
-          setVoxelRawNoRebuild(wx, wy, wz, BLOCK.OBSIDIAN, dirtySet); sfx.play('hiss'); spawnBlockParticles(wx, wy, wz, BLOCK.OBSIDIAN, 10);
+          setVoxelRawNoRebuild(wx, wy, wz, BLOCK.OBSIDIAN, dirtySet); if (Math.hypot(wx - player.x, wy - player.y, wz - player.z) < 24) sfx.play('hiss'); spawnBlockParticles(wx, wy, wz, BLOCK.OBSIDIAN, 10);
           turnedToObsidian = true; break;
         }
       }

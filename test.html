@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=105"></iframe>
+    <iframe id="game-frame" src="./index.html?v=106"></iframe>
   </div>
 
   <script>
@@ -633,6 +633,13 @@
           assert(rep.healthy === true && rep.anomalies.length === 0, `PerfWatchdog detectó anomalías tras travesía rápida: ${rep.anomalies.join(', ')}`);
           assert(rep.orphanSolidMeshes === 0, `Se detectaron ${rep.orphanSolidMeshes} mallas huérfanas en GPU`);
           assert(rep.simQueueSize === 0, `simQueue no se vació en reposo (size=${rep.simQueueSize})`);
+          // Verificar en la grieta/pantano de (42, 66, 35) que romper un bloque junto al agua no provoca simRunaway ni cascada infinita
+          vc.player.x = 42; vc.player.y = 66; vc.player.z = 35;
+          vc.updateChunkStreaming();
+          vc.setVoxelGlobal(42, 63, 35, vc.BLOCK.AIR);
+          for (let t = 0; t < 25; t++) vc.updateVoxelSimulation(0.16);
+          assert(vc.simQueue.size === 0, `En (42,66,35) junto a grieta/río no debe producirse simRunaway (simQueue=${vc.simQueue.size})`);
+          vc.player.x = origX; vc.player.y = origY; vc.player.z = origZ;
           assert(rep.cacheSize <= 1024 && rep.bufferPoolSize <= 64, 'Los pools de RAM deben mantenerse dentro de sus límites');
           const spikeRep = vc.updatePerfWatchdog(0.016, 15.0, 0.5, 0.5, 0.5, 16.5);
           assert(spikeRep.healthy === false && spikeRep.anomalies.includes('simSpike:15.0ms') && spikeRep.dominantSubsystem === 'sim', 'PerfWatchdog debe detectar y aislar un pico en sim');

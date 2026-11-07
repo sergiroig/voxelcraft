@@ -19,6 +19,7 @@ function loadSaveData() {
     if (parsed && typeof parsed.seed === 'number') {
       worldSeed = parsed.seed;
       worldDeltas = parsed.deltas || {};
+      for (const k of Object.keys(worldDeltas)) { const d = worldDeltas[k]; if (Array.isArray(d) && d.length > 160) { const cl = []; for (let i = 0; i < d.length; i += 2) if (d[i + 1] !== BLOCK.WATER && d[i + 1] !== BLOCK.OBSIDIAN) cl.push(d[i], d[i + 1]); if (cl.length > 0) worldDeltas[k] = cl; else delete worldDeltas[k]; } }
       if (parsed.chests && typeof parsed.chests === 'object') chestLootMap = parsed.chests;
       if (Array.isArray(parsed.waypoints) && parsed.waypoints.length > 0) waypoints = parsed.waypoints;
       if (parsed.inventory && typeof parsed.inventory === 'object') Object.assign(inventoryCounts, parsed.inventory);

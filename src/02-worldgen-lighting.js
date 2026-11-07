@@ -219,7 +219,7 @@ function createWorldGenerator(seed) {
     if (mask < 0.21) return 0;
     const warp = noise2D(wx * 0.02 + 19.3, wz * 0.02 - 41.7) * 6.0;
     const rVal = Math.abs(noise2D((wx + warp) * 0.0075 + 711.2, (wz - warp) * 0.018 - 388.6));
-    return rVal < 0.0095 ? 10 + ((Math.abs(wx + wz)) & 3) : 0;
+    return rVal < 0.0095 ? 11 : 0;
   }
 
   function isVillageChunk(cx, cz) {
@@ -326,11 +326,11 @@ function createWorldGenerator(seed) {
             for (let dx = 0; dx < 4; dx++) {
               const fx = dx * 0.25, lx = gx * 4 + dx, surfY = surfaceMap[lz * CHUNK_SIZE + lx];
               const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-              const ravFloor = (notOriginChunk && surfY > SEA_LEVEL + 3) ? getRavineFloorAt(wx0 + lx, wz0 + lz) : 0;
+              const ravFloor = (notOriginChunk && surfY > SEA_LEVEL + 5) ? getRavineFloorAt(wx0 + lx, wz0 + lz) : 0;
               for (let dy = 0; dy < 4; dy++) {
                 const y = gy * 4 + dy;
                 if (ravFloor > 0 && y >= ravFloor && y <= surfY) {
-                  data[colOffset + y] = (y === ravFloor) ? ((lx + lz) & 1 ? BLOCK.LAVA : BLOCK.WATER) : BLOCK.AIR;
+                  data[colOffset + y] = (y === ravFloor) ? ((lx + lz) & 1 ? BLOCK.OBSIDIAN : BLOCK.COBBLE) : BLOCK.AIR;
                   continue;
                 }
                 if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 5 && y >= Math.min(surfY - 3, SEA_LEVEL - 6))) continue;
