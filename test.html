@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=101"></iframe>
+    <iframe id="game-frame" src="./index.html?v=102"></iframe>
   </div>
 
   <script>
@@ -3476,7 +3476,7 @@
             chicken:  { tiles: [26, 27],           geos: ['headChicken', 'bodyChicken', 'legChicken'], check: (px) => px(26, 4, 4)[0] === 226 && px(27, 2, 3)[0] === 226 },
             spider:   { tiles: [28, 29],           geos: ['headSpider', 'bodySpider', 'legSpider'], check: (px) => px(28, 4, 4)[0] === 166 && px(29, 2, 3)[0] === 61 },
             enderman: { tiles: [30, 31],           geos: ['headEnderman', 'bodyEnderman', 'limbEnderman'], check: (px) => px(30, 4, 4)[0] === 22 && px(30, 0, 4)[0] === 224 },
-            wolf:     { tiles: [32, 33],           geos: ['headWolf', 'bodyWolf', 'legWolf'], check: (px) => px(32, 4, 4)[0] === 18 && px(33, 2, 3)[0] === 211 },
+            wolf:     { tiles: [32, 33],           geos: ['headWolf', 'bodyWolf', 'legWolf'], check: (px) => px(32, 2, 4)[0] === 18 && px(32, 5, 4)[0] === 18 && px(33, 2, 3)[0] === 211 },
             slime:    { tiles: [34],               geos: ['bodySlime'], check: (px) => px(34, 4, 4)[1] > 130 },
             villager:         { tiles: [35], geos: ['geoVillager'],         check: (px) => px(35, 4, 4)[0] === 190 },
             wandering_trader: { tiles: [36], geos: ['geoWanderingTrader'],  check: (px) => px(36, 4, 4)[0] === 129 },
@@ -3539,7 +3539,7 @@
           for (const legTile of [16, 18, 22, 25]) {
             const c0 = mPx(legTile, 0, 0);
             assert(c0[0] + c0[1] + c0[2] > 60, `El tile ${legTile} no debe tener una esquina negra (RGB=${c0[0]},${c0[1]},${c0[2]})`);
-          } const cowM = vc.spawnMob('cow', 8, 65, 8), vilM = vc.spawnMob('villager', 10, 65, 8), hrsM = vc.spawnMob('horse', 12, 65, 8), golM = vc.spawnMob('golem', 14, 65, 8); assert(cowM.height >= 1.40 && cowM.head.position.y >= 1.25 && vilM.height >= 1.95 && vilM.legs.length === 4 && hrsM.height >= 1.75 && hrsM.legs.length === 4 && golM.height >= 2.65, 'Los mobs deben tener el tamaño y proporciones 3D reales de Minecraft (Vaca >=1.4m, Aldeano >=1.95m, Caballo >=1.75m, Gólem >=2.65m)'); vc.removeMobAt(vc.mobs.indexOf(golM)); vc.removeMobAt(vc.mobs.indexOf(hrsM)); vc.removeMobAt(vc.mobs.indexOf(vilM)); vc.removeMobAt(vc.mobs.indexOf(cowM)); if (false) { {
+          } const cowM = vc.spawnMob('cow', 8, 65, 8), vilM = vc.spawnMob('villager', 10, 65, 8), hrsM = vc.spawnMob('horse', 12, 65, 8), golM = vc.spawnMob('golem', 14, 65, 8), pigM = vc.spawnMob('pig', 16, 65, 8); assert(cowM.height >= 1.40 && cowM.head.position.y >= 1.25 && vilM.height >= 1.95 && vilM.legs.length === 4 && hrsM.height >= 1.75 && hrsM.legs.length === 4 && golM.height >= 2.65 && pigM.legs[0].position.y >= 0.36 && mPx(22, 4, 0)[0] > 200 && mPx(26, 2, 2)[0] === 0 && mPx(26, 5, 2)[0] === 0 && mPx(26, 5, 1)[0] > 180 && mPx(26, 5, 1)[1] > 180, 'Los mobs deben tener proporciones, pivote superior de cadera en patas y texturas simétricas limpias (Cerdo sin pezuñas arriba, Pollo con ojos simétricos sin mancha roja en la frente)'); vc.removeMobAt(vc.mobs.indexOf(pigM)); vc.removeMobAt(vc.mobs.indexOf(golM)); vc.removeMobAt(vc.mobs.indexOf(hrsM)); vc.removeMobAt(vc.mobs.indexOf(vilM)); vc.removeMobAt(vc.mobs.indexOf(cowM)); if (false) { {
             }
           }
         });

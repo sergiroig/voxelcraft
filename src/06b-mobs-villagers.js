@@ -88,7 +88,7 @@ for (const [mType, tile, hp, loot, geoName, w, h, d, hostile] of EXTRA_MOB_SPECS
   const isHum = HUMANOID_EXTRA.has(mType), isQuad = QUADRUPED_EXTRA.has(mType);
   const legH = mType === 'camel' ? 1.02 : (mType === 'horse' ? 0.82 : (mType === 'warden' ? 0.96 : (mType === 'wither_skeleton' ? 0.90 : (isHum ? 0.75 : (mType === 'polarbear' ? 0.68 : (mType === 'panda' || mType === 'strider' ? 0.58 : 0.34))))));
   const legW = (mType === 'warden' || mType === 'polarbear' || mType === 'panda') ? 0.28 : (isHum || mType === 'horse' || mType === 'camel' ? 0.24 : 0.16);
-  const legGeo = makeMobBox(legW, legH, legW, tile, tile, tile, tile);
+  const legGeo = makeMobBox(legW, legH, legW, tile, tile, tile, tile, null, true);
   const headS = mType === 'warden' ? 0.68 : (mType === 'wither_skeleton' ? 0.56 : (isHum || mType === 'horse' || mType === 'camel' || mType === 'polarbear' || mType === 'panda' ? 0.50 : Math.max(0.28, w * 0.75)));
   const headGeo = makeMobBox(headS, headS, headS, tile, tile, tile, tile);
   EXTRA_MOB_MAP[mType] = { tile, hp, loot, geoName, legGeo, headGeo, legH, headS, isHum, isQuad, w, h, d, hostile };
@@ -105,19 +105,19 @@ createMobMesh = function(type) {
   if (spec.isHum) {
     addP(mobGeos[spec.geoName], 0, spec.legH + spec.h * 0.5, 0);
     const head = addP(spec.headGeo, 0, spec.legH + spec.h + spec.headS * 0.5, 0);
-    const armL = addP(spec.legGeo, -(spec.w * 0.5 + 0.12), spec.legH + spec.h * 0.55, 0.10), armR = addP(spec.legGeo, spec.w * 0.5 + 0.12, spec.legH + spec.h * 0.55, 0.10);
-    const l1 = addP(spec.legGeo, -spec.w * 0.25, spec.legH * 0.5, 0), l2 = addP(spec.legGeo, spec.w * 0.25, spec.legH * 0.5, 0);
+    const armL = addP(spec.legGeo, -(spec.w * 0.5 + 0.12), spec.legH + spec.h * 0.90, 0.10), armR = addP(spec.legGeo, spec.w * 0.5 + 0.12, spec.legH + spec.h * 0.90, 0.10);
+    const l1 = addP(spec.legGeo, -spec.w * 0.25, spec.legH, 0), l2 = addP(spec.legGeo, spec.w * 0.25, spec.legH, 0);
     return { root, head, legs: [l1, l2, armL, armR], mats, height: spec.legH + spec.h + spec.headS, radius: Math.max(0.38, spec.w * 0.55) };
   }
   if (spec.isQuad) {
     addP(mobGeos[spec.geoName], 0, spec.legH + spec.h * 0.5, 0);
     const head = addP(spec.headGeo, 0, spec.legH + spec.h * 0.85, spec.d * 0.54);
-    const lx = spec.w * 0.30, ly = spec.legH * 0.5, lz = spec.d * 0.34;
+    const lx = spec.w * 0.30, ly = spec.legH, lz = spec.d * 0.36;
     const legs = [[-lx, ly, lz], [lx, ly, lz], [-lx, ly, -lz], [lx, ly, -lz]].map(([px, py, pz]) => addP(spec.legGeo, px, py, pz));
     return { root, head, legs, mats, height: spec.legH + spec.h + spec.headS * 0.6, radius: Math.max(0.42, spec.w * 0.55) };
   }
   const head = addP(mobGeos[spec.geoName], 0, spec.legH + spec.h * 0.5, 0);
-  const l1 = addP(spec.legGeo, -spec.w * 0.25, spec.legH * 0.5, 0), l2 = addP(spec.legGeo, spec.w * 0.25, spec.legH * 0.5, 0);
+  const l1 = addP(spec.legGeo, -spec.w * 0.25, spec.legH, 0), l2 = addP(spec.legGeo, spec.w * 0.25, spec.legH, 0);
   return { root, head, legs: [l1, l2], mats, height: spec.legH + spec.h, radius: Math.max(0.35, spec.w * 0.5) };
 };
 
