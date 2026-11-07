@@ -36,19 +36,31 @@ function saveWorldData() {
 loadSaveData();
 let generator = createWorldGenerator(worldSeed);
 
-const chunks = new Map();
+const chunks = new Map(), chunkDataCache = new Map(), MAX_CACHED_CHUNKS = 1024;
 const buildQueue = [];
 
 const chunkKey = (cx, cz) => `${cx},${cz}`;
 const voxelIndex = (lx, y, lz) => (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT + y;
 
+function cacheUnloadedChunk(key, ch) {
+  if (!ch || !ch.data) return;
+  if (chunkDataCache.size >= MAX_CACHED_CHUNKS) chunkDataCache.delete(chunkDataCache.keys().next().value);
+  chunkDataCache.set(key, { seed: worldSeed, dLen: worldDeltas[key] ? worldDeltas[key].length : 0, data: ch.data, light: ch.light, lightReady: ch.lightReady, maxY: ch.maxY, mapColors: ch.mapColors });
+}
+
 function getChunkData(cx, cz) {
   const key = chunkKey(cx, cz);
   let ch = chunks.get(key);
   if (!ch) {
-    const data = generator.generateChunkVoxels(cx, cz, worldDeltas[key]);
-    const light = new Uint8Array(CHUNK_VOLUME);
-    ch = { cx, cz, data, light, lightReady: false, solidMesh: null, waterMesh: null, dirty: true, queued: false, meshVersion: 0 };
+    const cached = chunkDataCache.get(key), dLen = worldDeltas[key] ? worldDeltas[key].length : 0;
+    if (cached && cached.seed === worldSeed && cached.dLen === dLen) {
+      chunkDataCache.delete(key);
+      ch = { cx, cz, data: cached.data, light: cached.light, lightReady: cached.lightReady, maxY: cached.maxY, mapColors: cached.mapColors, solidMesh: null, waterMesh: null, dirty: true, queued: false, meshVersion: 0 };
+    } else {
+      const data = generator.generateChunkVoxels(cx, cz, worldDeltas[key]);
+      const light = new Uint8Array(CHUNK_VOLUME);
+      ch = { cx, cz, data, light, lightReady: false, solidMesh: null, waterMesh: null, dirty: true, queued: false, meshVersion: 0 };
+    }
     chunks.set(key, ch);
   }
   return ch;

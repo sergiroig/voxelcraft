@@ -655,7 +655,7 @@ function applyWorldSeed(newSeed) {
     if (ch.solidMesh) { chunkSolidGroup.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
     if (ch.waterMesh) { scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); }
   }
-  chunks.clear(); buildQueue.length = 0; simQueue.clear();
+  chunks.clear(); if (typeof chunkDataCache !== 'undefined') chunkDataCache.clear(); buildQueue.length = 0; simQueue.clear();
   if (typeof leafDecayQueue !== 'undefined') leafDecayQueue.length = 0;
   while (mobs.length > 0) removeMobAt(0);
   for (const t of activeTNTs) scene.remove(t.mesh);

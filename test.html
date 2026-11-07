@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=102"></iframe>
+    <iframe id="game-frame" src="./index.html?v=103"></iframe>
   </div>
 
   <script>
@@ -769,7 +769,7 @@
       describe('14. Web Worker Multihilo (Blob + Transferable) y Escalado Dinámico', () => {
         it('Ejecuta el meshing de chunks en Web Worker con Transferable ArrayBuffers (Zero-Copy) e idéntica geometría', async () => {
           const wState0 = vc.getWorkerState();
-          assert(wState0.hasWorker === true, 'meshWorker (Blob URL) debería estar inicializado y activo');
+          assert(wState0.hasWorker === true && wState0.workerPoolSize >= 2, 'Pool multihilo de Web Workers (Blob URL) debería estar inicializado con >= 2 hilos');
 
           // Compare synchronous mesh arrays vs Worker mesh arrays on chunk (0, 0)
           const syncMesh = vc.buildChunkMeshArrays(0, 0, vc.getVoxelGlobal, vc.getLightGlobal, vc.getState().sunFactor);
@@ -777,6 +777,8 @@
           const workerMesh = await vc.requestChunkMeshWorker(0, 0);
 
           assert(workerMesh !== null && workerMesh.solid && workerMesh.water, 'requestChunkMeshWorker(0,0) debe resolver con buffers solid y water');
+          assert(workerMesh.solid.idx instanceof win.Uint16Array && syncMesh.solid.idx instanceof win.Uint16Array, 'Los buffers de índices de chunks deben usar Uint16Array (50% menos VRAM)');
+          assert(vc.getWorkerState().paddedBufferPoolSize >= 2 && vc.chunkDataCache instanceof win.Map, 'El pool Zero-GC de buffers padded y la caché RAM chunkDataCache deben estar activos');
           assert(
             vc.getWorkerState().workerJobsCompleted >= completedBefore + 1,
             'workerJobsCompleted debe incrementarse al completar el trabajo en el Web Worker'

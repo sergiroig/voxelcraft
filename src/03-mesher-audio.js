@@ -74,12 +74,12 @@ const MAX_VERTS = 55000;
 const scratchPos = new Float32Array(MAX_VERTS * 3);
 const scratchUV  = new Float32Array(MAX_VERTS * 2);
 const scratchCol = new Float32Array(MAX_VERTS * 3);
-const scratchIdx = new Uint32Array((MAX_VERTS / 4) * 6);
+const scratchIdx = new Uint16Array((MAX_VERTS / 4) * 6);
 
 const scratchWPos = new Float32Array(12000 * 3);
 const scratchWUV  = new Float32Array(12000 * 2);
 const scratchWCol = new Float32Array(12000 * 3);
-const scratchWIdx = new Uint32Array((12000 / 4) * 6);
+const scratchWIdx = new Uint16Array((12000 / 4) * 6);
 
 function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor, lodLevel = 0, maxY) {
   let vCount = 0, iCount = 0;
@@ -97,8 +97,9 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
     const wz = wz0 + lz;
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       const wx = wx0 + lx;
-      for (let y = yStart; y < yEnd; y++) {
-        const blockId = getVoxelGlobal(wx, y, wz);
+      let belowId = yStart > 0 ? getVoxelGlobal(wx, yStart - 1, wz) : BLOCK.BEDROCK, blockId = yStart < yEnd ? getVoxelGlobal(wx, yStart, wz) : BLOCK.AIR, aboveId = BLOCK.AIR;
+      for (let y = yStart; y < yEnd; y++, belowId = blockId, blockId = aboveId) {
+        aboveId = (y + 1 < CHUNK_HEIGHT) ? getVoxelGlobal(wx, y + 1, wz) : BLOCK.AIR;
         if (blockId === BLOCK.AIR) continue;
 
         const def = BLOCK_DEFS[blockId];
@@ -157,8 +158,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           continue;
         }
 
-        const isWater = blockId === BLOCK.WATER;
-        const isGlow = def.light > 5;
+        const isWater = blockId === BLOCK.WATER, isGlow = def.light > 5, isLeaves = blockId === BLOCK.LEAVES || blockId === BLOCK.SNOW_LEAVES;
 
         for (let f = 0; f < 6; f++) {
           if (lodLevel > 0 && f === 1 && y <= SEA_LEVEL + 2) continue;
@@ -167,11 +167,10 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
           const ny = y + face.dir[1];
           const nz = wz + face.dir[2];
 
-          const neighborId = ny < 0 ? BLOCK.BEDROCK : (ny >= CHUNK_HEIGHT ? BLOCK.AIR : getVoxelGlobal(nx, ny, nz));
+          const neighborId = f === 0 ? aboveId : (f === 1 ? belowId : getVoxelGlobal(nx, ny, nz));
           const nDef = BLOCK_DEFS[neighborId];
 
           // Hidden Face Culling (do not cull between swaying leaves and stationary blocks)
-          const isLeaves = blockId === BLOCK.LEAVES || blockId === BLOCK.SNOW_LEAVES;
           const neighborIsLeaves = neighborId === BLOCK.LEAVES || neighborId === BLOCK.SNOW_LEAVES;
           if (isLeaves) { if (neighborId === blockId) continue; }
           else if (neighborIsLeaves) { /* keep face against swaying leaves */ }

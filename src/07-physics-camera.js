@@ -640,9 +640,9 @@ function updateChunkStreaming() {
       for (let dx = -renderDistance; dx <= renderDistance; dx++) {
         const dSq = dx * dx + dz * dz;
         if (dSq > maxDistSq) continue;
-        const cKey = chunkKey(pcx + dx, pcz + dz), exists = chunks.has(cKey);
-        if (!exists && dSq > 9 && createdThisFrame >= 12) { lastPlayerChunkX = null; continue; }
-        if (!exists) createdThisFrame++;
+        const cKey = chunkKey(pcx + dx, pcz + dz), exists = chunks.has(cKey), inCache = !exists && typeof chunkDataCache !== 'undefined' && chunkDataCache.has(cKey);
+        if (!exists && !inCache && dSq > 9 && createdThisFrame >= 12) { lastPlayerChunkX = null; continue; }
+        if (!exists && !inCache) createdThisFrame++;
         const ch = exists ? chunks.get(cKey) : getChunkData(pcx + dx, pcz + dz);
         const targetLod = dSq > 25 ? 1 : 0;
         if (!ch.dirty && ch.lodLevel === 1 && targetLod === 0) ch.dirty = true;
@@ -660,6 +660,7 @@ function updateChunkStreaming() {
       if (dx * dx + dz * dz > unloadDistSq) {
         if (ch.solidMesh) { chunkSolidGroup.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); }
         if (ch.waterMesh) { scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); }
+        if (typeof cacheUnloadedChunk === 'function') cacheUnloadedChunk(key, ch);
         chunks.delete(key);
       }
     }
@@ -672,7 +673,7 @@ function updateChunkStreaming() {
     const dx = nextCh.cx - pcx, dz = nextCh.cz - pcz, dSq = dx * dx + dz * dz;
     const lod = dSq > 25 ? 1 : 0;
     if (meshWorker && dSq > 2) {
-      if (workerJobsInFlight >= 16) break;
+      if (workerJobsInFlight >= Math.max(16, (typeof meshWorkers !== 'undefined' ? meshWorkers.length : 4) * 4)) break;
       buildQueue.shift(); requestChunkMeshWorker(nextCh.cx, nextCh.cz, lod);
     } else {
       buildQueue.shift(); rebuildChunkImmediate(nextCh.cx, nextCh.cz, lod);

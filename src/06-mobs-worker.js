@@ -534,22 +534,11 @@ function updateMobs(dt) {
 }
 
 function applyArraysToMesh(ch, meshData, lodLevel = 0) {
-  if (ch.solidMesh) {
-    chunkSolidGroup.remove(ch.solidMesh);
-    ch.solidMesh.geometry.dispose();
-    ch.solidMesh = null;
-  }
-  if (ch.waterMesh) {
-    scene.remove(ch.waterMesh);
-    ch.waterMesh.geometry.dispose();
-    ch.waterMesh = null;
-  }
-
+  const topY = Math.min(CHUNK_HEIGHT, (ch.maxY || 44) + 3);
   if (!ch.worldBox) {
-    ch.worldBox = new THREE.Box3(
-      new THREE.Vector3(ch.cx * CHUNK_SIZE - 1, 0, ch.cz * CHUNK_SIZE - 1),
-      new THREE.Vector3((ch.cx + 1) * CHUNK_SIZE + 1, CHUNK_HEIGHT, (ch.cz + 1) * CHUNK_SIZE + 1)
-    );
+    ch.worldBox = new THREE.Box3(new THREE.Vector3(ch.cx * CHUNK_SIZE - 1, 0, ch.cz * CHUNK_SIZE - 1), new THREE.Vector3((ch.cx + 1) * CHUNK_SIZE + 1, topY, (ch.cz + 1) * CHUNK_SIZE + 1));
+  } else {
+    ch.worldBox.max.y = topY;
   }
 
   if (meshData.solid.idx.length > 0) {
@@ -559,11 +548,10 @@ function applyArraysToMesh(ch, meshData, lodLevel = 0) {
     geo.setAttribute('color', new THREE.BufferAttribute(meshData.solid.col, 3));
     geo.setIndex(new THREE.BufferAttribute(meshData.solid.idx, 1));
     geo.computeBoundingSphere();
-
-    const mesh = new THREE.Mesh(geo, solidMaterial);
-    mesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE);
-    chunkSolidGroup.add(mesh);
-    ch.solidMesh = mesh;
+    if (ch.solidMesh) { ch.solidMesh.geometry.dispose(); ch.solidMesh.geometry = geo; }
+    else { const mesh = new THREE.Mesh(geo, solidMaterial); mesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE); chunkSolidGroup.add(mesh); ch.solidMesh = mesh; }
+  } else if (ch.solidMesh) {
+    chunkSolidGroup.remove(ch.solidMesh); ch.solidMesh.geometry.dispose(); ch.solidMesh = null;
   }
 
   if (meshData.water.idx.length > 0) {
@@ -573,17 +561,13 @@ function applyArraysToMesh(ch, meshData, lodLevel = 0) {
     wGeo.setAttribute('color', new THREE.BufferAttribute(meshData.water.col, 3));
     wGeo.setIndex(new THREE.BufferAttribute(meshData.water.idx, 1));
     wGeo.computeBoundingSphere();
-
-    const wMesh = new THREE.Mesh(wGeo, waterMaterial);
-    wMesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE);
-    wMesh.renderOrder = 1;
-    scene.add(wMesh);
-    ch.waterMesh = wMesh;
+    if (ch.waterMesh) { ch.waterMesh.geometry.dispose(); ch.waterMesh.geometry = wGeo; }
+    else { const wMesh = new THREE.Mesh(wGeo, waterMaterial); wMesh.position.set(ch.cx * CHUNK_SIZE, 0, ch.cz * CHUNK_SIZE); wMesh.renderOrder = 1; scene.add(wMesh); ch.waterMesh = wMesh; }
+  } else if (ch.waterMesh) {
+    scene.remove(ch.waterMesh); ch.waterMesh.geometry.dispose(); ch.waterMesh = null;
   }
 
-  ch.lodLevel = lodLevel || 0;
-  ch.dirty = false;
-  ch.queued = false;
+  ch.lodLevel = lodLevel || 0; ch.dirty = false; ch.queued = false;
 }
 
 function rebuildChunkImmediate(cx, cz, lodLevel = 0) {
@@ -607,6 +591,7 @@ function rebuildChunkImmediate(cx, cz, lodLevel = 0) {
 // ============================================================================
 const PADDED_SIZE = CHUNK_SIZE + 2;
 const PADDED_VOL  = PADDED_SIZE * PADDED_SIZE * CHUNK_HEIGHT;
+const paddedBufferPool = [];
 
 function packChunkPaddedBuffers(cx, cz, lodLevel = 0) {
   const surfaceOnly = lodLevel > 0;
@@ -619,8 +604,8 @@ function packChunkPaddedBuffers(cx, cz, lodLevel = 0) {
   const centerCh = getChunkData(cx, cz);
   if (!centerCh.lightReady || (!surfaceOnly && centerCh.lightReady === 'surface')) computeChunkLighting(centerCh, getChunkIfLoaded, surfaceOnly);
 
-  const paddedVoxels = new Uint8Array(PADDED_VOL);
-  const paddedLight  = new Uint8Array(PADDED_VOL);
+  const paddedVoxels = paddedBufferPool.length > 0 ? paddedBufferPool.pop() : new Uint8Array(PADDED_VOL);
+  const paddedLight  = paddedBufferPool.length > 0 ? paddedBufferPool.pop() : new Uint8Array(PADDED_VOL);
 
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     const srcOff = lz * CHUNK_SIZE * CHUNK_HEIGHT;
@@ -630,16 +615,11 @@ function packChunkPaddedBuffers(cx, cz, lodLevel = 0) {
   }
 
   const copyBorderCol = (plx, plz) => {
-    const wx = cx * CHUNK_SIZE + (plx - 1);
-    const wz = cz * CHUNK_SIZE + (plz - 1);
-    const ncx = Math.floor(wx / CHUNK_SIZE);
-    const ncz = Math.floor(wz / CHUNK_SIZE);
-    const nCh = chunks.get(chunkKey(ncx, ncz));
-    if (!nCh) return;
-    const nlx = wx - ncx * CHUNK_SIZE;
-    const nlz = wz - ncz * CHUNK_SIZE;
-    const srcOff = (nlz * CHUNK_SIZE + nlx) * CHUNK_HEIGHT;
-    const dstOff = (plz * PADDED_SIZE + plx) * CHUNK_HEIGHT;
+    const wx = cx * CHUNK_SIZE + (plx - 1), wz = cz * CHUNK_SIZE + (plz - 1);
+    const ncx = Math.floor(wx / CHUNK_SIZE), ncz = Math.floor(wz / CHUNK_SIZE);
+    const nCh = chunks.get(chunkKey(ncx, ncz)), dstOff = (plz * PADDED_SIZE + plx) * CHUNK_HEIGHT;
+    if (!nCh) { paddedVoxels.fill(0, dstOff, dstOff + CHUNK_HEIGHT); paddedLight.fill(0xF0, dstOff, dstOff + CHUNK_HEIGHT); return; }
+    const nlx = wx - ncx * CHUNK_SIZE, nlz = wz - ncz * CHUNK_SIZE, srcOff = (nlz * CHUNK_SIZE + nlx) * CHUNK_HEIGHT;
     paddedVoxels.set(nCh.data.subarray(srcOff, srcOff + CHUNK_HEIGHT), dstOff);
     paddedLight.set(nCh.light.subarray(srcOff, srcOff + CHUNK_HEIGHT), dstOff);
   };
@@ -657,6 +637,8 @@ function packChunkPaddedBuffers(cx, cz, lodLevel = 0) {
 }
 
 let meshWorker = null;
+const meshWorkers = [];
+const WORKER_POOL_SIZE = Math.min(8, Math.max(2, (typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency - 1 : 4)));
 let workerJobSeq = 0;
 let workerJobsInFlight = 0;
 let workerJobsCompleted = 0;
@@ -679,12 +661,12 @@ try {
     const scratchPos = new Float32Array(MAX_VERTS * 3);
     const scratchUV  = new Float32Array(MAX_VERTS * 2);
     const scratchCol = new Float32Array(MAX_VERTS * 3);
-    const scratchIdx = new Uint32Array((MAX_VERTS / 4) * 6);
+    const scratchIdx = new Uint16Array((MAX_VERTS / 4) * 6);
 
     const scratchWPos = new Float32Array(12000 * 3);
     const scratchWUV  = new Float32Array(12000 * 2);
     const scratchWCol = new Float32Array(12000 * 3);
-    const scratchWIdx = new Uint32Array((12000 / 4) * 6);
+    const scratchWIdx = new Uint16Array((12000 / 4) * 6);
 
     ${buildChunkMeshArrays.toString()}
 
@@ -711,26 +693,21 @@ try {
 
       const meshData = buildChunkMeshArrays(cx, cz, getVoxelLocal, getLightLocal, sunFactor, lodLevel || 0, maxY);
       self.postMessage(
-        { jobId, cx, cz, lodLevel: lodLevel || 0, solid: meshData.solid, water: meshData.water },
+        { jobId, cx, cz, lodLevel: lodLevel || 0, solid: meshData.solid, water: meshData.water, paddedVoxels, paddedLight },
         [
-          meshData.solid.pos.buffer,
-          meshData.solid.uv.buffer,
-          meshData.solid.col.buffer,
-          meshData.solid.idx.buffer,
-          meshData.water.pos.buffer,
-          meshData.water.uv.buffer,
-          meshData.water.col.buffer,
-          meshData.water.idx.buffer
+          meshData.solid.pos.buffer, meshData.solid.uv.buffer, meshData.solid.col.buffer, meshData.solid.idx.buffer,
+          meshData.water.pos.buffer, meshData.water.uv.buffer, meshData.water.col.buffer, meshData.water.idx.buffer,
+          paddedVoxels.buffer, paddedLight.buffer
         ]
       );
     };
   `;
   const blob = new Blob([workerSource], { type: 'application/javascript' });
   const blobUrl = URL.createObjectURL(blob);
-  meshWorker = new Worker(blobUrl);
-
-  meshWorker.onmessage = (e) => {
-    const { jobId, cx, cz, lodLevel, solid, water } = e.data;
+  const handleWorkerMsg = (e) => {
+    const { jobId, cx, cz, lodLevel, solid, water, paddedVoxels, paddedLight } = e.data;
+    if (paddedVoxels && paddedBufferPool.length < 64) paddedBufferPool.push(paddedVoxels);
+    if (paddedLight && paddedBufferPool.length < 64) paddedBufferPool.push(paddedLight);
     const job = pendingWorkerJobs.get(jobId);
     pendingWorkerJobs.delete(jobId);
     workerJobsInFlight = Math.max(0, workerJobsInFlight - 1);
@@ -742,8 +719,6 @@ try {
     if (ch) {
       if (!job || ch.meshVersion === job.version) {
         applyArraysToMesh(ch, meshData, lodLevel || 0); if ((lodLevel || 0) > 0 && typeof player !== 'undefined' && (ch.cx - Math.floor(player.x / CHUNK_SIZE)) ** 2 + (ch.cz - Math.floor(player.z / CHUNK_SIZE)) ** 2 <= 25) { ch.dirty = true; ch.queued = true; buildQueue.unshift(ch); }
-      } else {
-        ch.queued = false;
       }
     }
     const applyMs = performance.now() - tApply0;
@@ -752,6 +727,12 @@ try {
       job.resolve(meshData);
     }
   };
+  for (let i = 0; i < WORKER_POOL_SIZE; i++) {
+    const w = new Worker(blobUrl);
+    w.onmessage = handleWorkerMsg;
+    meshWorkers.push(w);
+  }
+  meshWorker = meshWorkers[0];
 } catch (_) {
   meshWorker = null;
 }
@@ -770,10 +751,11 @@ function requestChunkMeshWorker(cx, cz, lodLevel = 0) {
 
   const jobId = ++workerJobSeq;
   workerJobsInFlight++;
+  const targetWorker = meshWorkers[((cx * 31 + cz) >>> 0) % meshWorkers.length] || meshWorker;
 
   return new Promise((resolve) => {
     pendingWorkerJobs.set(jobId, { ch, cx, cz, version, packMs, resolve });
-    meshWorker.postMessage(
+    targetWorker.postMessage(
       { jobId, cx, cz, sunFactor: 1.0, lodLevel, maxY: ch.maxY, paddedVoxels, paddedLight },
       [paddedVoxels.buffer, paddedLight.buffer]
     );
