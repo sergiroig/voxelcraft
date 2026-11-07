@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=96"></iframe>
+    <iframe id="game-frame" src="./index.html?v=97"></iframe>
   </div>
 
   <script>
@@ -477,7 +477,7 @@
           vc.setTimeOfDay(0);
           const noonSun = vc.sunMesh.material.color.clone(), noonSky = vc.scene.background.clone();
           assert(noonSun.r > 0.98 && noonSun.g > 0.98 && noonSun.b > 0.98, 'Durante el día el Sol debe ser blanco solar puro (no amarillo)');
-          assert(noonSky.b > noonSky.r && noonSky.g > 0.65, 'Al mediodía el cielo debe ser azul celeste realista');
+          assert(noonSky.b > noonSky.r && noonSky.g > 0.65, 'Al mediodía el cielo debe ser azul celeste realista'); vc.setTimeOfDay(Math.acos(0.25)); assert(vc.cloudMesh.material.color.r > 0.99 && vc.cloudMesh.material.color.g > 0.99 && vc.cloudMesh.material.color.b > 0.99, 'Durante todo el día (sunElev >= 0.12) las nubes deben verse 100% blancas puras y no amarillentas');
           vc.setTimeOfDay(Math.PI / 2);
           const sunsetSun = vc.sunMesh.material.color.clone(), sunsetSky = vc.scene.background.clone();
           assert(sunsetSun.r > 0.90 && sunsetSun.b < 0.35 && sunsetSun.g < noonSun.g, 'En el horizonte/atardecer el Sol debe tornarse cálido anaranjado');

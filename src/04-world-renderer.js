@@ -168,7 +168,7 @@ scene.add(chunkSolidGroup);
 const skyColorDay = new THREE.Color(0x6ec6ff), skyColorGolden = new THREE.Color(0xf4845f), skyColorTwilight = new THREE.Color(0xb84a39), skyColorNight = new THREE.Color(0x070b16);
 const fogColorDay = new THREE.Color(0x9ecff8), fogColorTwilight = new THREE.Color(0x52567a), fogColorNight = new THREE.Color(0x070b16), currentFogColor = fogColorDay.clone();
 const currentSkyColor = skyColorDay.clone(), sunColHorizon = new THREE.Color(0xff5e2b), sunColGolden = new THREE.Color(0xffe8cc), sunColNoon = new THREE.Color(0xffffff);
-const cloudColDay = new THREE.Color(0xf8fafc), cloudColSunset = new THREE.Color(0xfdba8c), cloudColNight = new THREE.Color(0x263147);
+const cloudColDay = new THREE.Color(0xffffff), cloudColSunset = new THREE.Color(0xffe4d6), cloudColNight = new THREE.Color(0x263147);
 scene.background = currentSkyColor.clone(); scene.fog = new THREE.FogExp2(0x6ec6ff, 0.0055);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 850);
 scene.add(camera);
@@ -670,20 +670,20 @@ const starField = new THREE.Points(starGeo, starMat); starField.renderOrder = -4
 
 // Merged 3D Voxel Clouds (Single BufferGeometry = 1 Draw Call!)
 const cloudMesh = (() => {
-  const TILE = 480, boxes = [], pos = [], col = [], idx = [];
+  const TILE = 480, N = 60, CS = 8, grid = new Uint8Array(N * N), pos = [], col = [], idx = [];
   let cSeed = 9001, vOff = 0;
   const cRand = () => { cSeed = (cSeed * 1664525 + 1013904223) >>> 0; return (cSeed & 0xffff) / 0x10000; };
-  for (let i = 0; i < 42; i++) { const cx = cRand() * TILE, cz = cRand() * TILE, lobes = 1 + ((cRand() * 3) | 0); for (let l = 0; l < lobes; l++) boxes.push({ x: ((cx + (l ? (cRand() - 0.5) * 26 : 0)) % TILE + TILE) % TILE, z: ((cz + (l ? (cRand() - 0.5) * 22 : 0)) % TILE + TILE) % TILE, w: 14 + Math.floor(cRand() * 24), d: 12 + Math.floor(cRand() * 20) }); }
+  for (let i = 0; i < 38; i++) { const cx = (cRand() * N) | 0, cz = (cRand() * N) | 0, lobes = 1 + ((cRand() * 3) | 0); for (let l = 0; l < lobes; l++) { const ox = cx + (l ? ((cRand() * 5) | 0) - 2 : 0), oz = cz + (l ? ((cRand() * 5) | 0) - 2 : 0), w = 2 + ((cRand() * 3) | 0), d = 2 + ((cRand() * 3) | 0); for (let dz = 0; dz < d; dz++) for (let dx = 0; dx < w; dx++) grid[(((oz + dz + N) % N) * N) + ((ox + dx + N) % N)] = 1; } }
   const pushQuad = (p0, p1, p2, p3, sh) => { pos.push(...p0, ...p1, ...p2, ...p3); col.push(sh,sh,sh, sh,sh,sh, sh,sh,sh, sh,sh,sh); idx.push(vOff, vOff + 1, vOff + 2, vOff, vOff + 2, vOff + 3); vOff += 4; };
-  for (let tz = -1; tz <= 1; tz++) for (let tx = -1; tx <= 1; tx++) for (const b of boxes) {
-    const x0 = tx * TILE + b.x, x1 = x0 + b.w, y0 = 192, y1 = 195.5, z0 = tz * TILE + b.z, z1 = z0 + b.d;
-    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0], 1.00); pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1], 0.78);
-    pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1], 0.90); pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0], 0.90);
-    pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1], 0.84); pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0], 0.84);
+  for (let tz = -1; tz <= 1; tz++) for (let tx = -1; tx <= 1; tx++) for (let gz = 0; gz < N; gz++) for (let gx = 0; gx < N; gx++) if (grid[gz * N + gx]) {
+    const x0 = tx * TILE + gx * CS, x1 = x0 + CS, y0 = 192, y1 = 195.5, z0 = tz * TILE + gz * CS, z1 = z0 + CS;
+    pushQuad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0], 1.00); pushQuad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1], 0.93);
+    if (!grid[((gz + 1) % N) * N + gx]) pushQuad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1], 0.97); if (!grid[((gz + N - 1) % N) * N + gx]) pushQuad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0], 0.97);
+    if (!grid[gz * N + ((gx + 1) % N)]) pushQuad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1], 0.95); if (!grid[gz * N + ((gx + N - 1) % N)]) pushQuad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0], 0.95);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx);
-  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.82, depthWrite: false, fog: false })); m.frustumCulled = false;
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.90, depthWrite: true, fog: false })); m.frustumCulled = false;
   scene.add(m); return m;
 })();
 
@@ -744,15 +744,15 @@ function updateDynamicSky(dt) {
   currentFogColor.copy(fogColorNight).lerp(fogColorDay, dayF).lerp(fogColorTwilight, twiF * 0.75);
   if (sunElev >= 0.22) {
     const t = THREE.MathUtils.smoothstep(sunElev, 0.22, 0.58);
-    currentSkyColor.copy(skyColorGolden).lerp(skyColorDay, t); cloudMesh.material.color.copy(cloudColSunset).lerp(cloudColDay, t);
+    currentSkyColor.copy(skyColorGolden).lerp(skyColorDay, t); cloudMesh.material.color.copy(cloudColDay);
     gpuShaderUniforms.uSunLightColor.value.set(1.0, 0.78 + 0.22 * t, 0.58 + 0.42 * t);
   } else if (sunElev >= 0.0) {
     const t = THREE.MathUtils.smoothstep(sunElev, 0.0, 0.22);
-    currentSkyColor.copy(skyColorTwilight).lerp(skyColorGolden, t); cloudMesh.material.color.copy(cloudColNight).lerp(cloudColSunset, t);
+    currentSkyColor.copy(skyColorTwilight).lerp(skyColorGolden, t); cloudMesh.material.color.copy(sunElev >= 0.12 ? cloudColDay : cloudColSunset.clone().lerp(cloudColDay, THREE.MathUtils.smoothstep(sunElev, 0.0, 0.12)));
     gpuShaderUniforms.uSunLightColor.value.set(0.52 + 0.48 * t, 0.36 + 0.42 * t, 0.34 + 0.24 * t);
   } else if (sunElev >= -0.12) {
     const t = THREE.MathUtils.smoothstep(sunElev, -0.12, 0.0);
-    currentSkyColor.copy(skyColorNight).lerp(skyColorTwilight, t); cloudMesh.material.color.copy(cloudColNight);
+    currentSkyColor.copy(skyColorNight).lerp(skyColorTwilight, t); cloudMesh.material.color.copy(cloudColNight).lerp(cloudColSunset, t);
     gpuShaderUniforms.uSunLightColor.value.set(0.18 + 0.34 * t, 0.22 + 0.14 * t, 0.34);
   } else {
     currentSkyColor.copy(skyColorNight); cloudMesh.material.color.copy(cloudColNight);
