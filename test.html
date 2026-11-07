@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=100"></iframe>
+    <iframe id="game-frame" src="./index.html?v=101"></iframe>
   </div>
 
   <script>
@@ -2407,7 +2407,7 @@
             'El Agua vertida en altura debe expandirse horizontalmente a sus 4 vecinos cardinales sobre suelo sólido'
           );
           vc.updateVoxelSimulation(0.20);
-          assert(vc.getVoxelGlobal(cx + 2, cy, cz) === vc.BLOCK.AIR, 'El charco de Agua en altura debe quedar acotado y no inundar infinitamente a radio 2');
+          assert(vc.getVoxelGlobal(cx + 2, cy, cz) === vc.BLOCK.AIR, 'El charco de Agua en altura debe quedar acotado y no inundar infinitamente a radio 2'); const ucy = 50; for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { vc.setVoxelGlobal(cx + dx, ucy - 1, cz + dz, vc.BLOCK.STONE); vc.setVoxelGlobal(cx + dx, ucy, cz + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(cx + dx, ucy + 1, cz + dz, vc.BLOCK.AIR); } vc.setVoxelGlobal(cx, ucy, cz, vc.BLOCK.WATER); vc.updateVoxelSimulation(0.20); vc.updateVoxelSimulation(0.20); assert(vc.getVoxelGlobal(cx + 2, ucy, cz) === vc.BLOCK.AIR, 'El Agua en cuevas subterráneas (wy < SEA_LEVEL) debe quedar acotada y no inundar infinitamente'); for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { vc.setVoxelGlobal(cx + dx, ucy, cz + dz, vc.BLOCK.AIR); vc.setVoxelGlobal(cx + dx, ucy - 1, cz + dz, vc.BLOCK.AIR); }
 
           // Limpiar y probar expansión horizontal de Lava en (10, 54, 10)
           for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) vc.setVoxelGlobal(cx + dx, cy, cz + dz, vc.BLOCK.AIR);

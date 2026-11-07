@@ -333,7 +333,7 @@ function createWorldGenerator(seed) {
                   data[colOffset + y] = (y === ravFloor) ? ((lx + lz) & 1 ? BLOCK.LAVA : BLOCK.WATER) : BLOCK.AIR;
                   continue;
                 }
-                if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 4 && y >= Math.min(surfY - 3, SEA_LEVEL - 4))) continue;
+                if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 5 && y >= Math.min(surfY - 3, SEA_LEVEL - 6))) continue;
                 const fy = dy * 0.25;
                 const c0 = (v000 + fx * (v100 - v000)) + fy * ((v010 + fx * (v110 - v010)) - (v000 + fx * (v100 - v000)));
                 const c1 = (v001 + fx * (v101 - v001)) + fy * ((v011 + fx * (v111 - v011)) - (v001 + fx * (v101 - v001)));
@@ -425,11 +425,11 @@ function createWorldGenerator(seed) {
     for (let pass = 0; pass < 2; pass++) for (let lz = 0; lz < CHUNK_SIZE; lz++) {
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
         const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT;
-        for (let y = SEA_LEVEL; y >= 3; y--) {
+        for (let y = SEA_LEVEL; y >= SEA_LEVEL - 9; y--) {
           const bBelow = data[colOffset + y - 1];
           if (data[colOffset + y] === BLOCK.WATER && (bBelow === BLOCK.AIR || (BLOCK_DEFS[bBelow].shape === 'cross' && bBelow !== BLOCK.LADDER))) data[colOffset + y - 1] = BLOCK.WATER;
         }
-        for (let y = 2; y <= SEA_LEVEL; y++) {
+        for (let y = SEA_LEVEL - 9; y <= SEA_LEVEL; y++) {
           const b = data[colOffset + y];
           if (b === BLOCK.AIR || (BLOCK_DEFS[b].shape === 'cross' && b !== BLOCK.LADDER)) {
             const wN = (lx > 0 && data[colOffset - CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lx < 15 && data[colOffset + CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lz > 0 && data[colOffset - CHUNK_SIZE * CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0) + (lz < 15 && data[colOffset + CHUNK_SIZE * CHUNK_HEIGHT + y] === BLOCK.WATER ? 1 : 0);

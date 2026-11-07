@@ -626,7 +626,7 @@ let lastPlayerChunkX = null, lastPlayerChunkZ = null;
 function updateChunkStreaming() {
   const pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE);
 
-  if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ || buildQueue.length === 0) {
+  if (pcx !== lastPlayerChunkX || pcz !== lastPlayerChunkZ) {
     lastPlayerChunkX = pcx; lastPlayerChunkZ = pcz;
     const maxDistSq = (renderDistance + 0.5) * (renderDistance + 0.5);
 
@@ -635,11 +635,15 @@ function updateChunkStreaming() {
       if (qdx * qdx + qdz * qdz > maxDistSq) { qCh.queued = false; buildQueue.splice(i, 1); }
     }
 
+    let createdThisFrame = 0;
     for (let dz = -renderDistance; dz <= renderDistance; dz++) {
       for (let dx = -renderDistance; dx <= renderDistance; dx++) {
         const dSq = dx * dx + dz * dz;
         if (dSq > maxDistSq) continue;
-        const ch = getChunkData(pcx + dx, pcz + dz);
+        const cKey = chunkKey(pcx + dx, pcz + dz), exists = chunks.has(cKey);
+        if (!exists && dSq > 9 && createdThisFrame >= 12) { lastPlayerChunkX = null; continue; }
+        if (!exists) createdThisFrame++;
+        const ch = exists ? chunks.get(cKey) : getChunkData(pcx + dx, pcz + dz);
         const targetLod = dSq > 25 ? 1 : 0;
         if (!ch.dirty && ch.lodLevel === 1 && targetLod === 0) ch.dirty = true;
         if (ch.dirty && !ch.queued) { ch.queued = true; buildQueue.push(ch); }

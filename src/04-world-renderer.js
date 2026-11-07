@@ -131,7 +131,6 @@ function rebuildAffectedChunksSet(dirtyChunksSet) {
     const ch = chunks.get(key);
     if (ch) chList.push(ch);
   }
-  for (const ch of chList) computeChunkLighting(ch, getChunkIfLoaded);
   for (const ch of chList) rebuildChunkImmediate(ch.cx, ch.cz);
 }
 
@@ -218,11 +217,13 @@ function updateShadowMapPass() {
   shadowCamera.lookAt(sx, sy, sz);
   shadowCamera.updateMatrixWorld();
   shadowMatrix.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse);
-  const prevClearHex = renderer.getClearColor(shadowClearCol).getHex(), prevClearAlpha = renderer.getClearAlpha();
+  const prevClearHex = renderer.getClearColor(shadowClearCol).getHex(), prevClearAlpha = renderer.getClearAlpha(), pcx = Math.floor(player.x / CHUNK_SIZE), pcz = Math.floor(player.z / CHUNK_SIZE), hiddenForShadow = [];
+  for (const ch of chunks.values()) if (ch.solidMesh && ch.solidMesh.visible && ((ch.cx - pcx) ** 2 + (ch.cz - pcz) ** 2 > 25)) { ch.solidMesh.visible = false; hiddenForShadow.push(ch.solidMesh); }
   chunkSolidGroup.overrideMaterial = shadowDepthMaterial;
   renderer.setClearColor(0xffffff, 1.0);
   renderer.setRenderTarget(shadowMapTarget); renderer.clear(); renderer.render(chunkSolidGroup, shadowCamera); renderer.setRenderTarget(null);
   chunkSolidGroup.overrideMaterial = null; renderer.setClearColor(prevClearHex, prevClearAlpha);
+  for (let i = 0; i < hiddenForShadow.length; i++) hiddenForShadow[i].visible = true;
   shadowPassCount++;
   return true;
 }

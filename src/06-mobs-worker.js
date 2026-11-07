@@ -616,7 +616,7 @@ function packChunkPaddedBuffers(cx, cz, lodLevel = 0) {
     }
   }
   const centerCh = getChunkData(cx, cz);
-  if (!surfaceOnly || !centerCh.lightReady) computeChunkLighting(centerCh, getChunkIfLoaded, surfaceOnly);
+  if (!centerCh.lightReady || (!surfaceOnly && centerCh.lightReady === 'surface')) computeChunkLighting(centerCh, getChunkIfLoaded, surfaceOnly);
 
   const paddedVoxels = new Uint8Array(PADDED_VOL);
   const paddedLight  = new Uint8Array(PADDED_VOL);
@@ -737,7 +737,7 @@ try {
 
     const meshData = { solid, water };
     const tApply0 = performance.now();
-    const ch = chunks.get(chunkKey(cx, cz)) || (job && job.ch);
+    const ch = chunks.get(chunkKey(cx, cz));
     if (ch) {
       if (!job || ch.meshVersion === job.version) {
         applyArraysToMesh(ch, meshData, lodLevel || 0); if ((lodLevel || 0) > 0 && typeof player !== 'undefined' && (ch.cx - Math.floor(player.x / CHUNK_SIZE)) ** 2 + (ch.cz - Math.floor(player.z / CHUNK_SIZE)) ** 2 <= 25) { ch.dirty = true; ch.queued = true; buildQueue.unshift(ch); }

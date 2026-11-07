@@ -103,7 +103,7 @@ function scanNearbyFloatingLeaves() {
     for (let dx = -24; dx <= 24; dx++) {
       const lx = px + dx, cx = Math.floor(lx / CHUNK_SIZE);
       const dArr = worldDeltas[`${cx},${cz}`];
-      const hasDelta = dArr && dArr.length > 0, isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER), isSideNeedW = (nx, ny, nz, sBelow) => { const nb = getVoxelGlobal(nx, ny, nz); return (BLOCK_DEFS[nb].shape === 'cross' && nb !== BLOCK.LADDER) || (nb === BLOCK.AIR && (getVoxelGlobal(nx, ny - 1, nz) === BLOCK.WATER || (sBelow && isWRep(getVoxelGlobal(nx, ny - 1, nz))))); };
+      const hasDelta = dArr && dArr.length > 0; if (!hasDelta) continue; const isWRep = id => id === BLOCK.AIR || (BLOCK_DEFS[id].shape === 'cross' && id !== BLOCK.LADDER), isSideNeedW = (nx, ny, nz, sBelow) => { const nb = getVoxelGlobal(nx, ny, nz); return (BLOCK_DEFS[nb].shape === 'cross' && nb !== BLOCK.LADDER) || (nb === BLOCK.AIR && (getVoxelGlobal(nx, ny - 1, nz) === BLOCK.WATER || (sBelow && isWRep(getVoxelGlobal(nx, ny - 1, nz))))); };
       for (let dy = -14; dy <= 8; dy++) {
         const ly = py + dy;
         if (ly <= 1 || ly >= CHUNK_HEIGHT) continue;
@@ -187,7 +187,7 @@ function updateVoxelSimulation(dt) {
       } else if (isWRep(below) && wy - 1 > 1) {
         setVoxelRawNoRebuild(wx, wy - 1, wz, BLOCK.WATER, dirtySet); movedThisTick.add(`${wx},${wy - 1},${wz}`);
       } else {
-        const isSource = (wy <= SEA_LEVEL) || (getVoxelGlobal(wx + 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx - 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz + 1) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz - 1) !== BLOCK.WATER);
+        const isSource = (wy === SEA_LEVEL) || getVoxelGlobal(wx, wy + 1, wz) === BLOCK.WATER || (getVoxelGlobal(wx + 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx - 1, wy, wz) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz + 1) !== BLOCK.WATER && getVoxelGlobal(wx, wy, wz - 1) !== BLOCK.WATER);
         for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
           const sideB = getVoxelGlobal(wx + dx, wy, wz + dz);
           if (sideB === BLOCK.LAVA) {

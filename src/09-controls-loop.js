@@ -218,8 +218,8 @@ const rayDir = new THREE.Vector3();
 
 function animate(now) {
   requestAnimationFrame(animate);
-  const frameStart = performance.now();
-  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  const frameStart = performance.now(), realDt = Math.max(0.0001, (now - lastTime) / 1000);
+  const dt = Math.min(0.05, realDt);
   lastTime = now;
 
   if (!menuOpen) {
@@ -240,7 +240,7 @@ function animate(now) {
   renderer.render(scene, camera);
 
   const frameMs = performance.now() - frameStart;
-  frames++; fpsAccum += dt; frameDurationSum += frameMs;
+  frames++; fpsAccum += realDt; frameDurationSum += frameMs;
 
   if (fpsAccum >= 0.35) {
     const fps = Math.round(frames / fpsAccum);
