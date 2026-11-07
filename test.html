@@ -127,7 +127,7 @@
 
   <div class="iframe-wrap">
     <div style="font-size:12px;color:var(--muted);">Instancia en vivo bajo prueba (<code>index.html</code>):</div>
-    <iframe id="game-frame" src="./index.html?v=94"></iframe>
+    <iframe id="game-frame" src="./index.html?v=95"></iframe>
   </div>
 
   <script>
@@ -2826,7 +2826,7 @@
           assert(testCh.lightReady === 'surface', `computeChunkLighting(..., true) debe marcar lightReady='surface' sin ejecutar la cola BFS 3D subterránea (obtuvo ${testCh.lightReady})`);
           assert((testCh.light[(8 * 16 + 8) * vc.CHUNK_HEIGHT + vc.SEA_LEVEL] >> 4) >= 12, 'En modo surfaceOnly (LOD lejano), los bloques de superficie y troncos no deben quedar negros (sun >= 12)');
           vc.computeChunkLighting(testCh, (x, z) => vc.chunks.get(`${x},${z}`), false);
-          assert(testCh.lightReady === true, 'computeChunkLighting(..., false) debe completar el BFS 3D y marcar lightReady=true');
+          assert(testCh.lightReady === true, 'computeChunkLighting(..., false) debe completar el BFS 3D y marcar lightReady=true'); let minBedY = 255; for (let z = -200; z <= 200; z += 8) for (let x = -200; x <= 200; x += 8) { const gy = vc.getGenerator().sampleSurfaceAt(x, z).groundY; if (gy < minBedY) minBedY = gy; } assert(minBedY >= vc.SEA_LEVEL - 12, `El fondo de lagos/mares (minBedY=${minBedY}) debe quedar siempre por encima del corte yStart=${vc.SEA_LEVEL - 16} de lodLevel=1 para no crear agujeros en el suelo bajo el agua`);
 
           const meshFull = vc.buildChunkMeshArrays(2, 2, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 0);
           const meshLod1 = vc.buildChunkMeshArrays(2, 2, vc.getVoxelGlobal, vc.getLightGlobal, 1.0, 1);

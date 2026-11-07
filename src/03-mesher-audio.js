@@ -89,7 +89,7 @@ function buildChunkMeshArrays(cx, cz, getVoxelGlobal, getLightGlobal, sunFactor,
   const wz0 = cz * CHUNK_SIZE;
   const uvStep = 1.0 / ATLAS_COLS;
   const uvPad = 0.0015 / ATLAS_COLS;
-  const yStart = lodLevel > 0 ? Math.max(0, SEA_LEVEL - 4) : 0;
+  const yStart = lodLevel > 0 ? Math.max(0, SEA_LEVEL - 16) : 0;
   if (maxY === undefined && typeof chunks !== 'undefined') { const c = chunks.get(`${cx},${cz}`); if (c && c.maxY) maxY = c.maxY; }
   const yEnd = Math.min(CHUNK_HEIGHT, (maxY || CHUNK_HEIGHT - 1) + 2);
 

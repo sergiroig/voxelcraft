@@ -641,7 +641,7 @@ function updateChunkStreaming() {
         if (dSq > maxDistSq) continue;
         const ch = getChunkData(pcx + dx, pcz + dz);
         const targetLod = dSq > 25 ? 1 : 0;
-        if (!ch.dirty && ch.solidMesh && ch.lodLevel === 1 && targetLod === 0) ch.dirty = true;
+        if (!ch.dirty && ch.lodLevel === 1 && targetLod === 0) ch.dirty = true;
         if (ch.dirty && !ch.queued) { ch.queued = true; buildQueue.push(ch); }
       }
     }

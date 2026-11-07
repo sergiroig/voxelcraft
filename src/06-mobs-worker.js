@@ -739,7 +739,7 @@ try {
     const ch = chunks.get(chunkKey(cx, cz)) || (job && job.ch);
     if (ch) {
       if (!job || ch.meshVersion === job.version) {
-        applyArraysToMesh(ch, meshData, lodLevel || 0);
+        applyArraysToMesh(ch, meshData, lodLevel || 0); if ((lodLevel || 0) > 0 && typeof player !== 'undefined' && (ch.cx - Math.floor(player.x / CHUNK_SIZE)) ** 2 + (ch.cz - Math.floor(player.z / CHUNK_SIZE)) ** 2 <= 25) { ch.dirty = true; ch.queued = true; buildQueue.unshift(ch); }
       } else {
         ch.queued = false;
       }

@@ -333,7 +333,7 @@ function createWorldGenerator(seed) {
                   data[colOffset + y] = (y === ravFloor) ? ((lx + lz) & 1 ? BLOCK.LAVA : BLOCK.WATER) : BLOCK.AIR;
                   continue;
                 }
-                if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 1 && y >= surfY - 4)) continue;
+                if (y <= 1 || y >= surfY || (surfY <= SEA_LEVEL + 4 && y >= Math.min(surfY - 3, SEA_LEVEL - 4))) continue;
                 const fy = dy * 0.25;
                 const c0 = (v000 + fx * (v100 - v000)) + fy * ((v010 + fx * (v110 - v010)) - (v000 + fx * (v100 - v000)));
                 const c1 = (v001 + fx * (v101 - v001)) + fy * ((v011 + fx * (v111 - v011)) - (v001 + fx * (v101 - v001)));
@@ -646,7 +646,7 @@ function createWorldGenerator(seed) {
       const over = rawH - 135.0;
       rawH = 135.0 + (over * 65.0) / (over + 65.0) + (r1 * r2 - 0.2) * 8.0 + crag * 4.0;
     }
-    let h = Math.floor(rawH);
+    if (rawH < SEA_LEVEL) rawH = SEA_LEVEL - Math.min(9.0, (SEA_LEVEL - rawH) * 0.55); let h = Math.floor(rawH);
     if (notOrig && h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 18) {
       const rf = getRiverFactorAt(wx, wz);
       if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 4) * rf);
@@ -709,7 +709,7 @@ function computeChunkLighting(ch, getChunkAt, surfaceOnly = false) {
           }
         }
         const def = BLOCK_DEFS[b];
-        if (def.opaque) sun = surfaceOnly ? (y >= SEA_LEVEL - 4 ? 12 : 0) : 0;
+        if (def.opaque) sun = surfaceOnly ? (y >= SEA_LEVEL - 16 ? 12 : 0) : 0;
         else if (b === BLOCK.WATER || b === BLOCK.LEAVES) sun = Math.max(surfaceOnly ? 12 : 0, sun - 2);
         const emit = def.light;
         light[idx] = (sun << 4) | emit;
