@@ -2323,6 +2323,15 @@
                 if (chData[(z * 16 + x) * 64 + sy + 2] === vc.BLOCK.COBBLE) cobbleAboveSurface++;
               }
               assert(cobbleAboveSurface === 0, 'El terreno natural no debe sembrarse con grupitos artificiales de adoquín (boulder) sobre la superficie');
+              let peakMax = 0, peakX = 0, peakZ = 0, clampedAt57 = 0;
+              for (let z = -200; z <= 200; z += 4) for (let x = -200; x <= 200; x += 4) {
+                const gy = gen.sampleSurfaceAt(x, z).groundY;
+                if (gy === 57) clampedAt57++;
+                if (gy > peakMax) { peakMax = gy; peakX = x; peakZ = z; }
+              }
+              let sameAtSummit = 0;
+              for (let dx = -12; dx <= 12; dx++) if (gen.sampleSurfaceAt(peakX + dx, peakZ).groundY === peakMax) sameAtSummit++;
+              assert(peakMax >= 48 && clampedAt57 <= 10 && sameAtSummit <= 5, `Las montañas deben alcanzar cumbres altas (peakMax=${peakMax}) con crestas naturales (sameAtSummit=${sameAtSummit}) sin truncarse en un plano horizontal en Y=57 (clampedAt57=${clampedAt57})`);
             }
           }
 

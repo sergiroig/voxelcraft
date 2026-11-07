@@ -268,21 +268,7 @@ function createWorldGenerator(seed) {
       for (let lx = 0; lx < CHUNK_SIZE; lx++) {
         const wx = wx0 + lx, biome = getBiomeAt(wx, wz);
         const continental = fbm2D(wx * 0.006, wz * 0.006, 3, 2.0, 0.5), detail = fbm2D(wx * 0.024, wz * 0.024, 2, 2.0, 0.5);
-        const mNorm = Math.max(0, (fbm2D(wx * 0.0075 + 100, wz * 0.0075 + 100, 3, 2.1, 0.55) + 0.02) * 4.8);
-        const ridge = Math.max(0, 1.0 - Math.abs(noise2D(wx * 0.009 - 350, wz * 0.009 + 350)) * 4.2);
-        const tempC = fbm2D(wx * 0.0024 + 500.37, wz * 0.0024 + 500.37, 2, 2.0, 0.5), moistC = fbm2D(wx * 0.0024 - 500.73, wz * 0.0024 - 500.73, 2, 2.0, 0.5);
-        const swampFlat = Math.max(0, Math.min(1, (moistC - 0.04) * 5.0)) * Math.max(0, 1 - Math.abs(tempC) * 6.0);
-        const originMask = notOriginChunk ? Math.min(1.0, ((wx - 8) * (wx - 8) + (wz - 8) * (wz - 8)) / 1200.0) : 0.0;
-        const alpineBoost = Math.max(0, (-tempC - 0.06) * 55.0) * (0.35 + 0.65 * mNorm);
-        const mesaBoost = (tempC > 0.11 && moistC < -0.05) ? Math.floor(Math.max(0, (mNorm - 0.20) * 3.2)) * 4 : 0;
-        const mElev = (mNorm * mNorm * 22.0 + mNorm * ridge * 11.0 + alpineBoost + mesaBoost) * originMask;
-        let h = Math.floor(SEA_LEVEL + (5 + (continental * 36 + detail * 11) * originMask + mElev) * (1 - swampFlat * 0.65));
-        if (notOriginChunk && h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 16) {
-          const rf = getRiverFactorAt(wx, wz);
-          if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 3) * rf);
-        }
-        if (h < 5) h = 5;
-        if (h >= CHUNK_HEIGHT - 6) h = CHUNK_HEIGHT - 7;
+        const h = computeColumnHeight(wx, wz, notOriginChunk, continental, detail);
         surfaceMap[lz * CHUNK_SIZE + lx] = h;
 
         const colOffset = (lz * CHUNK_SIZE + lx) * CHUNK_HEIGHT, rCol = hash3D(wx, h, wz), sBiome = biome;
@@ -294,9 +280,9 @@ function createWorldGenerator(seed) {
               data[colOffset + y] = (sBiome === 'Pantano' || detail > 0.28) ? BLOCK.CLAY : BLOCK.SAND;
             } else if (sBiome === 'Cumbres Heladas') {
               data[colOffset + y] = (h >= 34 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
-            } else if (h >= 44 || sBiome === 'Taiga Nevada') {
+            } else if (sBiome === 'Taiga Nevada' || (h >= 49 + Math.floor(detail * 4) && sBiome !== 'Desierto' && sBiome !== 'Meseta' && sBiome !== 'Sabana' && sBiome !== 'Jungla')) {
               data[colOffset + y] = BLOCK.SNOW;
-            } else if (h >= 38 && sBiome !== 'Meseta' && detail < 0.06) {
+            } else if (h >= 39 && sBiome !== 'Meseta' && sBiome !== 'Desierto' && (detail < 0.08 || h >= 45)) {
               data[colOffset + y] = BLOCK.STONE;
             } else if (sBiome === 'Desierto') {
               data[colOffset + y] = BLOCK.SAND;
@@ -307,7 +293,7 @@ function createWorldGenerator(seed) {
             }
           } else if (y >= h - 3) {
             if (sBiome === 'Meseta') data[colOffset + y] = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((y >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
-            else if (h >= 38 && detail < 0.06) data[colOffset + y] = BLOCK.STONE;
+            else if (h >= 39 && sBiome !== 'Desierto' && (detail < 0.08 || h >= 45)) data[colOffset + y] = BLOCK.STONE;
             else data[colOffset + y] = (sBiome === 'Desierto' || h < SEA_LEVEL) ? BLOCK.SAND : BLOCK.DIRT;
           } else {
             data[colOffset + y] = (sBiome === 'Meseta' && y >= h - 8 && rCol > 0.92) ? BLOCK.GOLD_ORE : BLOCK.STONE;
@@ -641,28 +627,41 @@ function createWorldGenerator(seed) {
     return { type: 'cabin', x: cx * CHUNK_SIZE + 8, y: baseY + 1, z: cz * CHUNK_SIZE + 8 };
   }
 
-  function sampleSurfaceAt(wx, wz) {
-    const continental = fbm2D(wx * 0.006, wz * 0.006, 3, 2.0, 0.5), detail = fbm2D(wx * 0.024, wz * 0.024, 2, 2.0, 0.5);
-    const mNorm = Math.max(0, (fbm2D(wx * 0.0075 + 100, wz * 0.0075 + 100, 3, 2.1, 0.55) + 0.02) * 4.8);
-    const ridge = Math.max(0, 1.0 - Math.abs(noise2D(wx * 0.009 - 350, wz * 0.009 + 350)) * 4.2);
+  function computeColumnHeight(wx, wz, notOrig, continental, detail) {
+    const mRaw = Math.max(0, (fbm2D(wx * 0.008 + 100, wz * 0.008 + 100, 3, 2.1, 0.55) + 0.015) * 3.8);
+    const mNorm = mRaw / (1.0 + mRaw * 0.42);
+    const r1 = Math.max(0, 1.0 - Math.abs(noise2D(wx * 0.014 - 350, wz * 0.014 + 350)) * 3.4);
+    const r2 = Math.max(0, 1.0 - Math.abs(noise2D(wx * 0.032 + 140, wz * 0.032 - 140)) * 3.4);
+    const crag = noise2D(wx * 0.052 + 190, wz * 0.052 - 190) * 3.0;
     const tempC = fbm2D(wx * 0.0024 + 500.37, wz * 0.0024 + 500.37, 2, 2.0, 0.5), moistC = fbm2D(wx * 0.0024 - 500.73, wz * 0.0024 - 500.73, 2, 2.0, 0.5);
     const swampFlat = Math.max(0, Math.min(1, (moistC - 0.04) * 5.0)) * Math.max(0, 1 - Math.abs(tempC) * 6.0);
-    const notOrig = (Math.floor(wx / CHUNK_SIZE) !== 0 || Math.floor(wz / CHUNK_SIZE) !== 0);
     const originMask = notOrig ? Math.min(1.0, ((wx - 8) * (wx - 8) + (wz - 8) * (wz - 8)) / 1200.0) : 0.0;
-    const alpineBoost = Math.max(0, (-tempC - 0.06) * 55.0) * (0.35 + 0.65 * mNorm);
-    const mesaBoost = (tempC > 0.11 && moistC < -0.05) ? Math.floor(Math.max(0, (mNorm - 0.20) * 3.2)) * 4 : 0;
-    const mElev = (mNorm * mNorm * 22.0 + mNorm * ridge * 11.0 + alpineBoost + mesaBoost) * originMask;
-    let h = Math.floor(SEA_LEVEL + (5 + (continental * 36 + detail * 11) * originMask + mElev) * (1 - swampFlat * 0.65));
+    const alpineBoost = Math.max(0, (-tempC - 0.06) * 38.0) * (0.3 + 0.7 * mNorm);
+    const mesaBoost = (tempC > 0.11 && moistC < -0.05) ? Math.floor(Math.max(0, (mRaw - 0.20) * 2.6)) * 4 : 0;
+    const mPeak = mNorm * (mNorm * 18.5 + r1 * r1 * 17.5 + r2 * 8.5 + crag * 4.0);
+    let rawH = SEA_LEVEL + (4.5 + (continental * 28.0 + detail * 12.0) * originMask + (mPeak + alpineBoost + mesaBoost) * originMask) * (1 - swampFlat * 0.65);
+    if (rawH > 45.0) {
+      const over = rawH - 45.0;
+      rawH = 45.0 + (over * 15.5) / (over + 15.5) + (r1 * r2 - 0.2) * 4.5 + crag * 2.2;
+    }
+    let h = Math.floor(rawH);
     if (notOrig && h >= SEA_LEVEL - 1 && h <= SEA_LEVEL + 16) {
       const rf = getRiverFactorAt(wx, wz);
       if (rf > 0) h = Math.floor(h * (1 - rf) + (SEA_LEVEL - 3) * rf);
     }
-    h = Math.max(5, Math.min(CHUNK_HEIGHT - 7, h));
+    return Math.max(5, Math.min(CHUNK_HEIGHT - 3, h));
+  }
+
+  function sampleSurfaceAt(wx, wz) {
+    const continental = fbm2D(wx * 0.006, wz * 0.006, 3, 2.0, 0.5), detail = fbm2D(wx * 0.024, wz * 0.024, 2, 2.0, 0.5);
+    const notOrig = (Math.floor(wx / CHUNK_SIZE) !== 0 || Math.floor(wz / CHUNK_SIZE) !== 0);
+    const h = computeColumnHeight(wx, wz, notOrig, continental, detail);
     const biome = getBiomeAt(wx, wz);
     let topBlock = BLOCK.GRASS;
     if (h < SEA_LEVEL) topBlock = (biome === 'Taiga Nevada' || biome === 'Cumbres Heladas') ? BLOCK.ICE : BLOCK.WATER;
-    else if (biome === 'Cumbres Heladas' || biome === 'Taiga Nevada' || h >= 44) topBlock = BLOCK.SNOW;
-    else if (h >= 38 && biome !== 'Meseta' && detail < 0.06) topBlock = BLOCK.STONE;
+    else if (biome === 'Cumbres Heladas') topBlock = (h >= 34 && detail > 0.22) ? BLOCK.ICE : BLOCK.SNOW;
+    else if (biome === 'Taiga Nevada' || (h >= 49 + Math.floor(detail * 4) && biome !== 'Desierto' && biome !== 'Meseta' && biome !== 'Sabana' && biome !== 'Jungla')) topBlock = BLOCK.SNOW;
+    else if (h >= 39 && biome !== 'Meseta' && biome !== 'Desierto' && (detail < 0.08 || h >= 45)) topBlock = BLOCK.STONE;
     else if (biome === 'Desierto') topBlock = BLOCK.SAND;
     else if (biome === 'Meseta') topBlock = (h <= SEA_LEVEL + 6) ? (BLOCK.RED_SAND || BLOCK.SAND) : (((h >> 2) & 1) ? (BLOCK.TERRACOTTA || BLOCK.STONE) : (BLOCK.ORANGE_TERRACOTTA || BLOCK.SAND));
     const surfY = Math.max(h, SEA_LEVEL);
